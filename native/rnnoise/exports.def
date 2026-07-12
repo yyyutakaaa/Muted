@@ -1,0 +1,14 @@
+LIBRARY rnnoise
+
+EXPORTS
+    rnnoise_get_size
+    rnnoise_get_frame_size
+    rnnoise_init
+    rnnoise_create
+    rnnoise_destroy
+    rnnoise_process_frame
+    rnnoise_model_from_buffer
+    rnnoise_model_from_file
+    rnnoise_model_from_filename
+    rnnoise_model_free
+

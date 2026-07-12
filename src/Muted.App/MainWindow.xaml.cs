@@ -1,0 +1,68 @@
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
+using Muted.App.ViewModels;
+
+namespace Muted.App;
+
+public partial class MainWindow : Window
+{
+    private const int DwmUseImmersiveDarkMode = 20;
+    private const int DwmWindowCornerPreference = 33;
+
+    internal MainWindow(MainViewModel viewModel)
+    {
+        InitializeComponent();
+        DataContext = viewModel;
+        SourceInitialized += (_, _) => ApplyWindowAppearance();
+    }
+
+    private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs eventArgs)
+    {
+        if (eventArgs.ChangedButton != MouseButton.Left)
+        {
+            return;
+        }
+
+        if (eventArgs.ClickCount == 2)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+            return;
+        }
+
+        try
+        {
+            DragMove();
+        }
+        catch (InvalidOperationException)
+        {
+            // The mouse may already have been released.
+        }
+    }
+
+    private void MinimizeButton_OnClick(object sender, RoutedEventArgs eventArgs) =>
+        WindowState = WindowState.Minimized;
+
+    private void CloseButton_OnClick(object sender, RoutedEventArgs eventArgs) => Close();
+
+    private void ApplyWindowAppearance()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        var enabled = 1;
+        _ = DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref enabled, sizeof(int));
+
+        // DWMWCP_ROUND on Windows 11; older Windows versions safely ignore it.
+        var rounded = 2;
+        _ = DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref rounded, sizeof(int));
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(
+        IntPtr window,
+        int attribute,
+        ref int value,
+        int valueSize);
+}
