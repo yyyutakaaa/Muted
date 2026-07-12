@@ -25,12 +25,11 @@ virtual cable you've already installed, like [VB-CABLE](https://vb-audio.com/Cab
    asks for it.
 2. Start Muted.
 3. Pick your real microphone under **Microphone**.
-4. Pick the cable's playback side under **Virtual cable output** — for
-   VB-CABLE that's usually `CABLE Input` or `CABLE In 16ch`.
+4. Pick the cable's playback side under **Virtual cable output**, usually
+   `CABLE Input` or `CABLE In 16ch` for VB-CABLE.
 5. Hit the power button.
 6. In Discord, Teams, Zoom, or your game, select the cable's recording side as
-   your microphone — for VB-CABLE that's usually `CABLE Output` or
-   `CABLE Out 16ch`.
+   your microphone, usually `CABLE Output` or `CABLE Out 16ch` for VB-CABLE.
 
 Muted deliberately refuses to start into regular speakers or a headset.
 Without that guard, a missing cable at autostart could quietly feed your own
@@ -38,7 +37,7 @@ output back into your microphone. Full setup, the 48 kHz requirement, and
 troubleshooting live in [docs/VIRTUAL-CABLE.md](docs/VIRTUAL-CABLE.md).
 
 Turn off your call app's built-in noise suppression if you hear pumping or
-distortion — two suppressors stacked on top of each other don't always beat
+distortion. Two suppressors stacked on top of each other don't always beat
 one.
 
 ## What it does
@@ -56,7 +55,7 @@ one.
 
 RNNoise suppresses noise, it doesn't cancel echo. Sound coming back into your
 mic from your speakers needs AEC, or just a headset. Hard keyboard clicks
-during speech can still partly leak through — that's a limit of the model,
+during speech can still partly leak through. That's a limit of the model,
 not a bug.
 
 ## Requirements
@@ -133,6 +132,6 @@ driver would look like, is covered in
 ## License
 
 Muted itself is MIT-licensed, see [LICENSE](LICENSE). RNNoise
-(BSD-3-Clause) and NAudio (MIT) are bundled with their own notices intact —
+(BSD-3-Clause) and NAudio (MIT) are bundled with their own notices intact,
 see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and the `licenses`
 folder.
