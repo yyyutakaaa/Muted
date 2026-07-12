@@ -1,0 +1,23 @@
+# .NET build output
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+*.user
+*.suo
+
+# Native RNNoise scratch/cache (the verified runtime DLL stays tracked)
+native/rnnoise/.build/
+native/rnnoise/.downloads/
+
+# IDE and OS files
+.vs/
+.idea/
+.vscode/
+*.DotSettings.user
+Thumbs.db
+Desktop.ini
+
+# Local diagnostics
+*.log
+*.dmp

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/xiph/rnnoise",
+    "commit": "70f1d256acd4b34a572f999a05c87bf00b67730d",
+    "commitDate": "2025-02-22T18:58:18-05:00",
+    "sourceArchiveUrl": "https://codeload.github.com/xiph/rnnoise/tar.gz/70f1d256acd4b34a572f999a05c87bf00b67730d",
+    "sourceArchiveSha256": "f61ee0b3f4c4cd337303e003d333357c5eaf25ef5d75a742109ee59e9a0a3932",
+    "license": "BSD-3-Clause",
+    "licenseFileSha256": "45d37ca1cdb278c088e1aa85e0e65ca3a534ed86a28dcc96ca16810248a61d35"
+  },
+  "model": {
+    "variant": "full",
+    "version": "0a8755f8e2d834eff6a54714ecc7d75f9932e845df35f8b59bc52a7cfe6e8b37",
+    "archiveUrl": "https://media.xiph.org/rnnoise/models/rnnoise_data-0a8755f8e2d834eff6a54714ecc7d75f9932e845df35f8b59bc52a7cfe6e8b37.tar.gz",
+    "archiveSha256": "0a8755f8e2d834eff6a54714ecc7d75f9932e845df35f8b59bc52a7cfe6e8b37",
+    "compiledSource": "src/rnnoise_data.c",
+    "compiledHeader": "src/rnnoise_data.h",
+    "compiledSourceSha256": "d6021b7697677c4d2274c912975e143765552b0e6f25500aa660fdb4a9849be5",
+    "compiledHeaderSha256": "09ff880bddd0fc74a2ae0e5ec6c8d65714031b08d0c3f672493acd9e189c5855"
+  },
+  "build": {
+    "architecture": "x64",
+    "configuration": "Release",
+    "runtimeLibrary": "static",
+    "simd": [
+      "SSE2 baseline",
+      "SSE4.1 runtime dispatch",
+      "AVX2 runtime dispatch"
+    ],
+    "expectedExports": [
+      "rnnoise_get_size",
+      "rnnoise_get_frame_size",
+      "rnnoise_init",
+      "rnnoise_create",
+      "rnnoise_destroy",
+      "rnnoise_process_frame",
+      "rnnoise_model_from_buffer",
+      "rnnoise_model_from_file",
+      "rnnoise_model_from_filename",
+      "rnnoise_model_free"
+    ]
+  }
+}
