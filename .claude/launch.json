@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bmc-cover-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "--directory",
+        "C:\\Users\\User\\AppData\\Local\\Temp\\claude\\C--Users-User-Documents-Muted\\c7dd700d-4b48-4bb4-90bd-81fd5e1e7e9c\\scratchpad\\bmc-cover"
+      ],
+      "port": 4173
+    }
+  ]
+}

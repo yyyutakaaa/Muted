@@ -129,6 +129,11 @@ Why the virtual-cable route is the first version, and what a path to a real
 driver would look like, is covered in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Support
+
+Muted is free and always will be. If it's useful to you, a coffee helps keep
+it maintained: [buymeacoffee.com/yyyutakaaa](https://www.buymeacoffee.com/yyyutakaaa).
+
 ## License
 
 Muted itself is MIT-licensed, see [LICENSE](LICENSE). RNNoise

@@ -43,8 +43,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\icon.png">
-      <Link>icon.png</Link>
+    <Content Include="..\..\icon.ico">
+      <Link>icon.ico</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
