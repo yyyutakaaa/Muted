@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -10,6 +11,7 @@ public partial class MainWindow : Window
 {
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmWindowCornerPreference = 33;
+    private const string SupportUrl = "https://www.buymeacoffee.com/yyyutakaaa";
 
     internal MainWindow(MainViewModel viewModel)
     {
@@ -52,6 +54,18 @@ public partial class MainWindow : Window
             : WindowState.Maximized;
 
     private void CloseButton_OnClick(object sender, RoutedEventArgs eventArgs) => Close();
+
+    private void SupportButton_OnClick(object sender, RoutedEventArgs eventArgs)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(SupportUrl) { UseShellExecute = true });
+        }
+        catch (Exception)
+        {
+            // A missing browser association is not fatal; the button simply does nothing.
+        }
+    }
 
     private void ApplyWindowAppearance()
     {

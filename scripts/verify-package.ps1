@@ -10,7 +10,7 @@ $package = (Resolve-Path -LiteralPath $PackagePath).Path
 $requiredFiles = @(
     'Muted.exe',
     'Muted.dll',
-    'icon.png',
+    'icon.ico',
     'rnnoise.dll',
     'rnnoise.dll.sha256',
     'README.md',

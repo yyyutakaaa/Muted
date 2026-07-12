@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Muted"
-        Icon="pack://siteoforigin:,,,/icon.png"
+        Icon="pack://siteoforigin:,,,/icon.ico"
         Width="1180" Height="820"
         MinWidth="1024" MinHeight="720"
         WindowStartupLocation="CenterScreen"
@@ -749,7 +749,7 @@
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <Image Width="44" Height="44"
-                                           Source="pack://siteoforigin:,,,/icon.png"
+                                           Source="pack://siteoforigin:,,,/icon.ico"
                                            Stretch="Uniform" />
                                     <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="Muted" />
@@ -787,6 +787,27 @@
                                            LineHeight="21"
                                            TextWrapping="Wrap"
                                            Text="With the voice gate on, Muted goes fully silent whenever it doesn't hear you talking. Lower the sensitivity if it cuts off your words, raise it if noise sneaks through the quiet moments." />
+
+                                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                                <Grid>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="Support Muted" />
+                                        <TextBlock Margin="0,3,0,0"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   FontSize="13"
+                                                   TextWrapping="Wrap"
+                                                   Text="Muted is free and always will be. If it's useful to you, a coffee helps keep it maintained." />
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource TextButtonStyle}"
+                                            Padding="16,9"
+                                            Click="SupportButton_OnClick"
+                                            AutomationProperties.Name="Support Muted on Buy Me a Coffee">
+                                        <TextBlock Text="Buy me a coffee" />
+                                    </Button>
+                                </Grid>
 
                                 <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
                                 <TextBlock Style="{StaticResource CaptionStyle}"
