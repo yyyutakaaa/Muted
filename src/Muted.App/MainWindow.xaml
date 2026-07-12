@@ -4,17 +4,18 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Muted"
         Icon="pack://siteoforigin:,,,/icon.png"
-        Width="580"
-        SizeToContent="Height"
+        Width="1180" Height="820"
+        MinWidth="1024" MinHeight="720"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         Foreground="{StaticResource TextBrush}"
         FontFamily="Segoe UI Variable Text, Segoe UI"
-        Background="{StaticResource BackgroundBrush}">
+        Background="{StaticResource BackgroundBrush}"
+        MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
-                            ResizeBorderThickness="0"
+                            ResizeBorderThickness="6"
                             CornerRadius="14"
                             GlassFrameThickness="0"
                             UseAeroCaptionButtons="False" />
@@ -22,58 +23,106 @@
 
     <Window.Resources>
         <Style x:Key="ChromeButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}">
-            <Setter Property="Width" Value="38" />
+            <Setter Property="Width" Value="40" />
             <Setter Property="Height" Value="34" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontSize" Value="15" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         </Style>
 
-        <Style x:Key="PowerButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="110" />
-            <Setter Property="Height" Value="110" />
-            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
-            <Setter Property="FontSize" Value="38" />
-            <Setter Property="FontWeight" Value="Light" />
+        <Style x:Key="NavItemStyle" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="NavSurface"
+                                Background="Transparent"
+                                CornerRadius="10"
+                                Padding="14,11"
+                                Margin="0,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="NavGlyph"
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="16"
+                                           VerticalAlignment="Center"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           Text="{TemplateBinding Tag}" />
+                                <TextBlock Margin="12,0,0,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="14"
+                                           Foreground="{TemplateBinding Foreground}"
+                                           Text="{TemplateBinding Content}" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavSurface" Property="Background" Value="#171A22" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="NavSurface" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+                                <Setter TargetName="NavGlyph" Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StageCircleStyle" TargetType="Border">
+            <Setter Property="Width" Value="52" />
+            <Setter Property="Height" Value="52" />
+            <Setter Property="CornerRadius" Value="26" />
             <Setter Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <Style x:Key="StageGlyphStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="ColumnHeaderGlyphStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+        </Style>
+
+        <Style x:Key="ColumnHeaderTextStyle" TargetType="TextBlock">
+            <Setter Property="Margin" Value="10,0,0,0" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- Switch that reflects IsRunning and fires ToggleCommand; visual state
+             follows the view model so a failed start never leaves a stale "on". -->
+        <Style x:Key="RunSwitchStyle" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Grid>
-                            <Ellipse x:Name="PowerSurface"
-                                     Fill="{TemplateBinding Background}"
-                                     Stroke="{TemplateBinding BorderBrush}"
-                                     StrokeThickness="{TemplateBinding BorderThickness}" />
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              Margin="0,-3,0,0" />
+                        <Grid Width="46" Height="26">
+                            <Border x:Name="Track" Background="#303440" CornerRadius="13" />
+                            <Ellipse x:Name="Thumb"
+                                     Width="20" Height="20" Margin="3"
+                                     HorizontalAlignment="Left"
+                                     Fill="#D9DCE5" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                <Setter TargetName="PowerSurface" Property="Fill" Value="{StaticResource AccentBrush}" />
-                                <Setter TargetName="PowerSurface" Property="Stroke" Value="#B5ACFF" />
-                                <Setter Property="Foreground" Value="White" />
-                                <Setter TargetName="PowerSurface" Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect BlurRadius="34"
-                                                          ShadowDepth="0"
-                                                          Color="{StaticResource AccentColor}"
-                                                          Opacity="0.75" />
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter TargetName="Track" Property="Background" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Thumb" Property="Fill" Value="White" />
                             </DataTrigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="PowerSurface" Property="Stroke" Value="{StaticResource AccentBrush}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="PowerSurface" Property="Opacity" Value="0.76" />
-                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45" />
                             </Trigger>
@@ -82,201 +131,710 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="SettingRowLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+        </Style>
     </Window.Resources>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="58" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="252" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="0"
-              Background="#0E1015"
-              MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <!-- ======================= Sidebar ======================= -->
+        <Grid Grid.Column="0" Background="#0E1015">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-            <StackPanel Orientation="Horizontal" Margin="20,0" VerticalAlignment="Center">
-                <Image Width="30" Height="30"
-                       Source="pack://siteoforigin:,,,/icon.png"
-                       Stretch="Uniform" />
-                <TextBlock Margin="10,0,0,0"
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="22,26,22,28">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Rectangle Width="4" Height="12" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="22" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="30" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="18" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="10" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Margin="14,0,0,0"
                            VerticalAlignment="Center"
                            FontFamily="Segoe UI Variable Display, Segoe UI"
-                           FontSize="17"
+                           FontSize="21"
                            FontWeight="SemiBold"
                            Text="Muted" />
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
-                <Button Style="{StaticResource ChromeButtonStyle}"
-                        Content="—"
-                        Click="MinimizeButton_OnClick"
-                        ToolTip="Minimize"
-                        AutomationProperties.Name="Minimize window" />
-                <Button Style="{StaticResource ChromeButtonStyle}"
-                        Content="×"
-                        Click="CloseButton_OnClick"
-                        ToolTip="Close"
-                        AutomationProperties.Name="Close window" />
+            <StackPanel Grid.Row="1" Margin="14,0">
+                <RadioButton x:Name="NavDashboard"
+                             Style="{StaticResource NavItemStyle}"
+                             GroupName="Nav"
+                             IsChecked="True"
+                             Tag="&#xE80F;"
+                             Content="Dashboard" />
+                <RadioButton x:Name="NavSettings"
+                             Style="{StaticResource NavItemStyle}"
+                             GroupName="Nav"
+                             Tag="&#xE713;"
+                             Content="Settings" />
+                <RadioButton x:Name="NavAbout"
+                             Style="{StaticResource NavItemStyle}"
+                             GroupName="Nav"
+                             Tag="&#xE946;"
+                             Content="About" />
             </StackPanel>
-        </Grid>
 
-        <Grid Grid.Row="1" Margin="34,26,34,30">
-            <StackPanel>
-                <StackPanel HorizontalAlignment="Center">
-                    <Image Width="78" Height="78"
-                           Source="pack://siteoforigin:,,,/icon.png"
-                           Stretch="Uniform" />
-                    <TextBlock Margin="0,12,0,0"
-                               HorizontalAlignment="Center"
-                               FontFamily="Segoe UI Variable Display, Segoe UI"
-                               FontSize="22"
-                               FontWeight="SemiBold"
-                               Text="RNNoise microphone" />
-                    <TextBlock Margin="0,4,0,0"
-                               HorizontalAlignment="Center"
-                               Style="{StaticResource CaptionStyle}"
-                               Text="Real-time noise suppression" />
-                    <Grid Margin="0,20,0,0" HorizontalAlignment="Center">
-                        <Ellipse Width="110" Height="110"
-                                 Stroke="{StaticResource AccentBrush}"
-                                 StrokeThickness="2.5"
-                                 Opacity="0"
-                                 IsHitTestVisible="False"
-                                 RenderTransformOrigin="0.5,0.5">
-                            <Ellipse.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1" />
-                            </Ellipse.RenderTransform>
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                            <DataTrigger.EnterActions>
-                                                <BeginStoryboard x:Name="PulseStoryboard">
-                                                    <Storyboard RepeatBehavior="Forever">
-                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                         From="0.6" To="0"
-                                                                         Duration="0:0:1.8" />
-                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                                         From="1" To="1.5"
-                                                                         Duration="0:0:1.8" />
-                                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                                         From="1" To="1.5"
-                                                                         Duration="0:0:1.8" />
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </DataTrigger.EnterActions>
-                                            <DataTrigger.ExitActions>
-                                                <RemoveStoryboard BeginStoryboardName="PulseStoryboard" />
-                                            </DataTrigger.ExitActions>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <Button Style="{StaticResource PowerButtonStyle}"
-                                Content="⏻"
-                                Command="{Binding ToggleCommand}"
-                                ToolTip="Start or stop RNNoise"
-                                AutomationProperties.Name="Start or stop RNNoise" />
-                    </Grid>
-                    <TextBlock Margin="0,12,0,0"
-                               HorizontalAlignment="Center"
-                               FontFamily="Segoe UI Variable Display, Segoe UI"
-                               FontSize="18"
-                               FontWeight="SemiBold"
-                               Text="{Binding StatusText}" />
-                </StackPanel>
-
-                <Border Margin="0,28,0,0" Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <Grid>
-                            <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Live signal" />
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                                        Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
-                                <Ellipse Width="8" Height="8" VerticalAlignment="Center"
-                                         Fill="{StaticResource SuccessBrush}"
-                                         Opacity="{Binding VoiceProbability}" />
-                                <TextBlock Margin="6,0,0,0" VerticalAlignment="Center"
-                                           Style="{StaticResource CaptionStyle}"
-                                           Text="VOICE DETECTED" />
-                            </StackPanel>
-                        </Grid>
-
-                        <TextBlock Margin="0,16,0,6"
-                                   Style="{StaticResource CaptionStyle}"
-                                   Text="MICROPHONE (RAW)" />
-                        <ProgressBar Style="{StaticResource MeterStyle}"
-                                     Maximum="1"
-                                     Value="{Binding InputLevel, Mode=OneWay}"
-                                     Foreground="{StaticResource WarningBrush}" />
-
-                        <TextBlock Margin="0,14,0,6"
-                                   Style="{StaticResource CaptionStyle}"
-                                   Text="FILTERED OUTPUT (NOISE REMOVED)" />
-                        <ProgressBar Style="{StaticResource MeterStyle}"
-                                     Maximum="1"
-                                     Value="{Binding OutputLevel, Mode=OneWay}"
-                                     Foreground="{StaticResource SuccessBrush}" />
-
-                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap">
+            <Border Grid.Row="2"
+                    Margin="14,0,14,16"
+                    Padding="14,12"
+                    CornerRadius="12"
+                    Background="#12141B"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="7" Height="7" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Margin="7,0,0,0" FontSize="13" FontWeight="SemiBold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Muted is stopped" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                <Setter Property="Text" Value="Muted is running" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                        <TextBlock Margin="14,3,0,0" FontSize="11" Foreground="{StaticResource TextMutedBrush}">
                             <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
-                                    <Setter Property="Text" Value="Start RNNoise to see the live microphone signal." />
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Your mic is unfiltered" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                            <Setter Property="Text" Value="The gap between both bars is the background noise being removed." />
+                                            <Setter Property="Text" Value="Your mic is filtered" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
                     </StackPanel>
-                </Border>
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource RunSwitchStyle}"
+                            Command="{Binding ToggleCommand}"
+                            ToolTip="Start or stop RNNoise"
+                            AutomationProperties.Name="Start or stop RNNoise" />
+                </Grid>
+            </Border>
+        </Grid>
 
-                <Border Margin="0,14,0,0" Style="{StaticResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitleStyle}" Text="Audio devices" />
+        <!-- ======================= Main column ======================= -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-                        <TextBlock Margin="0,18,0,6"
-                                   Style="{StaticResource CaptionStyle}"
-                                   Text="MICROPHONE INPUT" />
-                        <ComboBox ItemsSource="{Binding InputDevices}"
-                                  SelectedItem="{Binding SelectedInput}"
-                                  DisplayMemberPath="DisplayName"
-                                  IsEnabled="{Binding CanSelectInput}"
-                                  AutomationProperties.Name="Microphone input" />
-
-                        <TextBlock Margin="0,18,0,6"
-                                   Style="{StaticResource CaptionStyle}"
-                                   Text="VIRTUAL CABLE OUTPUT" />
-                        <ComboBox ItemsSource="{Binding OutputDevices}"
-                                  SelectedItem="{Binding SelectedOutput}"
-                                  DisplayMemberPath="DisplayName"
-                                  IsEnabled="{Binding IsStopped}"
-                                  AutomationProperties.Name="Virtual cable output" />
-                        <TextBlock Margin="0,10,0,0"
-                                   Style="{StaticResource CaptionStyle}"
-                                   TextWrapping="Wrap"
-                                   Text="Select the playback side of your virtual audio cable." />
-                    </StackPanel>
-                </Border>
-
-                <Border Margin="0,14,0,0"
-                        Padding="14"
-                        CornerRadius="12"
-                        Background="#2A151A"
-                        BorderBrush="#66313B"
-                        BorderThickness="1"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Foreground="{StaticResource DangerBrush}"
-                               TextWrapping="Wrap"
-                               Text="{Binding ErrorMessage}" />
-                </Border>
+            <!-- Window chrome buttons -->
+            <StackPanel Grid.Row="0"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Margin="0,10,12,0">
+                <Button Style="{StaticResource ChromeButtonStyle}"
+                        Content="&#xE921;"
+                        FontFamily="Segoe MDL2 Assets"
+                        Click="MinimizeButton_OnClick"
+                        ToolTip="Minimize"
+                        AutomationProperties.Name="Minimize window" />
+                <Button Style="{StaticResource ChromeButtonStyle}"
+                        Content="&#xE922;"
+                        FontFamily="Segoe MDL2 Assets"
+                        Click="MaximizeButton_OnClick"
+                        ToolTip="Maximize or restore"
+                        AutomationProperties.Name="Maximize or restore window" />
+                <Button Style="{StaticResource ChromeButtonStyle}"
+                        Content="&#xE8BB;"
+                        FontFamily="Segoe MDL2 Assets"
+                        Click="CloseButton_OnClick"
+                        ToolTip="Close"
+                        AutomationProperties.Name="Close window" />
             </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="34,0,34,0">
+                <Grid>
+                    <!-- ============ Dashboard ============ -->
+                    <StackPanel Visibility="{Binding IsChecked, ElementName=NavDashboard, Converter={StaticResource BoolToVisibility}}">
+                        <!-- Hero -->
+                        <Grid Margin="0,14,0,26">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock FontFamily="Segoe UI Variable Display, Segoe UI"
+                                           FontSize="34"
+                                           FontWeight="SemiBold">
+                                    <Run Text="Clean mic. " /><Run Text="Clear voice." Foreground="{StaticResource AccentBrush}" />
+                                </TextBlock>
+                                <TextBlock Margin="0,12,24,0"
+                                           FontSize="14"
+                                           LineHeight="23"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="460"
+                                           HorizontalAlignment="Left"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           Text="Muted runs your microphone through RNNoise locally, filtering out fan noise, mic hiss, and keyboard clatter before it reaches Discord, Teams, or your game." />
+                            </StackPanel>
+
+                            <!-- Animated waveform: each line is a seamless 360 px tile drawn
+                                 twice and scrolled one tile-width, so the loop is invisible. -->
+                            <Grid Grid.Column="1" Width="360" Height="150" VerticalAlignment="Center" ClipToBounds="True">
+                                <Canvas>
+                                    <Canvas.RenderTransform>
+                                        <TranslateTransform x:Name="PurpleWaveShift" />
+                                    </Canvas.RenderTransform>
+                                    <Canvas.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetName="PurpleWaveShift"
+                                                                     Storyboard.TargetProperty="X"
+                                                                     From="0" To="-360"
+                                                                     Duration="0:0:7" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Canvas.Triggers>
+                                    <Path Stroke="{StaticResource AccentBrush}"
+                                          StrokeThickness="2.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          Data="M0,80 C30,20 60,20 90,80 C120,140 150,140 180,80 C210,20 240,20 270,80 C300,140 330,140 360,80">
+                                        <Path.Effect>
+                                            <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="{StaticResource AccentColor}" Opacity="0.7" />
+                                        </Path.Effect>
+                                    </Path>
+                                    <Path Canvas.Left="360"
+                                          Stroke="{StaticResource AccentBrush}"
+                                          StrokeThickness="2.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          Data="M0,80 C30,20 60,20 90,80 C120,140 150,140 180,80 C210,20 240,20 270,80 C300,140 330,140 360,80">
+                                        <Path.Effect>
+                                            <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="{StaticResource AccentColor}" Opacity="0.7" />
+                                        </Path.Effect>
+                                    </Path>
+                                </Canvas>
+                                <Canvas>
+                                    <Canvas.RenderTransform>
+                                        <TranslateTransform x:Name="GreenWaveShift" />
+                                    </Canvas.RenderTransform>
+                                    <Canvas.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <DoubleAnimation Storyboard.TargetName="GreenWaveShift"
+                                                                     Storyboard.TargetProperty="X"
+                                                                     From="0" To="-360"
+                                                                     Duration="0:0:11" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Canvas.Triggers>
+                                    <Path Stroke="{StaticResource SuccessBrush}"
+                                          StrokeThickness="2.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          Data="M0,112 C30,98 60,98 90,112 C120,126 150,126 180,112 C210,98 240,98 270,112 C300,126 330,126 360,112">
+                                        <Path.Effect>
+                                            <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="{StaticResource SuccessColor}" Opacity="0.55" />
+                                        </Path.Effect>
+                                    </Path>
+                                    <Path Canvas.Left="360"
+                                          Stroke="{StaticResource SuccessBrush}"
+                                          StrokeThickness="2.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          Data="M0,112 C30,98 60,98 90,112 C120,126 150,126 180,112 C210,98 240,98 270,112 C300,126 330,126 360,112">
+                                        <Path.Effect>
+                                            <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="{StaticResource SuccessColor}" Opacity="0.55" />
+                                        </Path.Effect>
+                                    </Path>
+                                </Canvas>
+                            </Grid>
+                        </Grid>
+
+                        <!-- Pipeline -->
+                        <Border Style="{StaticResource CardStyle}" Padding="22,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Viewbox Grid.Column="0"
+                                         StretchDirection="DownOnly"
+                                         HorizontalAlignment="Left"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,16,0">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource StageCircleStyle}">
+                                            <TextBlock Style="{StaticResource StageGlyphStyle}"
+                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Text="&#xE720;" />
+                                        </Border>
+                                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock FontSize="14" FontWeight="SemiBold" Text="Microphone" />
+                                            <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Input" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                        <Line X1="0" X2="30" Y1="0" Y2="0"
+                                              VerticalAlignment="Center"
+                                              Stroke="{StaticResource BorderBrush}"
+                                              StrokeThickness="2"
+                                              StrokeDashArray="1 3" />
+                                        <Ellipse Width="6" Height="6" Margin="5,0,0,0" VerticalAlignment="Center" Fill="{StaticResource SuccessBrush}" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource StageCircleStyle}">
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Rectangle Width="3" Height="8" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                                                <Rectangle Width="3" Height="15" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" Margin="2.5,0,0,0" VerticalAlignment="Center" />
+                                                <Rectangle Width="3" Height="20" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" Margin="2.5,0,0,0" VerticalAlignment="Center" />
+                                                <Rectangle Width="3" Height="12" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" Margin="2.5,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock FontSize="14" FontWeight="SemiBold" Text="RNNoise" />
+                                            <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Filtering" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                        <Line X1="0" X2="30" Y1="0" Y2="0"
+                                              VerticalAlignment="Center"
+                                              Stroke="{StaticResource BorderBrush}"
+                                              StrokeThickness="2"
+                                              StrokeDashArray="1 3" />
+                                        <Ellipse Width="6" Height="6" Margin="5,0,0,0" VerticalAlignment="Center" Fill="{StaticResource SuccessBrush}" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource StageCircleStyle}">
+                                            <Path Stroke="{StaticResource SuccessBrush}"
+                                                  StrokeThickness="2"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Data="M0,8 L5,8 L8,2 L12,14 L15,8 L20,8" />
+                                        </Border>
+                                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock FontSize="14" FontWeight="SemiBold" Text="Processed" />
+                                            <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Clean audio" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                                        <Line X1="0" X2="30" Y1="0" Y2="0"
+                                              VerticalAlignment="Center"
+                                              Stroke="{StaticResource BorderBrush}"
+                                              StrokeThickness="2"
+                                              StrokeDashArray="1 3" />
+                                        <Ellipse Width="6" Height="6" Margin="5,0,0,0" VerticalAlignment="Center" Fill="{StaticResource SuccessBrush}" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource StageCircleStyle}">
+                                            <TextBlock Style="{StaticResource StageGlyphStyle}"
+                                                       Foreground="{StaticResource SuccessBrush}"
+                                                       Text="&#xE767;" />
+                                        </Border>
+                                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock FontSize="14" FontWeight="SemiBold" Text="Virtual Cable" />
+                                            <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Output" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                                </Viewbox>
+
+                                <!-- Status pill -->
+                                <Border Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Padding="16,10"
+                                        CornerRadius="12"
+                                        Background="{StaticResource SurfaceRaisedBrush}"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                                                <Ellipse.Style>
+                                                    <Style TargetType="Ellipse">
+                                                        <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                                <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Ellipse.Style>
+                                            </Ellipse>
+                                            <TextBlock Margin="8,0,0,0"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Text="{Binding StatusText}" />
+                                        </StackPanel>
+                                        <TextBlock Margin="16,2,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
+                                                    <Setter Property="Text" Value="Flip the switch to start" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                            <Setter Property="Text" Value="All systems go" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Settings / Noise Filter / Output -->
+                        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="24,20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Microphone column -->
+                                <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource ColumnHeaderGlyphStyle}" Text="&#xE713;" />
+                                        <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Settings" />
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,20,0,8">
+                                        <TextBlock Style="{StaticResource ColumnHeaderGlyphStyle}"
+                                                   FontSize="13"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Text="&#xE720;" />
+                                        <TextBlock Margin="8,0,0,0"
+                                                   Style="{StaticResource SettingRowLabelStyle}"
+                                                   Text="Microphone" />
+                                    </StackPanel>
+                                    <ComboBox ItemsSource="{Binding InputDevices}"
+                                              SelectedItem="{Binding SelectedInput}"
+                                              DisplayMemberPath="DisplayName"
+                                              IsEnabled="{Binding CanSelectInput}"
+                                              AutomationProperties.Name="Microphone input" />
+
+                                    <Grid Margin="0,18,0,8">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Text="Input Level" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Style="{StaticResource SettingRowLabelStyle}"
+                                                   Text="{Binding InputLevelDb}" />
+                                    </Grid>
+                                    <ProgressBar Style="{StaticResource MeterStyle}"
+                                                 Height="8"
+                                                 Maximum="1"
+                                                 Value="{Binding InputLevel, Mode=OneWay}"
+                                                 Foreground="{StaticResource SuccessBrush}" />
+                                </StackPanel>
+
+                                <Rectangle Grid.Column="1" Width="1" Margin="22,4" Fill="{StaticResource BorderBrush}" />
+
+                                <!-- Noise filter column -->
+                                <StackPanel Grid.Column="2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource ColumnHeaderGlyphStyle}" Text="&#xE71C;" />
+                                        <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Noise Filter" />
+                                    </StackPanel>
+
+                                    <Grid Margin="0,20,0,0">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="RNNoise" />
+                                        <Border HorizontalAlignment="Right"
+                                                Padding="12,4"
+                                                CornerRadius="8"
+                                                Background="{StaticResource AccentSoftBrush}">
+                                            <TextBlock FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource AccentBrush}"
+                                                       Text="Enabled" />
+                                        </Border>
+                                    </Grid>
+
+                                    <Grid Margin="0,18,0,0">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Voice Gate" />
+                                        <CheckBox HorizontalAlignment="Right"
+                                                  Style="{StaticResource ToggleStyle}"
+                                                  IsChecked="{Binding VoiceGateEnabled}"
+                                                  ToolTip="Mutes the output completely while no voice is detected"
+                                                  AutomationProperties.Name="Voice gate" />
+                                    </Grid>
+
+                                    <TextBlock Margin="0,18,0,0"
+                                               Style="{StaticResource SettingRowLabelStyle}"
+                                               Text="Sensitivity" />
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   VerticalAlignment="Center"
+                                                   Text="Low" />
+                                        <Slider Grid.Column="1"
+                                                Margin="12,0"
+                                                VerticalAlignment="Center"
+                                                Minimum="0.05" Maximum="0.99"
+                                                IsEnabled="{Binding VoiceGateEnabled}"
+                                                Value="{Binding VoiceSensitivity}"
+                                                AutomationProperties.Name="Voice gate sensitivity" />
+                                        <TextBlock Grid.Column="2"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   VerticalAlignment="Center"
+                                                   Text="High" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <Rectangle Grid.Column="3" Width="1" Margin="22,4" Fill="{StaticResource BorderBrush}" />
+
+                                <!-- Output column -->
+                                <StackPanel Grid.Column="4">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource ColumnHeaderGlyphStyle}" Text="&#xE767;" />
+                                        <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Output" />
+                                    </StackPanel>
+
+                                    <ComboBox Margin="0,20,0,0"
+                                              ItemsSource="{Binding OutputDevices}"
+                                              SelectedItem="{Binding SelectedOutput}"
+                                              DisplayMemberPath="DisplayName"
+                                              IsEnabled="{Binding IsStopped}"
+                                              AutomationProperties.Name="Virtual cable output" />
+
+                                    <Grid Margin="0,18,0,0">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Text="Sample Rate" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Style="{StaticResource SettingRowLabelStyle}"
+                                                   Text="48 kHz" />
+                                    </Grid>
+                                    <Rectangle Height="1" Margin="0,12,0,0" Fill="{StaticResource BorderBrush}" />
+                                    <Grid Margin="0,12,0,0">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Text="Format" />
+                                        <TextBlock HorizontalAlignment="Right"
+                                                   Style="{StaticResource SettingRowLabelStyle}"
+                                                   Text="Mono" />
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Error banner -->
+                        <Border Margin="0,16,0,0"
+                                Padding="14"
+                                CornerRadius="12"
+                                Background="#2A151A"
+                                BorderBrush="#66313B"
+                                BorderThickness="1"
+                                Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Foreground="{StaticResource DangerBrush}"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding ErrorMessage}" />
+                        </Border>
+
+                    </StackPanel>
+
+                    <!-- ============ Settings ============ -->
+                    <StackPanel Visibility="{Binding IsChecked, ElementName=NavSettings, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="0,14,0,20"
+                                   FontFamily="Segoe UI Variable Display, Segoe UI"
+                                   FontSize="28"
+                                   FontWeight="SemiBold"
+                                   Text="Settings" />
+
+                        <Border Style="{StaticResource CardStyle}" Padding="22">
+                            <StackPanel>
+                                <Grid>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Start with Windows" />
+                                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Launch Muted automatically when you sign in." />
+                                    </StackPanel>
+                                    <CheckBox HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Style="{StaticResource ToggleStyle}"
+                                              IsChecked="{Binding StartWithWindows}"
+                                              AutomationProperties.Name="Start with Windows" />
+                                </Grid>
+                                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                                <Grid>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Start minimized" />
+                                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Open in the tray instead of showing the window." />
+                                    </StackPanel>
+                                    <CheckBox HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Style="{StaticResource ToggleStyle}"
+                                              IsChecked="{Binding StartMinimized}"
+                                              AutomationProperties.Name="Start minimized" />
+                                </Grid>
+                                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                                <Grid>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Minimize to tray" />
+                                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Keep filtering in the background when the window closes." />
+                                    </StackPanel>
+                                    <CheckBox HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Style="{StaticResource ToggleStyle}"
+                                              IsChecked="{Binding MinimizeToTray}"
+                                              AutomationProperties.Name="Minimize to tray" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ============ About ============ -->
+                    <StackPanel Visibility="{Binding IsChecked, ElementName=NavAbout, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="0,14,0,20"
+                                   FontFamily="Segoe UI Variable Display, Segoe UI"
+                                   FontSize="28"
+                                   FontWeight="SemiBold"
+                                   Text="About" />
+
+                        <Border Style="{StaticResource CardStyle}" Padding="22">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Image Width="44" Height="44"
+                                           Source="pack://siteoforigin:,,,/icon.png"
+                                           Stretch="Uniform" />
+                                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="Muted" />
+                                        <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Version 0.1.0" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="What it is" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           FontSize="13"
+                                           LineHeight="21"
+                                           TextWrapping="Wrap"
+                                           Text="Muted sits between your microphone and your apps. Everything your mic picks up goes through RNNoise first, a small neural network that learned what a human voice sounds like. Your voice passes through. The fan hum, mic hiss, and keyboard clatter mostly don't. All of this happens on your PC. Nothing is uploaded, nothing is recorded." />
+
+                                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="How to set it up" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           FontSize="13"
+                                           LineHeight="21"
+                                           TextWrapping="Wrap">
+                                    <Run Text="1.  Install a virtual audio cable like VB-CABLE, and restart Windows if the installer asks." />
+                                    <LineBreak />
+                                    <Run Text="2.  On the dashboard, pick your real microphone and the cable's playback side (usually CABLE Input)." />
+                                    <LineBreak />
+                                    <Run Text="3.  Flip the switch in the sidebar." />
+                                    <LineBreak />
+                                    <Run Text="4.  In Discord, Teams, or your game, pick the cable's recording side (usually CABLE Output) as your microphone." />
+                                </TextBlock>
+
+                                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="The voice gate" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           FontSize="13"
+                                           LineHeight="21"
+                                           TextWrapping="Wrap"
+                                           Text="With the voice gate on, Muted goes fully silent whenever it doesn't hear you talking. Lower the sensitivity if it cuts off your words, raise it if noise sneaks through the quiet moments." />
+
+                                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                                <TextBlock Style="{StaticResource CaptionStyle}"
+                                           TextWrapping="Wrap"
+                                           Text="Muted is MIT-licensed. Bundled components: RNNoise (BSD-3-Clause) and NAudio (MIT). See THIRD-PARTY-NOTICES.md for details." />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <Grid Grid.Row="2" Margin="34,10,34,16">
+                <StackPanel Orientation="Horizontal">
+                    <Path VerticalAlignment="Center"
+                          Fill="{StaticResource TextMutedBrush}"
+                          Data="M7,0 L14,2.6 V7 C14,11.4 11.2,13.8 7,15.4 C2.8,13.8 0,11.4 0,7 V2.6 Z M6.2,9.9 L3.9,7.6 L4.9,6.6 L6.2,7.9 L9.1,5 L10.1,6 Z" />
+                    <TextBlock Margin="10,0,0,0"
+                               VerticalAlignment="Center"
+                               Style="{StaticResource CaptionStyle}"
+                               FontSize="13"
+                               Text="Local processing only" />
+                    <TextBlock Margin="10,0"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="•" />
+                    <TextBlock VerticalAlignment="Center"
+                               Style="{StaticResource CaptionStyle}"
+                               FontSize="13"
+                               Text="Your audio never leaves your PC" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock VerticalAlignment="Center"
+                               Style="{StaticResource CaptionStyle}"
+                               FontSize="13"
+                               Text="RNNoise" />
+                    <Border Margin="10,0,0,0"
+                            Padding="10,4"
+                            CornerRadius="8"
+                            Background="#14261F">
+                        <TextBlock FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource SuccessBrush}"
+                                   Text="v0.1.0" />
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

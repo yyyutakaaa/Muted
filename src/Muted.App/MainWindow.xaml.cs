@@ -46,6 +46,11 @@ public partial class MainWindow : Window
     private void MinimizeButton_OnClick(object sender, RoutedEventArgs eventArgs) =>
         WindowState = WindowState.Minimized;
 
+    private void MaximizeButton_OnClick(object sender, RoutedEventArgs eventArgs) =>
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+
     private void CloseButton_OnClick(object sender, RoutedEventArgs eventArgs) => Close();
 
     private void ApplyWindowAppearance()

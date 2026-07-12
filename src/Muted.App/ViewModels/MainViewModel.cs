@@ -41,6 +41,9 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private double _inputLevel;
     private double _outputLevel;
     private double _voiceProbability;
+    private string _inputLevelDb = "–∞ dB";
+    private bool _voiceGateEnabled;
+    private double _voiceSensitivity = 0.55;
     private bool _uiVisible = true;
 
     public MainViewModel(
@@ -258,12 +261,46 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         private set => SetProperty(ref _voiceProbability, value);
     }
 
+    public string InputLevelDb
+    {
+        get => _inputLevelDb;
+        private set => SetProperty(ref _inputLevelDb, value);
+    }
+
+    public bool VoiceGateEnabled
+    {
+        get => _voiceGateEnabled;
+        set
+        {
+            if (SetProperty(ref _voiceGateEnabled, value) && _initialized)
+            {
+                _engine.UpdateSuppression(BuildSuppressionOptions());
+                QueueSave();
+            }
+        }
+    }
+
+    public double VoiceSensitivity
+    {
+        get => _voiceSensitivity;
+        set
+        {
+            if (SetProperty(ref _voiceSensitivity, value) && _initialized)
+            {
+                _engine.UpdateSuppression(BuildSuppressionOptions());
+                QueueSave();
+            }
+        }
+    }
+
     public async Task InitializeAsync(AppSettings settings)
     {
         _settings = settings.Normalize();
         _startWithWindows = _settings.StartWithWindows;
         _startMinimized = _settings.StartMinimized;
         _minimizeToTray = _settings.MinimizeToTray;
+        _voiceGateEnabled = _settings.VoiceGateEnabled;
+        _voiceSensitivity = _settings.VoiceThreshold;
 
         try
         {
@@ -474,8 +511,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private SuppressionOptions BuildSuppressionOptions() => new(
         Enabled: true,
         WetMix: 1f,
-        VoiceGateEnabled: false,
-        VoiceThreshold: 0.55f,
+        VoiceGateEnabled: VoiceGateEnabled,
+        VoiceThreshold: (float)VoiceSensitivity,
         VoiceHoldMilliseconds: _settings.VoiceHoldMilliseconds);
 
     private AppSettings BuildSettings(bool? wasRunning = null) => new()
@@ -485,8 +522,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         FollowDefaultInput = false,
         SuppressionEnabled = true,
         WetMix = 1f,
-        VoiceGateEnabled = false,
-        VoiceThreshold = 0.55f,
+        VoiceGateEnabled = VoiceGateEnabled,
+        VoiceThreshold = (float)VoiceSensitivity,
         VoiceHoldMilliseconds = _settings.VoiceHoldMilliseconds,
         TargetLatencyMilliseconds = _settings.TargetLatencyMilliseconds,
         StartWithWindows = StartWithWindows,
@@ -591,6 +628,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             InputLevel = 0;
             OutputLevel = 0;
             VoiceProbability = 0;
+            InputLevelDb = "–∞ dB";
         }
     }
 
@@ -600,6 +638,9 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         InputLevel = Smooth(InputLevel, metrics.InputPeak);
         OutputLevel = Smooth(OutputLevel, metrics.OutputPeak);
         VoiceProbability = Smooth(VoiceProbability, metrics.VoiceProbability, decay: 0.10);
+        InputLevelDb = InputLevel <= 0.001
+            ? "–∞ dB"
+            : $"{20 * Math.Log10(InputLevel):0.0} dB";
     }
 
     // Peaks rise instantly and fall gradually so the meters read naturally.
