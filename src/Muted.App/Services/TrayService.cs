@@ -1,7 +1,7 @@
 using System.Drawing;
 using System.IO;
-using System.Runtime.InteropServices;
 using Muted.Core.Audio;
+using Muted.Core.Settings;
 
 namespace Muted.App.Services;
 
@@ -9,6 +9,9 @@ internal sealed class TrayService : IDisposable
 {
     private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
     private readonly System.Windows.Forms.ToolStripMenuItem _toggleItem;
+    private readonly System.Windows.Forms.ToolStripMenuItem _muteItem;
+    private readonly System.Windows.Forms.ToolStripMenuItem _suppressionItem;
+    private readonly System.Windows.Forms.ToolStripMenuItem _profilesItem;
     private readonly Icon _appIcon;
 
     public TrayService()
@@ -21,12 +24,26 @@ internal sealed class TrayService : IDisposable
         _toggleItem = new System.Windows.Forms.ToolStripMenuItem("Start noise suppression");
         _toggleItem.Click += (_, _) => ToggleRequested?.Invoke(this, EventArgs.Empty);
         menu.Items.Add(_toggleItem);
+
+        _muteItem = new System.Windows.Forms.ToolStripMenuItem("Mute microphone");
+        _muteItem.Click += (_, _) => MuteRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(_muteItem);
+
+        _suppressionItem = new System.Windows.Forms.ToolStripMenuItem("Noise suppression");
+        _suppressionItem.Click += (_, _) => SuppressionToggleRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(_suppressionItem);
+
+        _profilesItem = new System.Windows.Forms.ToolStripMenuItem("Profiles");
+        menu.Items.Add(_profilesItem);
+
+        var diagnosticsItem = menu.Items.Add("Run diagnostics…");
+        diagnosticsItem.Click += (_, _) => DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
+
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         var exitItem = menu.Items.Add("Quit");
         exitItem.Click += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
 
         _appIcon = LoadAppIcon();
-
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
             Text = "Muted — RNNoise",
@@ -41,11 +58,25 @@ internal sealed class TrayService : IDisposable
 
     public event EventHandler? ToggleRequested;
 
+    public event EventHandler? MuteRequested;
+
+    public event EventHandler? SuppressionToggleRequested;
+
+    public event EventHandler<ProfileRequestedEventArgs>? ProfileRequested;
+
+    public event EventHandler? DiagnosticsRequested;
+
     public event EventHandler? ExitRequested;
 
-    public void UpdateState(AudioEngineState state)
+    public void UpdateState(
+        AudioEngineState state,
+        bool isMuted,
+        bool suppressionEnabled,
+        IReadOnlyList<AudioProfile> profiles,
+        string? activeProfileId)
     {
-        _toggleItem.Enabled = state is not (AudioEngineState.Starting or AudioEngineState.Stopping);
+        var isBusy = state is AudioEngineState.Starting or AudioEngineState.Stopping;
+        _toggleItem.Enabled = !isBusy;
         _toggleItem.Text = state switch
         {
             AudioEngineState.Starting => "Starting RNNoise…",
@@ -53,14 +84,43 @@ internal sealed class TrayService : IDisposable
             AudioEngineState.Running => "Stop RNNoise",
             _ => "Start RNNoise"
         };
+
+        _muteItem.Enabled = state == AudioEngineState.Running;
+        _muteItem.Checked = isMuted;
+        _muteItem.Text = isMuted ? "Unmute microphone" : "Mute microphone";
+        _suppressionItem.Enabled = !isBusy;
+        _suppressionItem.Checked = suppressionEnabled;
+        UpdateProfiles(profiles, activeProfileId, isBusy);
+
         _notifyIcon.Text = state switch
         {
             AudioEngineState.Starting => "Muted — starting…",
             AudioEngineState.Stopping => "Muted — stopping…",
+            AudioEngineState.Running when isMuted => "Muted — microphone muted",
             AudioEngineState.Running => "Muted — active",
             AudioEngineState.Faulted => "Muted — audio error",
             _ => "Muted — stopped"
         };
+    }
+
+    private void UpdateProfiles(
+        IReadOnlyList<AudioProfile> profiles,
+        string? activeProfileId,
+        bool isBusy)
+    {
+        _profilesItem.DropDownItems.Clear();
+        _profilesItem.Enabled = profiles.Count > 0 && !isBusy;
+        foreach (var profile in profiles)
+        {
+            var item = new System.Windows.Forms.ToolStripMenuItem(profile.Name)
+            {
+                Checked = string.Equals(profile.Id, activeProfileId, StringComparison.OrdinalIgnoreCase)
+            };
+            var profileId = profile.Id;
+            item.Click += (_, _) =>
+                ProfileRequested?.Invoke(this, new ProfileRequestedEventArgs(profileId));
+            _profilesItem.DropDownItems.Add(item);
+        }
     }
 
     public void ShowBalloon(string title, string message)
@@ -79,26 +139,14 @@ internal sealed class TrayService : IDisposable
 
     private static Icon LoadAppIcon()
     {
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "icon.png");
-        if (!File.Exists(iconPath))
-        {
-            return (Icon)SystemIcons.Information.Clone();
-        }
-
-        using var source = new Bitmap(iconPath);
-        using var bitmap = new Bitmap(source, new Size(64, 64));
-        var iconHandle = bitmap.GetHicon();
-        try
-        {
-            return (Icon)Icon.FromHandle(iconHandle).Clone();
-        }
-        finally
-        {
-            DestroyIcon(iconHandle);
-        }
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "icon.ico");
+        return File.Exists(iconPath)
+            ? new Icon(iconPath, 64, 64)
+            : (Icon)SystemIcons.Information.Clone();
     }
+}
 
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool DestroyIcon(IntPtr hIcon);
+internal sealed class ProfileRequestedEventArgs(string profileId) : EventArgs
+{
+    public string ProfileId { get; } = profileId;
 }

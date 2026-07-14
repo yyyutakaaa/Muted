@@ -59,6 +59,15 @@ public partial class MainWindow : Window
 
     private void CloseButton_OnClick(object sender, RoutedEventArgs eventArgs) => Close();
 
+    internal void ShowDiagnostics()
+    {
+        NavDiagnostics.IsChecked = true;
+        if (DataContext is MainViewModel viewModel && viewModel.RunDiagnosticsCommand.CanExecute(null))
+        {
+            viewModel.RunDiagnosticsCommand.Execute(null);
+        }
+    }
+
     private void SupportButton_OnClick(object sender, RoutedEventArgs eventArgs)
     {
         try

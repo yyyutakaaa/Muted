@@ -181,6 +181,11 @@
                              GroupName="Nav"
                              Tag="&#xE713;"
                              Content="Settings" />
+                <RadioButton x:Name="NavDiagnostics"
+                             Style="{StaticResource NavItemStyle}"
+                             GroupName="Nav"
+                             Tag="&#xE9D9;"
+                             Content="Setup check" />
                 <RadioButton x:Name="NavAbout"
                              Style="{StaticResource NavItemStyle}"
                              GroupName="Nav"
@@ -589,15 +594,20 @@
 
                                     <Grid Margin="0,20,0,0">
                                         <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="RNNoise" />
-                                        <Border HorizontalAlignment="Right"
-                                                Padding="12,4"
-                                                CornerRadius="8"
-                                                Background="{StaticResource AccentSoftBrush}">
-                                            <TextBlock FontSize="12"
-                                                       FontWeight="SemiBold"
-                                                       Foreground="{StaticResource AccentBrush}"
-                                                       Text="Enabled" />
-                                        </Border>
+                                        <CheckBox HorizontalAlignment="Right"
+                                                  Style="{StaticResource ToggleStyle}"
+                                                  IsChecked="{Binding SuppressionEnabled}"
+                                                  AutomationProperties.Name="Noise suppression" />
+                                    </Grid>
+
+                                    <Grid Margin="0,18,0,0">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                                   Text="{Binding MuteStatusText}" />
+                                        <Button HorizontalAlignment="Right"
+                                                Style="{StaticResource TextButtonStyle}"
+                                                Padding="10,5"
+                                                Command="{Binding ToggleMuteCommand}"
+                                                Content="Mute / unmute" />
                                     </Grid>
 
                                     <Grid Margin="0,18,0,0">
@@ -733,6 +743,141 @@
                                               IsChecked="{Binding MinimizeToTray}"
                                               AutomationProperties.Name="Minimize to tray" />
                                 </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+                            <StackPanel>
+                                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Audio profiles" />
+                                <TextBlock Margin="0,4,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           Text="Save device and noise-filter settings, then switch them from the app or tray." />
+
+                                <Grid Margin="0,18,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0"
+                                              ItemsSource="{Binding Profiles}"
+                                              SelectedItem="{Binding SelectedProfile}"
+                                              DisplayMemberPath="Name"
+                                              AutomationProperties.Name="Audio profile" />
+                                    <Button Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            Style="{StaticResource TextButtonStyle}"
+                                            Command="{Binding ApplyProfileCommand}"
+                                            Content="Apply" />
+                                    <Button Grid.Column="2"
+                                            Margin="8,0,0,0"
+                                            Style="{StaticResource TextButtonStyle}"
+                                            Command="{Binding DeleteProfileCommand}"
+                                            Content="Delete" />
+                                </Grid>
+
+                                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0"
+                                             Height="38"
+                                             Padding="12,8"
+                                             MaxLength="40"
+                                             Background="{StaticResource SurfaceRaisedBrush}"
+                                             Foreground="{StaticResource TextBrush}"
+                                             BorderBrush="{StaticResource BorderBrush}"
+                                             BorderThickness="1"
+                                             Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                             AutomationProperties.Name="New profile name" />
+                                    <Button Grid.Column="1"
+                                            Margin="10,0,0,0"
+                                            Style="{StaticResource TextButtonStyle}"
+                                            Command="{Binding SaveProfileCommand}"
+                                            Content="Save current setup" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- ============ Diagnostics ============ -->
+                    <StackPanel Visibility="{Binding IsChecked, ElementName=NavDiagnostics, Converter={StaticResource BoolToVisibility}}">
+                        <Grid Margin="0,14,0,20">
+                            <StackPanel>
+                                <TextBlock FontFamily="Segoe UI Variable Display, Segoe UI"
+                                           FontSize="28"
+                                           FontWeight="SemiBold"
+                                           Text="Setup check" />
+                                <TextBlock Margin="0,5,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           Text="Checks your microphone, virtual cable, Windows format, RNNoise and live signal." />
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource TextButtonStyle}"
+                                    Padding="18,10"
+                                    Command="{Binding RunDiagnosticsCommand}"
+                                    Content="Run checks" />
+                        </Grid>
+
+                        <Border Style="{StaticResource CardStyle}" Padding="22">
+                            <StackPanel>
+                                <TextBlock FontSize="16"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding DiagnosticStatus}" />
+                                <TextBlock Margin="0,5,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           Text="Speak normally during the signal test. Muted may start briefly and stops again when the test finishes." />
+
+                                <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding DiagnosticChecks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,5,0,0"
+                                                    Padding="14,12"
+                                                    CornerRadius="10"
+                                                    Background="{StaticResource SurfaceRaisedBrush}"
+                                                    BorderBrush="{StaticResource BorderBrush}"
+                                                    BorderThickness="1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Ellipse Grid.Column="0"
+                                                             Width="10" Height="10"
+                                                             Margin="0,3,12,0"
+                                                             VerticalAlignment="Top">
+                                                        <Ellipse.Style>
+                                                            <Style TargetType="Ellipse">
+                                                                <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Passed">
+                                                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                                        <Setter Property="Fill" Value="#E6A84A" />
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Severity}" Value="Failed">
+                                                                        <Setter Property="Fill" Value="{StaticResource DangerBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Ellipse.Style>
+                                                    </Ellipse>
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="{Binding Title}" />
+                                                        <TextBlock Margin="0,3,0,0"
+                                                                   Style="{StaticResource CaptionStyle}"
+                                                                   TextWrapping="Wrap"
+                                                                   Text="{Binding Detail}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
                     </StackPanel>

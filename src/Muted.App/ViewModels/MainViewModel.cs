@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using Muted.App.Infrastructure;
@@ -42,8 +43,18 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private double _outputLevel;
     private double _voiceProbability;
     private string _inputLevelDb = "–∞ dB";
+    private bool _suppressionEnabled = true;
+    private double _wetMix = 1;
     private bool _voiceGateEnabled;
     private double _voiceSensitivity = 0.55;
+    private int _voiceHoldMilliseconds = 250;
+    private bool _isMuted;
+    private AudioProfile? _selectedProfile;
+    private string? _activeProfileId;
+    private string _newProfileName = string.Empty;
+    private bool _isApplyingProfile;
+    private bool _isDiagnosticsRunning;
+    private string _diagnosticStatus = "Run the checks to verify your setup.";
     private bool _uiVisible = true;
 
     public MainViewModel(
@@ -64,6 +75,28 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ToggleCommand = new AsyncRelayCommand(
             ToggleAsync,
             () => !IsBusy && (IsRunning || (HasDevices && IsRoutingReady)));
+        ToggleMuteCommand = new RelayCommand(
+            () => IsMuted = !IsMuted,
+            () => IsRunning && !IsBusy);
+        ToggleSuppressionCommand = new RelayCommand(
+            () => SuppressionEnabled = !SuppressionEnabled,
+            () => !IsBusy);
+        ApplyProfileCommand = new AsyncRelayCommand(
+            ApplySelectedProfileAsync,
+            () => SelectedProfile is not null && !IsBusy);
+        SaveProfileCommand = new RelayCommand(
+            SaveCurrentProfile,
+            () => !string.IsNullOrWhiteSpace(NewProfileName) &&
+                Profiles.Count < AppSettings.MaximumProfiles);
+        DeleteProfileCommand = new RelayCommand(
+            DeleteSelectedProfile,
+            () => SelectedProfile is not null &&
+                Profiles.Count > 1 &&
+                !string.Equals(SelectedProfile.Id, ActiveProfileId, StringComparison.OrdinalIgnoreCase) &&
+                !IsBusy);
+        RunDiagnosticsCommand = new AsyncRelayCommand(
+            RunDiagnosticsAsync,
+            () => !IsBusy && !IsDiagnosticsRunning);
 
         _engine.StateChanged += OnEngineStateChanged;
         _engine.Faulted += OnEngineFaulted;
@@ -80,7 +113,23 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public ObservableCollection<AudioDeviceInfo> OutputDevices { get; } = [];
 
+    public ObservableCollection<AudioProfile> Profiles { get; } = [];
+
+    public ObservableCollection<DiagnosticCheck> DiagnosticChecks { get; } = [];
+
     public AsyncRelayCommand ToggleCommand { get; }
+
+    public RelayCommand ToggleMuteCommand { get; }
+
+    public RelayCommand ToggleSuppressionCommand { get; }
+
+    public AsyncRelayCommand ApplyProfileCommand { get; }
+
+    public RelayCommand SaveProfileCommand { get; }
+
+    public RelayCommand DeleteProfileCommand { get; }
+
+    public AsyncRelayCommand RunDiagnosticsCommand { get; }
 
     public AudioDeviceInfo? SelectedInput
     {
@@ -206,6 +255,11 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
                 OnPropertyChanged(nameof(IsStopped));
                 OnPropertyChanged(nameof(CanSelectInput));
                 ToggleCommand.RaiseCanExecuteChanged();
+                ToggleMuteCommand.RaiseCanExecuteChanged();
+                ToggleSuppressionCommand.RaiseCanExecuteChanged();
+                ApplyProfileCommand.RaiseCanExecuteChanged();
+                DeleteProfileCommand.RaiseCanExecuteChanged();
+                RunDiagnosticsCommand.RaiseCanExecuteChanged();
                 UpdateMeterTimer();
             }
         }
@@ -267,6 +321,38 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         private set => SetProperty(ref _inputLevelDb, value);
     }
 
+    public bool SuppressionEnabled
+    {
+        get => _suppressionEnabled;
+        set
+        {
+            if (SetProperty(ref _suppressionEnabled, value) && _initialized)
+            {
+                _engine.UpdateSuppression(BuildSuppressionOptions());
+                if (!_isApplyingProfile)
+                {
+                    QueueSave();
+                }
+            }
+        }
+    }
+
+    public double WetMix
+    {
+        get => _wetMix;
+        set
+        {
+            if (SetProperty(ref _wetMix, Math.Clamp(value, 0, 1)) && _initialized)
+            {
+                _engine.UpdateSuppression(BuildSuppressionOptions());
+                if (!_isApplyingProfile)
+                {
+                    QueueSave();
+                }
+            }
+        }
+    }
+
     public bool VoiceGateEnabled
     {
         get => _voiceGateEnabled;
@@ -275,7 +361,10 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             if (SetProperty(ref _voiceGateEnabled, value) && _initialized)
             {
                 _engine.UpdateSuppression(BuildSuppressionOptions());
-                QueueSave();
+                if (!_isApplyingProfile)
+                {
+                    QueueSave();
+                }
             }
         }
     }
@@ -288,9 +377,87 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             if (SetProperty(ref _voiceSensitivity, value) && _initialized)
             {
                 _engine.UpdateSuppression(BuildSuppressionOptions());
-                QueueSave();
+                if (!_isApplyingProfile)
+                {
+                    QueueSave();
+                }
             }
         }
+    }
+
+    public bool IsMuted
+    {
+        get => _isMuted;
+        set
+        {
+            if (SetProperty(ref _isMuted, value))
+            {
+                _engine.UpdateSuppression(BuildSuppressionOptions());
+                OnPropertyChanged(nameof(MuteStatusText));
+            }
+        }
+    }
+
+    public string MuteStatusText => IsMuted ? "Microphone muted" : "Microphone live";
+
+    public AudioProfile? SelectedProfile
+    {
+        get => _selectedProfile;
+        set
+        {
+            if (SetProperty(ref _selectedProfile, value))
+            {
+                ApplyProfileCommand.RaiseCanExecuteChanged();
+                DeleteProfileCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string? ActiveProfileId
+    {
+        get => _activeProfileId;
+        private set
+        {
+            if (SetProperty(ref _activeProfileId, value))
+            {
+                OnPropertyChanged(nameof(ActiveProfileName));
+                DeleteProfileCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string ActiveProfileName => Profiles.FirstOrDefault(profile =>
+            string.Equals(profile.Id, ActiveProfileId, StringComparison.OrdinalIgnoreCase))?.Name
+        ?? "No profile";
+
+    public string NewProfileName
+    {
+        get => _newProfileName;
+        set
+        {
+            if (SetProperty(ref _newProfileName, value))
+            {
+                SaveProfileCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool IsDiagnosticsRunning
+    {
+        get => _isDiagnosticsRunning;
+        private set
+        {
+            if (SetProperty(ref _isDiagnosticsRunning, value))
+            {
+                RunDiagnosticsCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public string DiagnosticStatus
+    {
+        get => _diagnosticStatus;
+        private set => SetProperty(ref _diagnosticStatus, value);
     }
 
     public async Task InitializeAsync(AppSettings settings)
@@ -299,8 +466,22 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _startWithWindows = _settings.StartWithWindows;
         _startMinimized = _settings.StartMinimized;
         _minimizeToTray = _settings.MinimizeToTray;
+        _suppressionEnabled = _settings.SuppressionEnabled;
+        _wetMix = _settings.WetMix;
         _voiceGateEnabled = _settings.VoiceGateEnabled;
         _voiceSensitivity = _settings.VoiceThreshold;
+        _voiceHoldMilliseconds = _settings.VoiceHoldMilliseconds;
+
+        Profiles.Clear();
+        foreach (var profile in _settings.Profiles)
+        {
+            Profiles.Add(profile);
+        }
+
+        _selectedProfile = Profiles.FirstOrDefault(profile =>
+                string.Equals(profile.Id, _settings.ActiveProfileId, StringComparison.OrdinalIgnoreCase))
+            ?? Profiles.FirstOrDefault();
+        _activeProfileId = _selectedProfile?.Id;
 
         try
         {
@@ -345,18 +526,278 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    private async Task StartAsync()
+    private async Task ApplySelectedProfileAsync()
+    {
+        if (SelectedProfile is not null)
+        {
+            await ApplyProfileAsync(SelectedProfile.Id);
+        }
+    }
+
+    public async Task ApplyProfileAsync(string profileId)
+    {
+        var profile = Profiles.FirstOrDefault(candidate =>
+            string.Equals(candidate.Id, profileId, StringComparison.OrdinalIgnoreCase));
+        if (profile is null || IsBusy)
+        {
+            return;
+        }
+
+        var wasRunning = IsRunning;
+        if (wasRunning)
+        {
+            if (!await StopAsync())
+            {
+                return;
+            }
+        }
+
+        _isApplyingProfile = true;
+        try
+        {
+            SelectedProfile = profile;
+            if (!string.IsNullOrWhiteSpace(profile.InputDeviceId))
+            {
+                SelectedInput = InputDevices.FirstOrDefault(device => device.Id == profile.InputDeviceId)
+                    ?? SelectedInput;
+            }
+
+            if (!string.IsNullOrWhiteSpace(profile.OutputDeviceId))
+            {
+                SelectedOutput = OutputDevices.FirstOrDefault(device => device.Id == profile.OutputDeviceId)
+                    ?? SelectedOutput;
+            }
+
+            SuppressionEnabled = profile.SuppressionEnabled;
+            WetMix = profile.WetMix;
+            VoiceGateEnabled = profile.VoiceGateEnabled;
+            VoiceSensitivity = profile.VoiceThreshold;
+            _voiceHoldMilliseconds = profile.VoiceHoldMilliseconds;
+            _engine.UpdateSuppression(BuildSuppressionOptions());
+            ActiveProfileId = profile.Id;
+        }
+        finally
+        {
+            _isApplyingProfile = false;
+        }
+
+        if (wasRunning)
+        {
+            await StartAsync();
+        }
+
+        await TrySaveAsync();
+    }
+
+    private void SaveCurrentProfile()
+    {
+        var name = NewProfileName.Trim();
+        if (name.Length == 0 || Profiles.Count >= AppSettings.MaximumProfiles)
+        {
+            return;
+        }
+
+        if (name.Length > AudioProfile.MaximumNameLength)
+        {
+            name = name[..AudioProfile.MaximumNameLength];
+        }
+
+        var profile = new AudioProfile
+        {
+            Name = name,
+            InputDeviceId = SelectedInput?.Id,
+            OutputDeviceId = SelectedOutput?.Id,
+            SuppressionEnabled = SuppressionEnabled,
+            WetMix = (float)WetMix,
+            VoiceGateEnabled = VoiceGateEnabled,
+            VoiceThreshold = (float)VoiceSensitivity,
+            VoiceHoldMilliseconds = _voiceHoldMilliseconds
+        }.Normalize();
+
+        Profiles.Add(profile);
+        SelectedProfile = profile;
+        ActiveProfileId = profile.Id;
+        NewProfileName = string.Empty;
+        OnPropertyChanged(nameof(Profiles));
+        DeleteProfileCommand.RaiseCanExecuteChanged();
+        SaveProfileCommand.RaiseCanExecuteChanged();
+        QueueSave();
+    }
+
+    private void DeleteSelectedProfile()
+    {
+        if (SelectedProfile is null || Profiles.Count <= 1 ||
+            string.Equals(SelectedProfile.Id, ActiveProfileId, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Profiles.Remove(SelectedProfile);
+        SelectedProfile = Profiles[0];
+        OnPropertyChanged(nameof(Profiles));
+        DeleteProfileCommand.RaiseCanExecuteChanged();
+        SaveProfileCommand.RaiseCanExecuteChanged();
+        QueueSave();
+    }
+
+    private async Task RunDiagnosticsAsync()
+    {
+        IsDiagnosticsRunning = true;
+        DiagnosticChecks.Clear();
+        DiagnosticStatus = "Checking devices and audio signal…";
+        var startedForTest = false;
+
+        try
+        {
+            if (IsStopped)
+            {
+                RefreshDevicesCore(SelectedInput?.Id, SelectedOutput?.Id);
+            }
+
+            AddDeviceChecks();
+            AddRuntimeChecks();
+
+            if (HasDevices && IsRoutingReady)
+            {
+                if (!IsRunning)
+                {
+                    startedForTest = await StartAsync();
+                    if (!startedForTest)
+                    {
+                        DiagnosticChecks.Add(new DiagnosticCheck(
+                            "Audio pipeline",
+                            ErrorMessage ?? "Muted could not start the audio pipeline.",
+                            DiagnosticSeverity.Failed));
+                    }
+                }
+
+                if (IsRunning || startedForTest)
+                {
+                    var peak = 0f;
+                    var processingLoad = 0f;
+                    for (var index = 0; index < 20; index++)
+                    {
+                        await Task.Delay(100);
+                        var metrics = _engine.Metrics;
+                        peak = Math.Max(peak, metrics.InputPeak);
+                        processingLoad = Math.Max(processingLoad, metrics.ProcessingLoad);
+                    }
+
+                    DiagnosticChecks.Add(peak > 0.005f
+                        ? new DiagnosticCheck(
+                            "Microphone signal",
+                            $"Signal received ({20 * Math.Log10(peak):0.0} dB peak).",
+                            DiagnosticSeverity.Passed)
+                        : new DiagnosticCheck(
+                            "Microphone signal",
+                            "No clear signal was detected. Speak into the selected microphone and run again.",
+                            DiagnosticSeverity.Warning));
+
+                    DiagnosticChecks.Add(processingLoad < 0.85f
+                        ? new DiagnosticCheck(
+                            "Processing headroom",
+                            $"RNNoise peak processing load was {processingLoad * 100:0}%.",
+                            DiagnosticSeverity.Passed)
+                        : new DiagnosticCheck(
+                            "Processing headroom",
+                            $"RNNoise reached {processingLoad * 100:0}% processing load; audio may stutter.",
+                            DiagnosticSeverity.Warning));
+                }
+            }
+
+            var failures = DiagnosticChecks.Count(check => check.Severity == DiagnosticSeverity.Failed);
+            var warnings = DiagnosticChecks.Count(check => check.Severity == DiagnosticSeverity.Warning);
+            DiagnosticStatus = failures > 0
+                ? $"{failures} problem(s) need attention."
+                : warnings > 0
+                    ? $"Setup works, with {warnings} warning(s)."
+                    : "Everything looks ready.";
+        }
+        catch (Exception exception)
+        {
+            _log.Write(exception, "Run diagnostics");
+            DiagnosticChecks.Add(new DiagnosticCheck(
+                "Diagnostic interrupted",
+                FriendlyAudioError(exception),
+                DiagnosticSeverity.Failed));
+            DiagnosticStatus = "The checks could not be completed.";
+        }
+        finally
+        {
+            if (startedForTest)
+            {
+                await StopAsync();
+            }
+
+            IsDiagnosticsRunning = false;
+        }
+    }
+
+    private void AddDeviceChecks()
+    {
+        DiagnosticChecks.Add(SelectedInput is null
+            ? new DiagnosticCheck("Microphone", "No input device is selected.", DiagnosticSeverity.Failed)
+            : new DiagnosticCheck("Microphone", SelectedInput.Name, DiagnosticSeverity.Passed));
+
+        DiagnosticChecks.Add(SelectedOutput is null
+            ? new DiagnosticCheck("Virtual cable", "No output device is selected.", DiagnosticSeverity.Failed)
+            : IsRoutingReady
+                ? new DiagnosticCheck("Virtual cable", SelectedOutput.Name, DiagnosticSeverity.Passed)
+                : new DiagnosticCheck(
+                    "Virtual cable",
+                    $"{SelectedOutput.Name} does not look like a virtual cable output.",
+                    DiagnosticSeverity.Failed));
+
+        AddFormatCheck("Microphone format", SelectedInput);
+        AddFormatCheck("Cable format", SelectedOutput);
+    }
+
+    private void AddFormatCheck(string title, AudioDeviceInfo? device)
+    {
+        if (device is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var format = _deviceCatalog.GetMixFormat(device.Id);
+            DiagnosticChecks.Add(format.SampleRate == 48_000
+                ? new DiagnosticCheck(title, format.DisplayName, DiagnosticSeverity.Passed)
+                : new DiagnosticCheck(
+                    title,
+                    $"Windows uses {format.DisplayName}. Set the device's default format to 48 kHz.",
+                    DiagnosticSeverity.Warning));
+        }
+        catch (Exception exception)
+        {
+            DiagnosticChecks.Add(new DiagnosticCheck(title, exception.Message, DiagnosticSeverity.Failed));
+        }
+    }
+
+    private void AddRuntimeChecks()
+    {
+        var rnnoisePath = Path.Combine(AppContext.BaseDirectory, "rnnoise.dll");
+        DiagnosticChecks.Add(File.Exists(rnnoisePath)
+            ? new DiagnosticCheck("RNNoise runtime", "rnnoise.dll is present.", DiagnosticSeverity.Passed)
+            : new DiagnosticCheck(
+                "RNNoise runtime",
+                "rnnoise.dll is missing. Repair or reinstall Muted.",
+                DiagnosticSeverity.Failed));
+    }
+
+    private async Task<bool> StartAsync()
     {
         if (!HasDevices)
         {
             ErrorMessage = "Select an input and output device first.";
-            return;
+            return false;
         }
 
         if (!IsRoutingReady)
         {
             ErrorMessage = "Select a virtual cable output to prevent speaker feedback.";
-            return;
+            return false;
         }
 
         ErrorMessage = null;
@@ -373,19 +814,20 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         {
             _log.Write(exception, "Load RNNoise");
             ErrorMessage = "rnnoise.dll is missing. Repair or reinstall Muted.";
-            return;
+            return false;
         }
         catch (Exception exception)
         {
             _log.Write(exception, "Start audio engine");
             ErrorMessage = FriendlyAudioError(exception);
-            return;
+            return false;
         }
 
         await TrySaveAsync();
+        return true;
     }
 
-    private async Task StopAsync()
+    private async Task<bool> StopAsync()
     {
         try
         {
@@ -395,10 +837,12 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         {
             _log.Write(exception, "Stop audio engine");
             ErrorMessage = "The audio pipeline could not be stopped cleanly.";
-            return;
+            return false;
         }
 
+        IsMuted = false;
         await TrySaveAsync();
+        return true;
     }
 
     private void RefreshDevicesCore(string? preferredInputId, string? preferredOutputId)
@@ -509,27 +953,30 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }, null);
 
     private SuppressionOptions BuildSuppressionOptions() => new(
-        Enabled: true,
-        WetMix: 1f,
+        Enabled: SuppressionEnabled,
+        WetMix: (float)WetMix,
         VoiceGateEnabled: VoiceGateEnabled,
         VoiceThreshold: (float)VoiceSensitivity,
-        VoiceHoldMilliseconds: _settings.VoiceHoldMilliseconds);
+        VoiceHoldMilliseconds: _voiceHoldMilliseconds,
+        IsMuted: IsMuted);
 
     private AppSettings BuildSettings(bool? wasRunning = null) => new()
     {
         InputDeviceId = SelectedInput?.Id,
         OutputDeviceId = SelectedOutput?.Id,
         FollowDefaultInput = false,
-        SuppressionEnabled = true,
-        WetMix = 1f,
+        SuppressionEnabled = SuppressionEnabled,
+        WetMix = (float)WetMix,
         VoiceGateEnabled = VoiceGateEnabled,
         VoiceThreshold = (float)VoiceSensitivity,
-        VoiceHoldMilliseconds = _settings.VoiceHoldMilliseconds,
+        VoiceHoldMilliseconds = _voiceHoldMilliseconds,
         TargetLatencyMilliseconds = _settings.TargetLatencyMilliseconds,
         StartWithWindows = StartWithWindows,
         StartMinimized = StartMinimized,
         MinimizeToTray = MinimizeToTray,
-        WasRunningOnExit = wasRunning ?? IsRunning
+        WasRunningOnExit = wasRunning ?? IsRunning,
+        ActiveProfileId = ActiveProfileId,
+        Profiles = Profiles.ToArray()
     };
 
     private void QueueSave()
