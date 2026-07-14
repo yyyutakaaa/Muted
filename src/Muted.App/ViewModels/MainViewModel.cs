@@ -20,6 +20,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private readonly WasapiDeviceCatalog _deviceCatalog;
     private readonly JsonSettingsStore _settingsStore;
     private readonly StartupService _startupService;
+    private readonly UpdateCoordinator _updateCoordinator;
     private readonly FileLog _log;
     private readonly SynchronizationContext _uiContext;
     private readonly SemaphoreSlim _saveGate = new(1, 1);
@@ -55,6 +56,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private bool _isApplyingProfile;
     private bool _isDiagnosticsRunning;
     private string _diagnosticStatus = "Run the checks to verify your setup.";
+    private string _updateStatusText = "Muted checks for updates when it starts.";
     private bool _uiVisible = true;
 
     public MainViewModel(
@@ -62,12 +64,14 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         WasapiDeviceCatalog deviceCatalog,
         JsonSettingsStore settingsStore,
         StartupService startupService,
+        UpdateCoordinator updateCoordinator,
         FileLog log)
     {
         _engine = engine;
         _deviceCatalog = deviceCatalog;
         _settingsStore = settingsStore;
         _startupService = startupService;
+        _updateCoordinator = updateCoordinator;
         _log = log;
         _uiContext = SynchronizationContext.Current
             ?? throw new InvalidOperationException("MainViewModel moet op de UI-thread worden gemaakt.");
@@ -97,6 +101,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         RunDiagnosticsCommand = new AsyncRelayCommand(
             RunDiagnosticsAsync,
             () => !IsBusy && !IsDiagnosticsRunning);
+        CheckForUpdatesCommand = new AsyncRelayCommand(CheckForUpdatesAsync);
 
         _engine.StateChanged += OnEngineStateChanged;
         _engine.Faulted += OnEngineFaulted;
@@ -130,6 +135,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public RelayCommand DeleteProfileCommand { get; }
 
     public AsyncRelayCommand RunDiagnosticsCommand { get; }
+
+    public AsyncRelayCommand CheckForUpdatesCommand { get; }
 
     public AudioDeviceInfo? SelectedInput
     {
@@ -460,6 +467,12 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         private set => SetProperty(ref _diagnosticStatus, value);
     }
 
+    public string UpdateStatusText
+    {
+        get => _updateStatusText;
+        private set => SetProperty(ref _updateStatusText, value);
+    }
+
     public async Task InitializeAsync(AppSettings settings)
     {
         _settings = settings.Normalize();
@@ -731,6 +744,15 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
             IsDiagnosticsRunning = false;
         }
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        UpdateStatusText = "Checking for updates…";
+        var result = await _updateCoordinator.CheckAndPromptAsync(
+            showNoUpdateMessage: true,
+            System.Windows.Application.Current.MainWindow);
+        UpdateStatusText = result.Message;
     }
 
     private void AddDeviceChecks()
