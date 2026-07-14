@@ -17,6 +17,7 @@ public partial class App : System.Windows.Application
     private MainViewModel? _viewModel;
     private MainWindow? _window;
     private FileLog? _log;
+    private UpdateCoordinator? _updateCoordinator;
     private int _exitRequested;
     private bool _showedTrayHint;
 
@@ -45,6 +46,8 @@ public partial class App : System.Windows.Application
 
             var settingsStore = new JsonSettingsStore();
             var settings = await settingsStore.LoadAsync();
+            _updateCoordinator = new UpdateCoordinator(new UpdateService(_log));
+            _updateCoordinator.InstallStarted += (_, _) => Dispatcher.BeginInvoke(RequestExit);
             _deviceCatalog = new WasapiDeviceCatalog();
             var engine = new RealtimeAudioEngine();
             _viewModel = new MainViewModel(
@@ -52,6 +55,7 @@ public partial class App : System.Windows.Application
                 _deviceCatalog,
                 settingsStore,
                 new StartupService(),
+                _updateCoordinator,
                 _log);
             await _viewModel.InitializeAsync(settings);
 
@@ -126,16 +130,14 @@ public partial class App : System.Windows.Application
 
     private async Task CheckForUpdateAsync()
     {
-        if (_log is null)
+        if (_updateCoordinator is null)
         {
             return;
         }
 
-        var updateService = new UpdateService(_log);
-        if (await updateService.DownloadAndStartLatestAsync())
-        {
-            await Dispatcher.InvokeAsync(RequestExit);
-        }
+        await _updateCoordinator.CheckAndPromptAsync(
+            showNoUpdateMessage: false,
+            _window);
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs eventArgs)

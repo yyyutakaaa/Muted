@@ -743,6 +743,24 @@
                                               IsChecked="{Binding MinimizeToTray}"
                                               AutomationProperties.Name="Minimize to tray" />
                                 </Grid>
+                                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                                <Grid>
+                                    <StackPanel Margin="0,0,180,0">
+                                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                                   FontSize="14"
+                                                   Text="Software updates" />
+                                        <TextBlock Margin="0,3,0,0"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   TextWrapping="Wrap"
+                                                   Text="{Binding UpdateStatusText}" />
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Style="{StaticResource TextButtonStyle}"
+                                            Command="{Binding CheckForUpdatesCommand}"
+                                            Content="Check for updates"
+                                            AutomationProperties.Name="Check for updates" />
+                                </Grid>
                             </StackPanel>
                         </Border>
 

@@ -15,9 +15,7 @@ internal sealed class UpdateService
         "https://api.github.com/repos/yyyutakaaa/Muted/releases/latest";
     private static readonly string[] UninstallKeyNames =
     [
-        // Existing Inno Setup installers used this AppId and therefore this key name.
         @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}}_is1",
-        // Keep accepting the conventional spelling in case a future installer is corrected.
         @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}_is1"
     ];
     private const long MaximumInstallerSize = 250L * 1024 * 1024;
@@ -30,69 +28,116 @@ internal sealed class UpdateService
         _log = log;
     }
 
-    public async Task<bool> DownloadAndStartLatestAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
     {
+        var currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0);
         if (!IsInstalledCopy())
         {
-            return false;
+            return new UpdateCheckResult(
+                UpdateCheckStatus.NotInstalled,
+                "Automatic updates are available for installed copies of Muted only.");
         }
 
         try
         {
-            using var response = await HttpClient.GetAsync(LatestReleaseUrl, cancellationToken);
+            using var response = await HttpClient.GetAsync(LatestReleaseUrl, cancellationToken)
+                .ConfigureAwait(false);
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                // The repository does not have a published release yet.
-                return false;
+                return new UpdateCheckResult(
+                    UpdateCheckStatus.Unavailable,
+                    "No published Muted release is available yet.");
             }
 
             response.EnsureSuccessStatusCode();
-            await using var releaseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var releaseStream = await response.Content
+                .ReadAsStreamAsync(cancellationToken)
+                .ConfigureAwait(false);
             var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(
-                releaseStream,
-                cancellationToken: cancellationToken);
+                    releaseStream,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
 
             if (release is null || release.Draft || release.Prerelease ||
                 !TryParseVersion(release.TagName, out var availableVersion))
             {
-                return false;
+                return new UpdateCheckResult(
+                    UpdateCheckStatus.Unavailable,
+                    "The latest release information is invalid.");
             }
 
-            var currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0);
             if (availableVersion <= currentVersion)
             {
-                return false;
+                return new UpdateCheckResult(
+                    UpdateCheckStatus.UpToDate,
+                    $"Muted {currentVersion.ToString(3)} is up to date.");
             }
 
             var versionText = availableVersion.ToString(3);
             var installerName = $"Muted-Setup-{versionText}.exe";
             var checksumName = installerName + ".sha256";
-            var installerAsset = release.Assets.FirstOrDefault(asset => asset.Name == installerName);
-            var checksumAsset = release.Assets.FirstOrDefault(asset => asset.Name == checksumName);
+            var installerAsset = release.Assets?.FirstOrDefault(asset => asset.Name == installerName);
+            var checksumAsset = release.Assets?.FirstOrDefault(asset => asset.Name == checksumName);
             if (installerAsset is null || checksumAsset is null ||
                 installerAsset.Size <= 0 || installerAsset.Size > MaximumInstallerSize ||
                 checksumAsset.Size <= 0 || checksumAsset.Size > 4096)
             {
                 _log.WriteMessage($"Release {release.TagName} has no valid installer and checksum assets.");
-                return false;
+                return new UpdateCheckResult(
+                    UpdateCheckStatus.Unavailable,
+                    $"Muted {versionText} is published, but its installer is unavailable.");
             }
 
-            var expectedHash = await DownloadChecksumAsync(checksumAsset.DownloadUrl, cancellationToken);
+            var update = new AvailableUpdate(
+                currentVersion,
+                availableVersion,
+                installerName,
+                installerAsset.DownloadUrl,
+                installerAsset.Size,
+                checksumAsset.DownloadUrl);
+            return new UpdateCheckResult(
+                UpdateCheckStatus.UpdateAvailable,
+                $"Muted {versionText} is available.",
+                update);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _log.Write(exception, "Check for updates");
+            return new UpdateCheckResult(
+                UpdateCheckStatus.Unavailable,
+                "Muted could not check for updates. Check your internet connection and try again.");
+        }
+    }
+
+    public async Task<bool> DownloadAndStartAsync(
+        AvailableUpdate update,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var expectedHash = await DownloadChecksumAsync(update.ChecksumUrl, cancellationToken)
+                .ConfigureAwait(false);
             var updateDirectory = Path.Combine(AppPaths.DataDirectory, "Updates");
             Directory.CreateDirectory(updateDirectory);
-            var installerPath = Path.Combine(updateDirectory, installerName);
+            var installerPath = Path.Combine(updateDirectory, update.InstallerName);
             var temporaryPath = installerPath + ".download";
 
             try
             {
                 var actualHash = await DownloadInstallerAsync(
-                    installerAsset.DownloadUrl,
-                    temporaryPath,
-                    installerAsset.Size,
-                    cancellationToken);
+                        update.InstallerUrl,
+                        temporaryPath,
+                        update.InstallerSize,
+                        cancellationToken)
+                    .ConfigureAwait(false);
                 if (!CryptographicOperations.FixedTimeEquals(actualHash, expectedHash))
                 {
-                    throw new InvalidDataException("The downloaded update checksum does not match the release checksum.");
+                    throw new InvalidDataException(
+                        "The downloaded update checksum does not match the release checksum.");
                 }
 
                 File.Move(temporaryPath, installerPath, overwrite: true);
@@ -105,14 +150,20 @@ internal sealed class UpdateService
                 }
             }
 
-            Process.Start(new ProcessStartInfo
+            var process = Process.Start(new ProcessStartInfo
             {
                 FileName = installerPath,
                 Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RESTARTMUTED=1",
                 UseShellExecute = true,
                 WorkingDirectory = updateDirectory
             });
-            _log.WriteMessage($"Started automatic update from {currentVersion} to {availableVersion}.");
+            if (process is null)
+            {
+                throw new InvalidOperationException("Windows could not start the update installer.");
+            }
+
+            _log.WriteMessage(
+                $"Started approved update from {update.CurrentVersion} to {update.AvailableVersion}.");
             return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -121,7 +172,7 @@ internal sealed class UpdateService
         }
         catch (Exception exception)
         {
-            _log.Write(exception, "Automatic update");
+            _log.Write(exception, "Install update");
             return false;
         }
     }
@@ -188,7 +239,7 @@ internal sealed class UpdateService
         string url,
         CancellationToken cancellationToken)
     {
-        var checksum = (await HttpClient.GetStringAsync(url, cancellationToken)).Trim();
+        var checksum = (await HttpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false)).Trim();
         var firstField = checksum.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         if (firstField is null || firstField.Length != 64)
         {
@@ -205,16 +256,18 @@ internal sealed class UpdateService
         CancellationToken cancellationToken)
     {
         using var response = await HttpClient.GetAsync(
-            url,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+                url,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken)
+            .ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaximumInstallerSize)
         {
             throw new InvalidDataException("The update installer is unexpectedly large.");
         }
 
-        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
         await using var destination = new FileStream(
             path,
             FileMode.Create,
@@ -226,7 +279,7 @@ internal sealed class UpdateService
         var buffer = new byte[81920];
         long totalBytes = 0;
         int bytesRead;
-        while ((bytesRead = await source.ReadAsync(buffer, cancellationToken)) > 0)
+        while ((bytesRead = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
         {
             totalBytes += bytesRead;
             if (totalBytes > MaximumInstallerSize)
@@ -234,7 +287,8 @@ internal sealed class UpdateService
                 throw new InvalidDataException("The update installer exceeded the size limit.");
             }
 
-            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken)
+                .ConfigureAwait(false);
             hash.AppendData(buffer, 0, bytesRead);
         }
 
@@ -248,10 +302,7 @@ internal sealed class UpdateService
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient
-        {
-            Timeout = TimeSpan.FromMinutes(10)
-        };
+        var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Muted", "1.0"));
         client.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
@@ -262,10 +313,31 @@ internal sealed class UpdateService
         [property: System.Text.Json.Serialization.JsonPropertyName("tag_name")] string TagName,
         [property: System.Text.Json.Serialization.JsonPropertyName("draft")] bool Draft,
         [property: System.Text.Json.Serialization.JsonPropertyName("prerelease")] bool Prerelease,
-        [property: System.Text.Json.Serialization.JsonPropertyName("assets")] GitHubAsset[] Assets);
+        [property: System.Text.Json.Serialization.JsonPropertyName("assets")] GitHubAsset[]? Assets);
 
     private sealed record GitHubAsset(
         [property: System.Text.Json.Serialization.JsonPropertyName("name")] string Name,
         [property: System.Text.Json.Serialization.JsonPropertyName("size")] long Size,
         [property: System.Text.Json.Serialization.JsonPropertyName("browser_download_url")] string DownloadUrl);
 }
+
+internal enum UpdateCheckStatus
+{
+    UpdateAvailable,
+    UpToDate,
+    NotInstalled,
+    Unavailable
+}
+
+internal sealed record AvailableUpdate(
+    Version CurrentVersion,
+    Version AvailableVersion,
+    string InstallerName,
+    string InstallerUrl,
+    long InstallerSize,
+    string ChecksumUrl);
+
+internal sealed record UpdateCheckResult(
+    UpdateCheckStatus Status,
+    string Message,
+    AvailableUpdate? Update = null);
