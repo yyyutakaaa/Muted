@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -16,6 +17,8 @@ public partial class MainWindow : Window
     internal MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
+        var version = Assembly.GetEntryAssembly()?.GetName().Version;
+        VersionText.Text = version is null ? "Version unknown" : $"Version {version.ToString(3)}";
         DataContext = viewModel;
         SourceInitialized += (_, _) => ApplyWindowAppearance();
     }

@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [switch] $SkipTests,
-    [switch] $SkipPublish
+    [switch] $SkipPublish,
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string] $Version = '0.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,10 +16,10 @@ $publishOutput = Join-Path $repoRoot 'artifacts\Muted-win-x64'
 
 if (-not $SkipPublish) {
     if ($SkipTests) {
-        & $publishScript -SelfContained -SkipTests
+        & $publishScript -SelfContained -SkipTests -Version $Version
     }
     else {
-        & $publishScript -SelfContained
+        & $publishScript -SelfContained -Version $Version
     }
     if ($LASTEXITCODE -ne 0) {
         throw "publish.ps1 failed with exit code $LASTEXITCODE."
@@ -51,7 +53,7 @@ function Find-InnoSetupCompiler {
 $iscc = Find-InnoSetupCompiler
 Write-Host "Using Inno Setup compiler: $iscc"
 
-& $iscc $issScript
+& $iscc "/DMyAppVersion=$Version" $issScript
 if ($LASTEXITCODE -ne 0) {
     throw "ISCC.exe failed with exit code $LASTEXITCODE."
 }
@@ -63,3 +65,13 @@ if (-not $setupFiles) {
 }
 
 Write-Host "Installer built: $($setupFiles[0].FullName)"
+
+$installer = $setupFiles | Where-Object Name -EQ "Muted-Setup-$Version.exe" | Select-Object -First 1
+if (-not $installer) {
+    throw "Expected installer Muted-Setup-$Version.exe was not produced."
+}
+
+$checksumPath = $installer.FullName + '.sha256'
+$checksum = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText($checksumPath, "$checksum  $($installer.Name)`n")
+Write-Host "Checksum: $checksumPath"

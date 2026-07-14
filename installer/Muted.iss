@@ -4,7 +4,9 @@
 ; to publish and compile in one step.
 
 #define MyAppName "Muted"
-#define MyAppVersion "0.1.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "0.1.0"
+#endif
 #define MyAppPublisher "Muted"
 #define MyAppExeName "Muted.exe"
 #define MyPublishDir "..\artifacts\Muted-win-x64"
@@ -48,3 +50,10 @@ Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Parameter
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent unchecked
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--minimized"; Flags: nowait; Check: RestartMuted
+
+[Code]
+function RestartMuted: Boolean;
+begin
+  Result := ExpandConstant('{param:RESTARTMUTED|0}') = '1';
+end;

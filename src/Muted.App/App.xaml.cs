@@ -88,6 +88,8 @@ public partial class App : System.Windows.Application
             }
 
             _singleInstance.ActivationRequested += (_, _) => Dispatcher.BeginInvoke(ShowMainWindow);
+
+            _ = CheckForUpdateAsync();
         }
         catch (Exception exception)
         {
@@ -98,6 +100,20 @@ public partial class App : System.Windows.Application
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             RequestExit();
+        }
+    }
+
+    private async Task CheckForUpdateAsync()
+    {
+        if (_log is null)
+        {
+            return;
+        }
+
+        var updateService = new UpdateService(_log);
+        if (await updateService.DownloadAndStartLatestAsync())
+        {
+            await Dispatcher.InvokeAsync(RequestExit);
         }
     }
 

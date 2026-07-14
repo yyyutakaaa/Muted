@@ -101,6 +101,26 @@ A local build isn't code-signed. For public distribution, both the EXE and
 any installer should be signed with a trusted code-signing certificate, or
 SmartScreen will warn users off.
 
+## Automatic updates and releases
+
+Installed copies check the latest published GitHub release in the background
+when Muted starts. If a newer stable version exists, Muted downloads the
+installer and its SHA-256 checksum, verifies it, runs the installer silently,
+and restarts on the new version. Portable ZIP copies do not install updates.
+
+To publish version `0.2.0`, push a matching tag:
+
+```powershell
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The release workflow builds and tests the app, creates the self-contained
+installer and checksum, and publishes all release assets. The tag must contain
+exactly three numeric version parts. Users who installed a version from before
+automatic updating was added need to install one updater-enabled release once
+by hand; releases after that are applied automatically.
+
 ## Rebuilding native RNNoise
 
 The verified runtime DLL already lives in the repo, so this is only needed if
