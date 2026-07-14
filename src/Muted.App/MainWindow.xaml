@@ -849,10 +849,10 @@
                             Padding="10,4"
                             CornerRadius="8"
                             Background="#14261F">
-                        <TextBlock FontSize="12"
+                        <TextBlock x:Name="FooterVersionText"
+                                   FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource SuccessBrush}"
-                                   Text="v0.1.0" />
+                                   Foreground="{StaticResource SuccessBrush}" />
                     </Border>
                 </StackPanel>
             </Grid>

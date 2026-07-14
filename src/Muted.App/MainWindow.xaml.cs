@@ -19,6 +19,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         var version = Assembly.GetEntryAssembly()?.GetName().Version;
         VersionText.Text = version is null ? "Version unknown" : $"Version {version.ToString(3)}";
+        FooterVersionText.Text = version is null ? "v?" : $"v{version.ToString(3)}";
         DataContext = viewModel;
         SourceInitialized += (_, _) => ApplyWindowAppearance();
     }
