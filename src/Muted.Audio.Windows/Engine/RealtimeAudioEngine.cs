@@ -285,6 +285,10 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     suppression.VoiceHoldMilliseconds,
                     suppression.Enabled && suppression.VoiceGateEnabled);
                 AudioMath.ApplyGainAndClamp(mixed, suppression.OutputGain);
+                if (suppression.IsMuted)
+                {
+                    mixed.AsSpan().Clear();
+                }
 
                 var target = outputProvider.TargetBufferedSamples;
                 var buffered = outputProvider.BufferedSamples;

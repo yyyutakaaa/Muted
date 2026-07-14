@@ -22,6 +22,14 @@ public sealed class WasapiDeviceCatalog : IMMNotificationClient, IDisposable
     public IReadOnlyList<AudioDeviceInfo> GetOutputDevices() =>
         Enumerate(DataFlow.Render, AudioDeviceKind.Output);
 
+    public AudioDeviceFormatInfo GetMixFormat(string deviceId)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        using var device = _enumerator.GetDevice(deviceId);
+        var format = device.AudioClient.MixFormat;
+        return new AudioDeviceFormatInfo(format.SampleRate, format.Channels, format.BitsPerSample);
+    }
+
     public static bool IsLikelyVirtualCable(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))

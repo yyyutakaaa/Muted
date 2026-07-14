@@ -4,7 +4,8 @@ namespace Muted.Core.Settings;
 
 public sealed record AppSettings
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+    public const int MaximumProfiles = 20;
 
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
     public string? InputDeviceId { get; init; }
@@ -20,15 +21,47 @@ public sealed record AppSettings
     public bool StartMinimized { get; init; }
     public bool MinimizeToTray { get; init; } = true;
     public bool WasRunningOnExit { get; init; }
+    public string? ActiveProfileId { get; init; }
+    public IReadOnlyList<AudioProfile> Profiles { get; init; } = [];
 
-    public AppSettings Normalize() => this with
+    public AppSettings Normalize()
     {
-        SchemaVersion = CurrentSchemaVersion,
-        WetMix = Math.Clamp(WetMix, 0f, 1f),
-        VoiceThreshold = Math.Clamp(VoiceThreshold, 0.05f, 0.99f),
-        VoiceHoldMilliseconds = Math.Clamp(VoiceHoldMilliseconds, 0, 2_000),
-        TargetLatencyMilliseconds = Math.Clamp(TargetLatencyMilliseconds, 20, 100)
-    };
+        var profiles = (Profiles ?? [])
+            .Where(profile => profile is not null)
+            .Select(profile => profile.Normalize())
+            .DistinctBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
+            .Take(MaximumProfiles)
+            .ToList();
+
+        if (profiles.Count == 0)
+        {
+            profiles.AddRange(AudioProfile.CreateDefaults(InputDeviceId, OutputDeviceId));
+            profiles[0] = (profiles[0] with
+            {
+                SuppressionEnabled = SuppressionEnabled,
+                WetMix = WetMix,
+                VoiceGateEnabled = VoiceGateEnabled,
+                VoiceThreshold = VoiceThreshold,
+                VoiceHoldMilliseconds = VoiceHoldMilliseconds
+            }).Normalize();
+        }
+
+        var activeProfileId = profiles.Any(profile =>
+                string.Equals(profile.Id, ActiveProfileId, StringComparison.OrdinalIgnoreCase))
+            ? ActiveProfileId
+            : profiles[0].Id;
+
+        return this with
+        {
+            SchemaVersion = CurrentSchemaVersion,
+            WetMix = Math.Clamp(WetMix, 0f, 1f),
+            VoiceThreshold = Math.Clamp(VoiceThreshold, 0.05f, 0.99f),
+            VoiceHoldMilliseconds = Math.Clamp(VoiceHoldMilliseconds, 0, 2_000),
+            TargetLatencyMilliseconds = Math.Clamp(TargetLatencyMilliseconds, 20, 100),
+            ActiveProfileId = activeProfileId,
+            Profiles = profiles
+        };
+    }
 
     public SuppressionOptions ToSuppressionOptions() => new(
         SuppressionEnabled,

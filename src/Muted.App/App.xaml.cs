@@ -70,9 +70,30 @@ public partial class App : System.Windows.Application
                     _viewModel.ToggleCommand.Execute(null);
                 }
             });
+            _tray.MuteRequested += (_, _) => Dispatcher.Invoke(() =>
+            {
+                if (_viewModel.ToggleMuteCommand.CanExecute(null))
+                {
+                    _viewModel.ToggleMuteCommand.Execute(null);
+                }
+            });
+            _tray.SuppressionToggleRequested += (_, _) => Dispatcher.Invoke(() =>
+            {
+                if (_viewModel.ToggleSuppressionCommand.CanExecute(null))
+                {
+                    _viewModel.ToggleSuppressionCommand.Execute(null);
+                }
+            });
+            _tray.ProfileRequested += (_, args) => Dispatcher.Invoke(() =>
+                _ = _viewModel.ApplyProfileAsync(args.ProfileId));
+            _tray.DiagnosticsRequested += (_, _) => Dispatcher.Invoke(() =>
+            {
+                ShowMainWindow();
+                _window.ShowDiagnostics();
+            });
             _tray.ExitRequested += (_, _) => Dispatcher.Invoke(RequestExit);
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            _tray.UpdateState(_viewModel.EngineState);
+            UpdateTrayState();
 
             var commandLineMinimized = eventArgs.Args.Any(argument =>
                 string.Equals(argument, "--minimized", StringComparison.OrdinalIgnoreCase));
@@ -164,10 +185,30 @@ public partial class App : System.Windows.Application
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (eventArgs.PropertyName == nameof(MainViewModel.EngineState))
+        if (eventArgs.PropertyName is nameof(MainViewModel.EngineState)
+            or nameof(MainViewModel.IsMuted)
+            or nameof(MainViewModel.SuppressionEnabled)
+            or nameof(MainViewModel.SelectedProfile)
+            or nameof(MainViewModel.ActiveProfileId)
+            or nameof(MainViewModel.Profiles))
         {
-            _tray?.UpdateState(_viewModel?.EngineState ?? AudioEngineState.Stopped);
+            UpdateTrayState();
         }
+    }
+
+    private void UpdateTrayState()
+    {
+        if (_tray is null || _viewModel is null)
+        {
+            return;
+        }
+
+        _tray.UpdateState(
+            _viewModel.EngineState,
+            _viewModel.IsMuted,
+            _viewModel.SuppressionEnabled,
+            _viewModel.Profiles.ToArray(),
+            _viewModel.ActiveProfileId);
     }
 
     private void ShowMainWindow()

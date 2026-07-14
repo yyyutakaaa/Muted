@@ -49,6 +49,10 @@ one.
 - corrects clock drift sample by sample during long sessions;
 - shows input/output meters, refreshes devices automatically on hotplug, and
   can minimize to the tray with autostart;
+- saves reusable audio profiles and switches them from the app or tray;
+- offers tray controls for mute, RNNoise, profiles, and setup diagnostics;
+- checks virtual-cable routing, Windows sample formats, RNNoise availability,
+  microphone signal, and processing headroom;
 - stores settings in `%LOCALAPPDATA%\Muted\settings.json` and logs errors to
   `%LOCALAPPDATA%\Muted\Muted.log`;
 - has no account, no cloud, no telemetry, and records nothing.

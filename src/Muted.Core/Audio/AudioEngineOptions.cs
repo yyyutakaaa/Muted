@@ -20,7 +20,8 @@ public sealed record SuppressionOptions(
     float VoiceThreshold = 0.55f,
     int VoiceHoldMilliseconds = 250,
     float InputGain = 1f,
-    float OutputGain = 1f)
+    float OutputGain = 1f,
+    bool IsMuted = false)
 {
     public SuppressionOptions Normalize() => this with
     {
