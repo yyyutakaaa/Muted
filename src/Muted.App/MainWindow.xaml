@@ -753,7 +753,7 @@
                                            Stretch="Uniform" />
                                     <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
                                         <TextBlock FontSize="17" FontWeight="SemiBold" Text="Muted" />
-                                        <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Version 0.1.0" />
+                                        <TextBlock x:Name="VersionText" Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" />
                                     </StackPanel>
                                 </StackPanel>
 

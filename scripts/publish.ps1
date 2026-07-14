@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [switch] $SelfContained,
-    [switch] $SkipTests
+    [switch] $SkipTests,
+    [ValidatePattern('^\d+\.\d+\.\d+$')]
+    [string] $Version = '0.1.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,7 +38,14 @@ if (Test-Path -LiteralPath $output) {
 }
 
 Invoke-DotNet -Arguments @('restore', $solution)
-Invoke-DotNet -Arguments @('build', $solution, '--configuration', 'Release', '--no-restore')
+Invoke-DotNet -Arguments @(
+    'build', $solution,
+    '--configuration', 'Release',
+    '--no-restore',
+    "-p:Version=$Version",
+    "-p:AssemblyVersion=$Version.0",
+    "-p:FileVersion=$Version.0"
+)
 if (-not $SkipTests) {
     Invoke-DotNet -Arguments @('test', $solution, '--configuration', 'Release', '--no-build')
 }
@@ -48,6 +57,9 @@ Invoke-DotNet -Arguments @(
     '--runtime', 'win-x64',
     '--self-contained', $selfContainedValue,
     '--output', $output,
+    "-p:Version=$Version",
+    "-p:AssemblyVersion=$Version.0",
+    "-p:FileVersion=$Version.0",
     '-p:DebugSymbols=false',
     '-p:DebugType=None'
 )

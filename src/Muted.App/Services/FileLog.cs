@@ -19,6 +19,11 @@ internal sealed class FileLog
         WriteLine($"{context}{Environment.NewLine}{exception}");
     }
 
+    public void WriteMessage(string message)
+    {
+        WriteLine(message);
+    }
+
     private void WriteLine(string message)
     {
         try
