@@ -13,8 +13,13 @@ internal sealed class UpdateService
 {
     private const string LatestReleaseUrl =
         "https://api.github.com/repos/yyyutakaaa/Muted/releases/latest";
-    private const string UninstallKeyName =
-        @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}_is1";
+    private static readonly string[] UninstallKeyNames =
+    [
+        // Existing Inno Setup installers used this AppId and therefore this key name.
+        @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}}_is1",
+        // Keep accepting the conventional spelling in case a future installer is corrected.
+        @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}_is1"
+    ];
     private const long MaximumInstallerSize = 250L * 1024 * 1024;
 
     private static readonly HttpClient HttpClient = CreateHttpClient();
@@ -155,20 +160,23 @@ internal sealed class UpdateService
             foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
             {
                 using var baseKey = RegistryKey.OpenBaseKey(hive, view);
-                using var uninstallKey = baseKey.OpenSubKey(UninstallKeyName);
-                if (uninstallKey?.GetValue("InstallLocation") is not string installLocation ||
-                    string.IsNullOrWhiteSpace(installLocation))
+                foreach (var uninstallKeyName in UninstallKeyNames)
                 {
-                    continue;
-                }
+                    using var uninstallKey = baseKey.OpenSubKey(uninstallKeyName);
+                    if (uninstallKey?.GetValue("InstallLocation") is not string installLocation ||
+                        string.IsNullOrWhiteSpace(installLocation))
+                    {
+                        continue;
+                    }
 
-                var installedExecutable = Path.GetFullPath(Path.Combine(installLocation, "Muted.exe"));
-                if (string.Equals(
-                        installedExecutable,
-                        Path.GetFullPath(executablePath),
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
+                    var installedExecutable = Path.GetFullPath(Path.Combine(installLocation, "Muted.exe"));
+                    if (string.Equals(
+                            installedExecutable,
+                            Path.GetFullPath(executablePath),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
                 }
             }
         }
