@@ -27,6 +27,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private const string NoDevicesError = "Windows did not report any usable audio devices.";
     private const string DeviceReadError = "Audio devices could not be read.";
     private const int MaximumRecoveryAttempts = 6;
+    private const int TextTicksPerUpdate = 5;
 
     public const string VirtualCableUrl = "https://vb-audio.com/Cable/";
 
@@ -102,6 +103,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private string _updateStatusText = "Muted checks for updates when it starts.";
     private string? _skippedUpdateVersion;
     private bool _uiVisible = true;
+    private int _textTickCounter;
     private bool _intendedRunning;
     private bool _isRecovering;
     private int _recoveryAttempt;
@@ -166,9 +168,10 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _engine.MonitorFaulted += OnMonitorFaulted;
         _deviceCatalog.DevicesChanged += OnDevicesChanged;
 
-        _meterTimer = new DispatcherTimer(DispatcherPriority.Render)
+        // Background priority: meters may drop a frame, the mouse may not wait for one.
+        _meterTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromMilliseconds(33)
+            Interval = TimeSpan.FromMilliseconds(40)
         };
         _meterTimer.Tick += OnMeterTick;
 
@@ -1908,6 +1911,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         if (!IsRunning)
         {
+            _textTickCounter = TextTicksPerUpdate;
             InputLevel = 0;
             OutputLevel = 0;
             VoiceProbability = 0;
@@ -1925,6 +1929,15 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         InputLevel = Smooth(InputLevel, metrics.InputPeak);
         OutputLevel = Smooth(OutputLevel, metrics.OutputPeak);
         VoiceProbability = Smooth(VoiceProbability, metrics.VoiceProbability, decay: 0.10);
+
+        // Meters move at the timer rate; the numbers next to them are read, not watched,
+        // so they refresh five times a second instead of formatting five strings per tick.
+        if (++_textTickCounter < TextTicksPerUpdate)
+        {
+            return;
+        }
+
+        _textTickCounter = 0;
         InputLevelDb = FormatDecibels(InputLevel);
         OutputLevelDb = FormatDecibels(OutputLevel);
         ReductionText = $"{metrics.NoiseReductionDb:0.0} dB";
