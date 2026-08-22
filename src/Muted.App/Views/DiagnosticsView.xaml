@@ -1,0 +1,103 @@
+<UserControl x:Class="Muted.App.Views.DiagnosticsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Foreground="{StaticResource TextBrush}">
+    <StackPanel>
+        <Grid Margin="0,14,0,20">
+            <StackPanel>
+                <TextBlock Style="{StaticResource PageTitleStyle}" Text="Setup check" />
+                <TextBlock Margin="0,5,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           Text="Checks your microphone, virtual cable, Windows format, RNNoise and live signal." />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Style="{StaticResource TextButtonStyle}"
+                        Padding="14,10"
+                        Command="{Binding CopyDiagnosticsCommand}"
+                        Content="Copy report"
+                        ToolTip="Copy the results as text, ready to paste into a bug report"
+                        AutomationProperties.Name="Copy the diagnostic report" />
+                <Button Margin="10,0,0,0"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Command="{Binding RunDiagnosticsCommand}"
+                        Content="Run checks" />
+            </StackPanel>
+        </Grid>
+
+        <Border Style="{StaticResource CardStyle}" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="{Binding DiagnosticStatus}" />
+                <TextBlock Margin="0,5,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           Text="Speak normally during the signal test. Muted may start briefly and stops again when the test finishes." />
+
+                <ItemsControl Margin="0,14,0,0" ItemsSource="{Binding DiagnosticChecks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,5,0,0" Style="{StaticResource InsetCardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Grid.Column="0"
+                                             Width="10" Height="10"
+                                             Margin="0,3,12,0"
+                                             VerticalAlignment="Top">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Passed">
+                                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Warning">
+                                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Severity}" Value="Failed">
+                                                        <Setter Property="Fill" Value="{StaticResource DangerBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="{Binding Title}" />
+                                        <TextBlock Margin="0,3,0,0"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   TextWrapping="Wrap"
+                                                   Text="{Binding Detail}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Live pipeline" />
+                <Grid Margin="0,16,0,0">
+                    <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Buffer and load" />
+                    <TextBlock Style="{StaticResource ValueLabelStyle}" FontSize="12" Text="{Binding HealthText}" />
+                </Grid>
+                <Grid Margin="0,12,0,0">
+                    <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Dropouts" />
+                    <TextBlock Style="{StaticResource ValueLabelStyle}" FontSize="12" Text="{Binding DropoutText}" />
+                </Grid>
+                <Grid Margin="0,12,0,0">
+                    <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Noise removed" />
+                    <TextBlock Style="{StaticResource ValueLabelStyle}" FontSize="12" Text="{Binding ReductionText}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

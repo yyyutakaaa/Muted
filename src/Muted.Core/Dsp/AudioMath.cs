@@ -17,6 +17,26 @@ public static class AudioMath
         return Math.Clamp(peak, 0f, 1f);
     }
 
+    public static float Rms(ReadOnlySpan<float> samples)
+    {
+        if (samples.Length == 0)
+        {
+            return 0f;
+        }
+
+        var sum = 0d;
+        foreach (var sample in samples)
+        {
+            sum += sample * (double)sample;
+        }
+
+        return (float)Math.Clamp(Math.Sqrt(sum / samples.Length), 0d, 1d);
+    }
+
+    /// <summary>Converts a linear 0-1 amplitude to dBFS, floored at -100 dB.</summary>
+    public static float ToDecibels(float amplitude) =>
+        amplitude <= 0.00001f ? -100f : 20f * MathF.Log10(amplitude);
+
     public static void ApplyGainAndClamp(Span<float> samples, float gain)
     {
         for (var index = 0; index < samples.Length; index++)

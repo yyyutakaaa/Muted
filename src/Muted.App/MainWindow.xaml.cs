@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -12,14 +11,16 @@ public partial class MainWindow : Window
 {
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmWindowCornerPreference = 33;
-    private const string SupportUrl = "https://www.buymeacoffee.com/yyyutakaaa";
+    private const int DwmSystemBackdropType = 38;
+
+    private readonly MainViewModel _viewModel;
 
     internal MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
         var version = Assembly.GetEntryAssembly()?.GetName().Version;
-        VersionText.Text = version is null ? "Version unknown" : $"Version {version.ToString(3)}";
         FooterVersionText.Text = version is null ? "v?" : $"v{version.ToString(3)}";
+        _viewModel = viewModel;
         DataContext = viewModel;
         SourceInitialized += (_, _) => ApplyWindowAppearance();
     }
@@ -61,35 +62,44 @@ public partial class MainWindow : Window
 
     internal void ShowDiagnostics()
     {
-        NavDiagnostics.IsChecked = true;
-        if (DataContext is MainViewModel viewModel && viewModel.RunDiagnosticsCommand.CanExecute(null))
+        _viewModel.SelectedPage = AppPage.Diagnostics;
+        if (_viewModel.RunDiagnosticsCommand.CanExecute(null))
         {
-            viewModel.RunDiagnosticsCommand.Execute(null);
+            _viewModel.RunDiagnosticsCommand.Execute(null);
         }
     }
 
-    private void SupportButton_OnClick(object sender, RoutedEventArgs eventArgs)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo(SupportUrl) { UseShellExecute = true });
-        }
-        catch (Exception)
-        {
-            // A missing browser association is not fatal; the button simply does nothing.
-        }
-    }
-
-    private void ApplyWindowAppearance()
+    /// <summary>Re-applies the titlebar colour after a theme switch.</summary>
+    internal void ApplyWindowAppearance()
     {
         var handle = new WindowInteropHelper(this).Handle;
-        var enabled = 1;
-        _ = DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref enabled, sizeof(int));
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var dark = System.Windows.Application.Current.Resources["BackgroundBrush"]
+            is System.Windows.Media.SolidColorBrush background && IsDark(background.Color)
+            ? 1
+            : 0;
+        _ = DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref dark, sizeof(int));
 
         // DWMWCP_ROUND on Windows 11; older Windows versions safely ignore it.
         var rounded = 2;
         _ = DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref rounded, sizeof(int));
+
+        // DWMSBT_MAINWINDOW is Mica, and it only shows through a transparent window
+        // background, so the solid brush stays wherever Mica is unavailable.
+        var backdrop = 2;
+        var micaEnabled = Environment.OSVersion.Version.Build >= 22621 &&
+            DwmSetWindowAttribute(handle, DwmSystemBackdropType, ref backdrop, sizeof(int)) == 0;
+        Background = micaEnabled
+            ? System.Windows.Media.Brushes.Transparent
+            : (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["BackgroundBrush"];
     }
+
+    private static bool IsDark(System.Windows.Media.Color color) =>
+        ((0.2126 * color.R) + (0.7152 * color.G) + (0.0722 * color.B)) < 128;
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(

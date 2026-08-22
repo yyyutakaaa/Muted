@@ -8,8 +8,10 @@ filtered out along the way.
 ```text
 physical microphone
   → WASAPI shared mode (48 kHz mono)
+  → input gain and optional high-pass
   → RNNoise (480 samples per call, 20 ms delay)
   → optional voice gate
+  → optional automatic level, output gain, limiter
   → drift correction
   → playback side of a virtual audio cable
   → recording side of that cable in Discord / your call app / game
@@ -40,21 +42,49 @@ Turn off your call app's built-in noise suppression if you hear pumping or
 distortion. Two suppressors stacked on top of each other don't always beat
 one.
 
+## Shortcuts
+
+Assign a push-to-talk key under **Shortcuts** and Muted stays muted until you
+hold it. Push to mute is the opposite. There are also shortcuts for mute,
+RNNoise, starting and stopping, and bringing the window back.
+
+Shortcuts use a low-level keyboard hook, because Windows only reports key
+presses to `RegisterHotKey` and push to talk needs the release too. Muted never
+swallows a key: whatever you press still reaches the game or call you are in.
+The hook is only installed once you actually assign a key.
+
 ## What it does
 
 - runs the official, pinned Xiph RNNoise full-model build;
 - captures audio at 48 kHz mono over WASAPI and renders event-driven;
 - exposes a live dry/wet mix with a correctly delayed dry path;
-- can optionally use RNNoise's own VAD to gate silence more aggressively;
+- can optionally use RNNoise's own VAD to gate silence more aggressively, with
+  an adjustable hold time;
+- adds input and output gain, a high-pass for desk rumble, slow automatic
+  levelling, and a limiter that catches peaks instead of clipping them;
+- can send the processed voice to a second output so you hear what the other
+  side hears;
+- has global shortcuts for push to talk, push to mute, mute, RNNoise and
+  start/stop, which keep working inside full-screen games;
 - corrects clock drift sample by sample during long sessions;
-- shows input/output meters, refreshes devices automatically on hotplug, and
-  can minimize to the tray with autostart;
-- saves reusable audio profiles and switches them from the app or tray;
-- offers tray controls for mute, RNNoise, profiles, and setup diagnostics;
+- reconnects on its own when a device disappears mid-call, and can follow the
+  Windows default microphone;
+- draws the real microphone signal as a live waveform, with dBFS meters that
+  have peak hold and a clip indicator, plus a readout of how much noise
+  RNNoise actually removed;
+- refreshes devices automatically on hotplug, and can minimize to the tray
+  with autostart;
+- has a compact always-on-top panel for the meter and a mute button;
+- follows the Windows light/dark theme and optionally its accent colour;
+- saves reusable audio profiles, including the whole processing chain, and
+  switches them from the app or tray;
+- offers tray controls for mute, RNNoise, monitoring, profiles, the compact
+  panel, and setup diagnostics;
 - checks virtual-cable routing, Windows sample formats, RNNoise availability,
-  microphone signal, and processing headroom;
+  microphone signal, processing headroom and output stability, and copies the
+  result as text for a bug report;
 - stores settings in `%LOCALAPPDATA%\Muted\settings.json` and logs errors to
-  `%LOCALAPPDATA%\Muted\Muted.log`;
+  `%LOCALAPPDATA%\Muted\Muted.log`, both reachable from Settings;
 - has no account, no cloud, no telemetry, and records nothing.
 
 RNNoise suppresses noise, it doesn't cancel echo. Sound coming back into your
@@ -108,10 +138,12 @@ SmartScreen will warn users off.
 ## Automatic updates and releases
 
 Installed copies check the latest published GitHub release in the background
-when Muted starts. If a newer stable version exists, Muted asks before it
-downloads anything. After approval it downloads the installer and its SHA-256
-checksum, verifies it, installs silently, and restarts on the new version. A
-manual **Check for updates** button is available in Settings. Portable ZIP
+when Muted starts. If a newer version exists, Muted asks before it downloads
+anything: install now, remind me later, or skip this version. A skipped
+version stays quiet in the background but still shows up when you press
+**Check for updates** yourself. After approval it downloads the installer and
+its SHA-256 checksum, verifies it, installs silently, and restarts on the new
+version. The **Beta** channel in Settings also offers prereleases. Portable ZIP
 copies do not install updates.
 
 To publish version `0.2.0`, push a matching tag:
@@ -122,10 +154,12 @@ git push origin v0.2.0
 ```
 
 The release workflow builds and tests the app, creates the self-contained
-installer and checksum, and publishes all release assets. The tag must contain
-exactly three numeric version parts. Users who installed a version from before
-automatic updating was added need to install one updater-enabled release once
-by hand; releases after that are offered automatically.
+installer and checksum, and publishes all release assets. A tag may also carry
+a prerelease suffix, like `v0.3.0-beta1`; the build keeps the three numeric
+parts and the release is marked as a prerelease, so only the beta channel
+offers it. Users who installed a version from before automatic updating was
+added need to install one updater-enabled release once by hand; releases after
+that are offered automatically.
 
 ## Rebuilding native RNNoise
 
@@ -146,7 +180,7 @@ Pins, exports, and build details are in
 ```text
 src/Muted.Core           allocation-free DSP primitives and settings
 src/Muted.Audio.Windows  WASAPI engine, device catalog, and RNNoise wrapper
-src/Muted.App            WPF UI, tray, autostart, and settings
+src/Muted.App            WPF shell, views, controls, tray, and services
 native/rnnoise           reproducible official native build
 tests                    unit and native smoke tests
 ```

@@ -1,4 +1,5 @@
 using System.Windows;
+using Muted.Core.Settings;
 
 namespace Muted.App.Services;
 
@@ -16,7 +17,9 @@ internal sealed class UpdateCoordinator
 
     public async Task<UpdatePromptResult> CheckAndPromptAsync(
         bool showNoUpdateMessage,
-        Window? owner = null)
+        Window? owner = null,
+        string? skippedVersion = null,
+        UpdateChannel channel = UpdateChannel.Stable)
     {
         if (Interlocked.Exchange(ref _isChecking, 1) != 0)
         {
@@ -25,7 +28,7 @@ internal sealed class UpdateCoordinator
 
         try
         {
-            var result = await _updateService.CheckAsync();
+            var result = await _updateService.CheckAsync(channel);
             if (result.Status != UpdateCheckStatus.UpdateAvailable || result.Update is null)
             {
                 if (showNoUpdateMessage)
@@ -40,12 +43,29 @@ internal sealed class UpdateCoordinator
             }
 
             var version = result.Update.AvailableVersion.ToString(3);
+
+            // A version the user skipped stays quiet in the background, but an explicit
+            // "check for updates" always shows what is out there.
+            if (!showNoUpdateMessage &&
+                string.Equals(version, skippedVersion, StringComparison.Ordinal))
+            {
+                return new UpdatePromptResult($"Muted {version} is available but skipped.", false);
+            }
+
             var answer = ShowMessage(
                 owner,
                 $"Muted {version} is available.{Environment.NewLine}{Environment.NewLine}" +
-                "Do you want to download and install it now? Muted will restart automatically.",
-                MessageBoxButton.YesNo,
+                $"Yes: download and install now, Muted restarts automatically.{Environment.NewLine}" +
+                $"No: remind me next time.{Environment.NewLine}" +
+                "Cancel: skip this version.",
+                MessageBoxButton.YesNoCancel,
                 MessageBoxImage.Information);
+
+            if (answer == MessageBoxResult.Cancel)
+            {
+                return new UpdatePromptResult($"Muted {version} was skipped.", false, version);
+            }
+
             if (answer != MessageBoxResult.Yes)
             {
                 return new UpdatePromptResult($"Muted {version} is available. Update postponed.", false);
@@ -78,4 +98,7 @@ internal sealed class UpdateCoordinator
             : System.Windows.MessageBox.Show(message, "Muted update", buttons, image);
 }
 
-internal sealed record UpdatePromptResult(string Message, bool InstallStarted);
+internal sealed record UpdatePromptResult(
+    string Message,
+    bool InstallStarted,
+    string? SkippedVersion = null);

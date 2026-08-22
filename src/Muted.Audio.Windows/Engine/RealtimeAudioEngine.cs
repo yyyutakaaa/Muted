@@ -18,6 +18,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private const int InputCapacitySamples = FrameSize * 16;
     private const int SteadyOutputTargetSamples = FrameSize * 2;
     private const int OutputHighWaterSamples = FrameSize * 6;
+    private const int MonitorHighWaterSamples = FrameSize * 8;
 
     private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private readonly AutoResetEvent _inputReady = new(false);
@@ -27,10 +28,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private MMDeviceEnumerator? _enumerator;
     private MMDevice? _inputDevice;
     private MMDevice? _outputDevice;
+    private MMDevice? _monitorDevice;
     private WasapiCapture? _capture;
     private WasapiOut? _render;
+    private WasapiOut? _monitorRender;
     private FloatRingBuffer? _inputBuffer;
     private RealtimeFloatWaveProvider? _outputProvider;
+    private RealtimeFloatWaveProvider? _monitorProvider;
     private RnnoiseProcessor? _rnnoise;
     private CancellationTokenSource? _processorCancellation;
     private Thread? _processorThread;
@@ -38,8 +42,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private Task? _faultTask;
     private float _inputPeak;
     private float _outputPeak;
+    private float _inputRms;
+    private float _outputRms;
     private float _voiceProbability;
     private float _processingLoad;
+    private float _noiseReductionDb;
+    private float _limiterReductionDb;
+    private float _autoGainDb;
     private int _faultHandling;
     private long _generation;
     private int _disposed;
@@ -48,7 +57,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
     public event EventHandler<Exception>? Faulted;
 
+    /// <summary>Raised when only the monitor path failed; the main pipeline keeps running.</summary>
+    public event EventHandler<Exception>? MonitorFaulted;
+
     public AudioEngineState State => _state;
+
+    /// <summary>Rolling frame peaks for the live waveform in the UI.</summary>
+    public WaveformScope Scope { get; } = new(256);
 
     public AudioMetrics Metrics
     {
@@ -64,7 +79,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 output is null ? 0 : output.BufferedSamples * 1_000d / SampleRate,
                 input?.DroppedSamples ?? 0,
                 output?.DroppedSamples ?? 0,
-                output?.UnderrunSamples ?? 0);
+                output?.UnderrunSamples ?? 0,
+                Volatile.Read(ref _inputRms),
+                Volatile.Read(ref _outputRms),
+                Volatile.Read(ref _noiseReductionDb),
+                Volatile.Read(ref _limiterReductionDb),
+                Volatile.Read(ref _autoGainDb),
+                Volatile.Read(ref _monitorProvider) is not null);
         }
     }
 
@@ -94,6 +115,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             Interlocked.Exchange(ref _pendingFault, null);
             Interlocked.Exchange(ref _faultHandling, 0);
             Volatile.Write(ref _options, options.Normalize());
+            Scope.Clear();
             SetState(AudioEngineState.Starting);
 
             await Task.Run(
@@ -160,6 +182,60 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         if (current is not null)
         {
             Volatile.Write(ref _options, current with { Suppression = suppression.Normalize() });
+        }
+    }
+
+    /// <summary>
+    /// Starts, stops, or re-points the monitor output without interrupting the
+    /// pipeline that feeds the virtual cable.
+    /// </summary>
+    public async Task UpdateMonitorAsync(MonitorOptions monitor, CancellationToken cancellationToken = default)
+    {
+        monitor = monitor.Normalize();
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var current = Volatile.Read(ref _options);
+            if (current is not null)
+            {
+                Volatile.Write(ref _options, current with { Monitor = monitor });
+            }
+
+            if (_state != AudioEngineState.Running)
+            {
+                return;
+            }
+
+            var deviceChanged = !string.Equals(
+                _monitorDevice?.ID,
+                monitor.DeviceId,
+                StringComparison.Ordinal);
+            var isRunning = Volatile.Read(ref _monitorProvider) is not null;
+            if (monitor.IsActive && isRunning && !deviceChanged)
+            {
+                return;
+            }
+
+            await Task.Run(
+                    () =>
+                    {
+                        StopMonitorCore();
+                        if (monitor.IsActive)
+                        {
+                            StartMonitorCore(monitor, Volatile.Read(ref _options)!.LatencyMilliseconds);
+                        }
+                    },
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            StopMonitorCore();
+            RaiseMonitorFaulted(exception);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
         }
     }
 
@@ -230,6 +306,80 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         _outputProvider.SetLive(true);
         _render.Play();
         ThrowIfFaultedDuringStart();
+
+        if (options.Monitor?.IsActive == true)
+        {
+            try
+            {
+                StartMonitorCore(options.Monitor, options.LatencyMilliseconds);
+            }
+            catch (Exception exception)
+            {
+                // Losing the monitor must never keep the microphone off the cable.
+                StopMonitorCore();
+                RaiseMonitorFaulted(exception);
+            }
+        }
+    }
+
+    private void StartMonitorCore(MonitorOptions monitor, int latencyMilliseconds)
+    {
+        var enumerator = _enumerator;
+        if (enumerator is null || string.IsNullOrWhiteSpace(monitor.DeviceId))
+        {
+            return;
+        }
+
+        _monitorDevice = enumerator.GetDevice(monitor.DeviceId);
+        var provider = new RealtimeFloatWaveProvider(
+            SampleRate,
+            OutputCapacitySamples,
+            SteadyOutputTargetSamples,
+            MonitorHighWaterSamples,
+            SteadyOutputTargetSamples);
+        _monitorRender = new WasapiOut(
+            _monitorDevice,
+            AudioClientShareMode.Shared,
+            useEventSync: true,
+            latencyMilliseconds);
+        _monitorRender.PlaybackStopped += OnMonitorPlaybackStopped;
+        _monitorRender.Init(provider);
+        provider.SetLive(true);
+        Volatile.Write(ref _monitorProvider, provider);
+        _monitorRender.Play();
+    }
+
+    private void StopMonitorCore()
+    {
+        var provider = Volatile.Read(ref _monitorProvider);
+        Volatile.Write(ref _monitorProvider, null);
+        provider?.SetLive(false);
+
+        var render = _monitorRender;
+        _monitorRender = null;
+        if (render is not null)
+        {
+            try
+            {
+                render.PlaybackStopped -= OnMonitorPlaybackStopped;
+                render.Dispose();
+            }
+            catch
+            {
+                // A monitor that refuses to shut down cleanly must not block the pipeline.
+            }
+        }
+
+        var device = _monitorDevice;
+        _monitorDevice = null;
+        try
+        {
+            device?.Dispose();
+        }
+        catch
+        {
+            // Same reasoning as above.
+        }
     }
 
     private void ProcessingLoop(long generation, CancellationToken cancellationToken)
@@ -238,10 +388,15 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         var delayedDry = new float[FrameSize];
         var wet = new float[FrameSize];
         var mixed = new float[FrameSize];
+        var monitorFrame = new float[FrameSize];
         var driftOutput = new float[FrameSize + 1];
         var dryDelay = new SampleDelayLine(RnnoiseProcessor.AlgorithmicDelaySamples);
         var voiceGate = new VoiceGate();
+        var highPass = new HighPassFilter(SampleRate);
+        var limiter = new SoftLimiter(SampleRate);
+        var autoGain = new AutoGainControl(SampleRate / (float)FrameSize);
         var smoothedLoad = 0f;
+        var smoothedReduction = 0f;
 
         try
         {
@@ -251,6 +406,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 var outputProvider = _outputProvider;
                 var rnnoise = _rnnoise;
                 var suppression = Volatile.Read(ref _options)?.Suppression;
+                var monitor = Volatile.Read(ref _options)?.Monitor;
                 if (inputBuffer is null || outputProvider is null || rnnoise is null || suppression is null)
                 {
                     return;
@@ -270,6 +426,18 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 var started = Stopwatch.GetTimestamp();
                 AudioMath.ApplyGainAndClamp(input, suppression.InputGain);
                 var inputPeak = AudioMath.Peak(input);
+                var inputRms = AudioMath.Rms(input);
+
+                if (suppression.HighPassEnabled)
+                {
+                    highPass.SetFrequency(suppression.HighPassFrequency);
+                    highPass.Process(input);
+                }
+                else
+                {
+                    highPass.Reset();
+                }
+
                 dryDelay.Process(input, delayedDry);
                 var voiceProbability = rnnoise.Process(input, wet);
 
@@ -284,10 +452,42 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     suppression.VoiceThreshold,
                     suppression.VoiceHoldMilliseconds,
                     suppression.Enabled && suppression.VoiceGateEnabled);
+                autoGain.Process(
+                    mixed,
+                    voiceProbability,
+                    suppression.AutoGainTargetDb,
+                    suppression.AutoGainEnabled);
                 AudioMath.ApplyGainAndClamp(mixed, suppression.OutputGain);
+                limiter.Process(mixed, suppression.LimiterEnabled);
                 if (suppression.IsMuted)
                 {
                     mixed.AsSpan().Clear();
+                }
+
+                // How much RNNoise actually removed, measured before and after the model.
+                var dryRms = AudioMath.Rms(delayedDry);
+                var wetRms = AudioMath.Rms(wet);
+                if (dryRms > 0.0015f && suppression.Enabled)
+                {
+                    var reduction = 20f * MathF.Log10(dryRms / MathF.Max(wetRms, 1e-6f));
+                    smoothedReduction = (smoothedReduction * 0.9f) + (Math.Clamp(reduction, 0f, 60f) * 0.1f);
+                }
+                else
+                {
+                    smoothedReduction *= 0.9f;
+                }
+
+                var monitorProvider = Volatile.Read(ref _monitorProvider);
+                if (monitorProvider is not null)
+                {
+                    var volume = monitor?.Volume ?? 0f;
+                    mixed.AsSpan().CopyTo(monitorFrame);
+                    if (volume < 0.999f)
+                    {
+                        AudioMath.ApplyGainAndClamp(monitorFrame, volume);
+                    }
+
+                    monitorProvider.Write(monitorFrame);
                 }
 
                 var target = outputProvider.TargetBufferedSamples;
@@ -300,13 +500,20 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 var outputLength = DriftCorrector.Process(mixed, driftOutput, correction);
                 outputProvider.Write(driftOutput.AsSpan(0, outputLength));
 
+                var outputPeak = AudioMath.Peak(mixed);
                 var elapsedSeconds = Stopwatch.GetElapsedTime(started).TotalSeconds;
                 var currentLoad = (float)(elapsedSeconds / (FrameSize / (double)SampleRate));
                 smoothedLoad = (smoothedLoad * 0.95f) + (currentLoad * 0.05f);
                 Volatile.Write(ref _inputPeak, inputPeak);
-                Volatile.Write(ref _outputPeak, AudioMath.Peak(mixed));
+                Volatile.Write(ref _outputPeak, outputPeak);
+                Volatile.Write(ref _inputRms, inputRms);
+                Volatile.Write(ref _outputRms, AudioMath.Rms(mixed));
                 Volatile.Write(ref _voiceProbability, voiceProbability);
                 Volatile.Write(ref _processingLoad, smoothedLoad);
+                Volatile.Write(ref _noiseReductionDb, smoothedReduction);
+                Volatile.Write(ref _limiterReductionDb, limiter.GainReductionDb);
+                Volatile.Write(ref _autoGainDb, autoGain.CurrentGainDb);
+                Scope.Push(outputPeak);
             }
         }
         catch (Exception exception)
@@ -356,6 +563,21 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             HandleFault(
                 eventArgs.Exception ?? new InvalidOperationException("The audio output stopped unexpectedly."),
                 generation);
+        }
+    }
+
+    private void OnMonitorPlaybackStopped(object? sender, StoppedEventArgs eventArgs)
+    {
+        if (!ReferenceEquals(sender, _monitorRender))
+        {
+            return;
+        }
+
+        Volatile.Write(ref _monitorProvider, null);
+        if (eventArgs.Exception is not null &&
+            _state is AudioEngineState.Running or AudioEngineState.Starting)
+        {
+            RaiseMonitorFaulted(eventArgs.Exception);
         }
     }
 
@@ -445,6 +667,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         {
             TryCleanup(() => outputProvider.SetLive(false));
         }
+
+        TryCleanup(StopMonitorCore);
 
         var capture = _capture;
         _capture = null;
@@ -542,8 +766,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
         Volatile.Write(ref _inputPeak, 0f);
         Volatile.Write(ref _outputPeak, 0f);
+        Volatile.Write(ref _inputRms, 0f);
+        Volatile.Write(ref _outputRms, 0f);
         Volatile.Write(ref _voiceProbability, 0f);
         Volatile.Write(ref _processingLoad, 0f);
+        Volatile.Write(ref _noiseReductionDb, 0f);
+        Volatile.Write(ref _limiterReductionDb, 0f);
+        Volatile.Write(ref _autoGainDb, 0f);
 
         return errors switch
         {
@@ -590,9 +819,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
     }
 
-    private void RaiseFaulted(Exception exception)
+    private void RaiseFaulted(Exception exception) => Raise(Faulted, exception);
+
+    private void RaiseMonitorFaulted(Exception exception) => Raise(MonitorFaulted, exception);
+
+    private void Raise(EventHandler<Exception>? handlers, Exception exception)
     {
-        var handlers = Faulted;
         if (handlers is null)
         {
             return;

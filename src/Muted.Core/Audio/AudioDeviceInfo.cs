@@ -12,5 +12,5 @@ public sealed record AudioDeviceInfo(
     AudioDeviceKind Kind,
     bool IsDefault = false)
 {
-    public string DisplayName => IsDefault ? $"{Name}  (standaard)" : Name;
+    public string DisplayName => IsDefault ? $"{Name}  (default)" : Name;
 }

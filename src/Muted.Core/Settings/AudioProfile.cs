@@ -15,6 +15,13 @@ public sealed record AudioProfile
     public bool VoiceGateEnabled { get; init; } = true;
     public float VoiceThreshold { get; init; } = 0.55f;
     public int VoiceHoldMilliseconds { get; init; } = 250;
+    public float InputGain { get; init; } = 1f;
+    public float OutputGain { get; init; } = 1f;
+    public bool HighPassEnabled { get; init; }
+    public float HighPassFrequency { get; init; } = 80f;
+    public bool LimiterEnabled { get; init; } = true;
+    public bool AutoGainEnabled { get; init; }
+    public float AutoGainTargetDb { get; init; } = -18f;
 
     public AudioProfile Normalize()
     {
@@ -30,7 +37,11 @@ public sealed record AudioProfile
             Name = normalizedName,
             WetMix = Math.Clamp(WetMix, 0f, 1f),
             VoiceThreshold = Math.Clamp(VoiceThreshold, 0.05f, 0.99f),
-            VoiceHoldMilliseconds = Math.Clamp(VoiceHoldMilliseconds, 0, 2_000)
+            VoiceHoldMilliseconds = Math.Clamp(VoiceHoldMilliseconds, 0, 2_000),
+            InputGain = Math.Clamp(InputGain, 0.25f, 4f),
+            OutputGain = Math.Clamp(OutputGain, 0.25f, 4f),
+            HighPassFrequency = Math.Clamp(HighPassFrequency, 40f, 200f),
+            AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f)
         };
     }
 
@@ -40,7 +51,14 @@ public sealed record AudioProfile
         VoiceGateEnabled,
         VoiceThreshold,
         VoiceHoldMilliseconds,
-        IsMuted: isMuted);
+        InputGain,
+        OutputGain,
+        isMuted,
+        HighPassEnabled,
+        HighPassFrequency,
+        LimiterEnabled,
+        AutoGainEnabled,
+        AutoGainTargetDb);
 
     public static IReadOnlyList<AudioProfile> CreateDefaults(
         string? inputDeviceId = null,
@@ -62,7 +80,9 @@ public sealed record AudioProfile
             InputDeviceId = inputDeviceId,
             OutputDeviceId = outputDeviceId,
             VoiceThreshold = 0.42f,
-            VoiceHoldMilliseconds = 400
+            VoiceHoldMilliseconds = 400,
+            HighPassEnabled = true,
+            AutoGainEnabled = true
         },
         new AudioProfile
         {
@@ -71,7 +91,8 @@ public sealed record AudioProfile
             InputDeviceId = inputDeviceId,
             OutputDeviceId = outputDeviceId,
             VoiceThreshold = 0.68f,
-            VoiceHoldMilliseconds = 160
+            VoiceHoldMilliseconds = 160,
+            HighPassEnabled = true
         }
     ];
 }
