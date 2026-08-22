@@ -51,20 +51,12 @@ jobs:
             throw "Release versions must look like v1.2.3 or v1.2.3-beta1."
           }
 
-      - name: Create tag
+      - name: Check the version is unused
         if: github.event_name == 'workflow_dispatch'
         shell: pwsh
         run: |
           if (git ls-remote --tags origin "refs/tags/$env:TAG") {
             throw "$env:TAG already exists. Pick a version that has not been released."
-          }
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a $env:TAG -m "Muted $env:VERSION"
-          git push origin $env:TAG
-          if ($LASTEXITCODE -ne 0) {
-            throw "Could not push $env:TAG."
           }
 
       - name: Install Inno Setup
@@ -74,6 +66,20 @@ jobs:
       - name: Build, test, and package
         shell: pwsh
         run: .\scripts\build-installer.ps1 -Version $env:VERSION
+
+      # Only once the installer exists, so a failed build never leaves a tag
+      # behind that blocks a retry with the same version.
+      - name: Create tag
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a $env:TAG -m "Muted $env:VERSION"
+          git push origin $env:TAG
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not push $env:TAG."
+          }
 
       - name: Publish GitHub release
         shell: pwsh

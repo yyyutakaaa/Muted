@@ -146,12 +146,15 @@ its SHA-256 checksum, verifies it, installs silently, and restarts on the new
 version. The **Beta** channel in Settings also offers prereleases. Portable ZIP
 copies do not install updates.
 
-To publish version `0.2.0`, push a matching tag:
+To publish version `0.4.1`, push a matching tag:
 
 ```powershell
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.4.1
+git push origin v0.4.1
 ```
+
+Or start **Actions → Release → Run workflow** and type the version there; the
+workflow then creates the tag itself, after the installer has been built.
 
 The release workflow builds and tests the app, creates the self-contained
 installer and checksum, and publishes all release assets. A tag may also carry
