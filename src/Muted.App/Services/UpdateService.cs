@@ -169,10 +169,21 @@ internal sealed class UpdateService
             return null;
         }
 
-        return assets.FirstOrDefault(asset => asset.Name == preferredName)
-            ?? assets.SingleOrDefault(asset =>
+        var exact = assets.FirstOrDefault(asset => asset.Name == preferredName);
+        if (exact is not null)
+        {
+            return exact;
+        }
+
+        // A prerelease tag can carry a suffix the asset name does not. Only accept the
+        // fallback when it is unambiguous; picking one of several installers blindly
+        // would mean installing something nobody asked for.
+        var candidates = assets
+            .Where(asset =>
                 asset.Name.StartsWith("Muted-Setup-", StringComparison.Ordinal) &&
-                asset.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+                asset.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        return candidates.Length == 1 ? candidates[0] : null;
     }
 
     public async Task<bool> DownloadAndStartAsync(
