@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # Lets a release be cut from the Actions tab when pushing a tag is not an
+  # option. The tag is created here, from whatever this workflow checked out.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, like 0.4.0 or 0.4.0-beta1"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -21,16 +29,42 @@ jobs:
       - name: Validate tag and derive version
         shell: pwsh
         run: |
-          $tag = '${{ github.ref_name }}'.TrimStart('v')
-          if ($tag -match '^(\d+\.\d+\.\d+)(-[0-9A-Za-z][0-9A-Za-z.]*)?$') {
+          $tag = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            '${{ inputs.version }}'.Trim()
+          }
+          else {
+            '${{ github.ref_name }}'
+          }
+          if (-not $tag.StartsWith('v')) {
+            $tag = "v$tag"
+          }
+
+          if ($tag.Substring(1) -match '^(\d+\.\d+\.\d+)(-[0-9A-Za-z][0-9A-Za-z.]*)?$') {
             # Assembly and installer versions stay strictly numeric; the suffix only
             # marks the release as a prerelease for the beta update channel.
             $prerelease = if ($Matches.Count -gt 2) { 'true' } else { 'false' }
+            "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
             "VERSION=$($Matches[1])" | Out-File -FilePath $env:GITHUB_ENV -Append
             "PRERELEASE=$prerelease" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
           else {
-            throw "Release tags must look like v1.2.3 or v1.2.3-beta1."
+            throw "Release versions must look like v1.2.3 or v1.2.3-beta1."
+          }
+
+      - name: Create tag
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          if (git ls-remote --tags origin "refs/tags/$env:TAG") {
+            throw "$env:TAG already exists. Pick a version that has not been released."
+          }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a $env:TAG -m "Muted $env:VERSION"
+          git push origin $env:TAG
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not push $env:TAG."
           }
 
       - name: Install Inno Setup
@@ -47,13 +81,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $arguments = @(
-            'release', 'create', '${{ github.ref_name }}',
+            'release', 'create', $env:TAG,
             "artifacts/Muted-Setup-$env:VERSION.exe",
             "artifacts/Muted-Setup-$env:VERSION.exe.sha256",
             "artifacts/Muted-win-x64.zip",
             '--verify-tag',
             '--generate-notes',
-            '--title', "Muted ${{ github.ref_name }}"
+            '--title', "Muted $env:VERSION"
           )
           if ($env:PRERELEASE -eq 'true') {
             $arguments += '--prerelease'
