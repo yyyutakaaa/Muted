@@ -42,9 +42,41 @@ user mode.
   hebben, maakt de driftcorrector een frame incidenteel 479 of 481 samples
   lang via lineaire interpolatie.
 
+## Verwerkingsketen
+
+Per frame van 480 samples, in deze volgorde:
+
+```text
+inputgain → high-pass (optioneel) → dry-vertraging ∥ RNNoise
+  → dry/wet-menging → voice gate → automatisch niveau (optioneel)
+  → outputgain → limiter → mute → driftcorrectie → kabel
+```
+
+- De high-pass is een tweede-orde Butterworth vóór de vertraging, zodat dry en
+  wet dezelfde filtering krijgen. Denormals worden per frame weggeschreven.
+- Het automatische niveau meet RMS en past alleen aan wanneer RNNoise spraak
+  meldt; de gain loopt binnen het frame op naar de nieuwe waarde, zonder zipper.
+- De limiter bepaalt eerst de piek van het hele frame en daarmee de benodigde
+  gain, dus het plafond van 0,97 wordt nooit overschreden. Een per-sample
+  veiligheid dekt de aanlooptijd van 1,5 ms af.
+- De reductiemeting vergelijkt de RMS voor en na RNNoise; dat is wat de UI als
+  "noise removed" toont.
+- Een optioneel tweede renderpad stuurt hetzelfde frame naar een monitoruitgang.
+  Dat pad heeft zijn eigen klok en trimt zijn eigen backlog; valt het weg, dan
+  blijft de kabel gewoon doorlopen en meldt de engine alleen `MonitorFaulted`.
+
 Er worden in de capturecallback en per DSP-frame geen managed objecten
-gealloceerd. De UI leest alleen atomaire metingen op 10 Hz en pauzeert die timer
-wanneer het venster niet zichtbaar is.
+gealloceerd. De UI leest alleen atomaire metingen op 30 Hz en pauzeert die timer
+wanneer geen venster zichtbaar is. De golfvorm in de UI leest een aparte
+ringbuffer met één piekwaarde per frame.
+
+## Globale sneltoetsen
+
+`RegisterHotKey` ziet alleen keydown, terwijl push-to-talk ook keyup nodig
+heeft. Daarom gebruikt Muted een `WH_KEYBOARD_LL`-hook op de UI-thread, die
+alleen wordt geïnstalleerd zodra er een toets is toegewezen. De hook geeft
+iedere toets door aan de rest van Windows, zodat een spel of gesprek de toets
+gewoon blijft zien.
 
 ## Productiepad zonder externe kabel
 

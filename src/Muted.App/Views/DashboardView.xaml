@@ -1,0 +1,373 @@
+<UserControl x:Class="Muted.App.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Muted.App.Controls"
+             Foreground="{StaticResource TextBrush}">
+    <StackPanel>
+        <!-- ===================== Hero ===================== -->
+        <Grid Margin="0,14,0,22">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="1.05*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                <TextBlock FontFamily="Segoe UI Variable Display, Segoe UI"
+                           FontSize="34"
+                           FontWeight="SemiBold">
+                    <Run Text="Clean mic. " /><Run Text="Clear voice." Foreground="{StaticResource AccentBrush}" />
+                </TextBlock>
+                <TextBlock Margin="0,12,24,0"
+                           FontSize="14"
+                           LineHeight="23"
+                           TextWrapping="Wrap"
+                           MaxWidth="440"
+                           HorizontalAlignment="Left"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           Text="Muted runs your microphone through RNNoise locally, filtering out fan noise, mic hiss, and keyboard clatter before it reaches Discord, Teams, or your game." />
+
+                <Border Margin="0,18,0,0"
+                        HorizontalAlignment="Left"
+                        Style="{StaticResource InsetCardStyle}"
+                        Padding="16,10">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="8" Height="8" VerticalAlignment="Center">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Margin="10,0,0,0"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding StatusText}" />
+                        <Rectangle Width="1" Height="16" Margin="14,0" Fill="{StaticResource BorderBrush}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Style="{StaticResource CaptionStyle}"
+                                   Text="{Binding SuppressionStatusText}" />
+                        <Rectangle Width="1" Height="16" Margin="14,0" Fill="{StaticResource BorderBrush}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Style="{StaticResource CaptionStyle}"
+                                   Text="{Binding MuteStatusText}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- The waveform is fed by the engine, so it shows the real signal. -->
+            <controls:LiveWaveform Grid.Column="1"
+                                   Height="168"
+                                   VerticalAlignment="Center"
+                                   Scope="{Binding Scope}"
+                                   IsActive="{Binding IsRunning}"
+                                   VoiceProbability="{Binding VoiceProbability}" />
+        </Grid>
+
+        <!-- ===================== Onboarding ===================== -->
+        <Border Margin="0,0,0,16"
+                Padding="20,18"
+                CornerRadius="16"
+                Background="{StaticResource WarningSurfaceBrush}"
+                BorderBrush="{StaticResource WarningBrush}"
+                BorderThickness="1"
+                Visibility="{Binding NeedsVirtualCableSetup, Converter={StaticResource BoolToVisibility}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           FontFamily="Segoe MDL2 Assets"
+                           FontSize="22"
+                           VerticalAlignment="Center"
+                           Foreground="{StaticResource WarningBrush}"
+                           Text="&#xE7BA;" />
+                <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
+                    <TextBlock FontSize="15" FontWeight="SemiBold" Text="One step left: install a virtual audio cable" />
+                    <TextBlock Margin="0,4,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="Windows only lets apps publish a new microphone through a signed driver, so Muted sends your filtered voice into a cable instead. Install VB-CABLE, restart if asked, then pick CABLE Input below." />
+                </StackPanel>
+                <Button Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Command="{Binding OpenCableDownloadCommand}"
+                        Content="Get VB-CABLE"
+                        AutomationProperties.Name="Download VB-CABLE" />
+            </Grid>
+        </Border>
+
+        <!-- ===================== Pipeline ===================== -->
+        <Border Style="{StaticResource CardStyle}" Padding="22,18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Viewbox Grid.Column="0"
+                         StretchDirection="DownOnly"
+                         HorizontalAlignment="Left"
+                         VerticalAlignment="Center"
+                         Margin="0,0,16,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource StageCircleStyle}">
+                                <TextBlock Style="{StaticResource StageGlyphStyle}"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           Text="&#xE720;" />
+                            </Border>
+                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Microphone" />
+                                <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Input" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                            <Line Style="{StaticResource StageLineStyle}" />
+                            <Ellipse Style="{StaticResource StageLinkDotStyle}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource StageCircleStyle}">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Rectangle Width="3" Height="8" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                                    <Rectangle Width="3" Height="15" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" Margin="2.5,0,0,0" VerticalAlignment="Center" />
+                                    <Rectangle Width="3" Height="20" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" Margin="2.5,0,0,0" VerticalAlignment="Center" />
+                                    <Rectangle Width="3" Height="12" RadiusX="1.5" RadiusY="1.5" Fill="{StaticResource AccentBrush}" Margin="2.5,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock FontSize="14" FontWeight="SemiBold" Text="RNNoise" />
+                                <TextBlock Margin="0,2,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           Text="{Binding SuppressionStatusText}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                            <Line Style="{StaticResource StageLineStyle}" />
+                            <Ellipse Style="{StaticResource StageLinkDotStyle}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource StageCircleStyle}">
+                                <Path Stroke="{StaticResource SuccessBrush}"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Data="M0,8 L5,8 L8,2 L12,14 L15,8 L20,8" />
+                            </Border>
+                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Processed" />
+                                <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Clean audio" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
+                            <Line Style="{StaticResource StageLineStyle}" />
+                            <Ellipse Style="{StaticResource StageLinkDotStyle}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource StageCircleStyle}">
+                                <TextBlock Style="{StaticResource StageGlyphStyle}"
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Text="&#xE767;" />
+                            </Border>
+                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock FontSize="14" FontWeight="SemiBold" Text="Virtual Cable" />
+                                <TextBlock Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" Text="Output" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Viewbox>
+
+                <Border Grid.Column="1" Style="{StaticResource InsetCardStyle}" VerticalAlignment="Center" Padding="16,10">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Active profile" />
+                        <TextBlock Margin="0,3,0,0"
+                                   FontSize="14"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding ActiveProfileName}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ===================== Devices and levels ===================== -->
+        <Grid Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.35*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource CardStyle}" Padding="24,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource GlyphStyle}" Text="&#xE720;" />
+                        <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Devices" />
+                    </StackPanel>
+
+                    <TextBlock Margin="0,18,0,8"
+                               Style="{StaticResource SettingRowLabelStyle}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Microphone" />
+                    <ComboBox ItemsSource="{Binding InputDevices}"
+                              SelectedItem="{Binding SelectedInput}"
+                              DisplayMemberPath="DisplayName"
+                              IsEnabled="{Binding CanSelectInput}"
+                              AutomationProperties.Name="Microphone input" />
+                    <TextBlock Margin="0,6,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               Text="Muted follows the Windows default microphone."
+                               Visibility="{Binding FollowDefaultInput, Converter={StaticResource BoolToVisibility}}" />
+
+                    <Grid Margin="0,16,0,6">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Input level" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" Text="{Binding InputLevelDb}" />
+                    </Grid>
+                    <controls:LevelMeter Height="24"
+                                         ShowScale="True"
+                                         Level="{Binding InputLevel, Mode=OneWay}"
+                                         AutomationProperties.Name="Input level meter" />
+
+                    <TextBlock Margin="0,18,0,8"
+                               Style="{StaticResource SettingRowLabelStyle}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Virtual cable output" />
+                    <ComboBox ItemsSource="{Binding OutputDevices}"
+                              SelectedItem="{Binding SelectedOutput}"
+                              DisplayMemberPath="DisplayName"
+                              IsEnabled="{Binding IsStopped}"
+                              AutomationProperties.Name="Virtual cable output" />
+
+                    <Grid Margin="0,16,0,6">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Output level" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" Text="{Binding OutputLevelDb}" />
+                    </Grid>
+                    <controls:LevelMeter Height="24"
+                                         ShowScale="True"
+                                         Level="{Binding OutputLevel, Mode=OneWay}"
+                                         AutomationProperties.Name="Output level meter" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="24,20">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource GlyphStyle}" Text="&#xE9D9;" />
+                        <TextBlock Style="{StaticResource ColumnHeaderTextStyle}" Text="Live" />
+                    </StackPanel>
+
+                    <!-- Voice activity, straight from RNNoise's own VAD. -->
+                    <Grid Margin="0,18,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="9" Height="9" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource BorderStrongBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsVoiceDetected}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <TextBlock Margin="9,0,0,0"
+                                       Style="{StaticResource SettingRowLabelStyle}"
+                                       Text="Voice detected" />
+                        </StackPanel>
+                    </Grid>
+                    <ProgressBar Margin="0,10,0,0"
+                                 Style="{StaticResource MeterStyle}"
+                                 Height="6"
+                                 Maximum="1"
+                                 Value="{Binding VoiceProbability, Mode=OneWay}"
+                                 Foreground="{StaticResource AccentBrush}" />
+
+                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                    <Grid>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Noise removed" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}"
+                                   Foreground="{StaticResource SuccessBrush}"
+                                   Text="{Binding ReductionText}" />
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Pipeline" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}"
+                                   FontSize="12"
+                                   Text="{Binding HealthText}" />
+                    </Grid>
+                    <Grid Margin="0,12,0,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Stability" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}"
+                                   FontSize="12"
+                                   Text="{Binding DropoutText}" />
+                    </Grid>
+
+                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                    <!-- Hold to hear the raw microphone, release to hear RNNoise again. -->
+                    <Button x:Name="BypassButton"
+                            Style="{StaticResource TextButtonStyle}"
+                            Padding="14,10"
+                            PreviewMouseLeftButtonDown="BypassButton_OnPressed"
+                            PreviewMouseLeftButtonUp="BypassButton_OnReleased"
+                            MouseLeave="BypassButton_OnReleased"
+                            IsEnabled="{Binding IsRunning}"
+                            ToolTip="Hold to bypass RNNoise and hear the raw microphone"
+                            AutomationProperties.Name="Hold to compare with the raw microphone">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" FontSize="13" VerticalAlignment="Center" Text="&#xE8AB;" />
+                            <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Text="Hold to A/B compare" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Margin="0,8,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="Holding this sends the unfiltered microphone through, so you can hear exactly what RNNoise takes away." />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ===================== Error ===================== -->
+        <Border Margin="0,16,0,0"
+                Padding="14"
+                CornerRadius="12"
+                Background="{StaticResource DangerSurfaceBrush}"
+                BorderBrush="{StaticResource DangerBorderBrush}"
+                BorderThickness="1"
+                Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Foreground="{StaticResource DangerBrush}"
+                       TextWrapping="Wrap"
+                       Text="{Binding ErrorMessage}" />
+        </Border>
+    </StackPanel>
+</UserControl>

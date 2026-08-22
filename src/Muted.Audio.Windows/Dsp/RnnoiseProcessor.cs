@@ -18,7 +18,7 @@ public sealed class RnnoiseProcessor : IDisposable
         if (FrameSize != ExpectedFrameSize)
         {
             throw new NotSupportedException(
-                $"Deze RNNoise-build gebruikt {FrameSize} samples per frame; Muted verwacht {ExpectedFrameSize}.");
+                $"This RNNoise build uses {FrameSize} samples per frame; Muted expects {ExpectedFrameSize}.");
         }
 
         _state = RnnoiseNative.rnnoise_create(IntPtr.Zero);
@@ -39,7 +39,7 @@ public sealed class RnnoiseProcessor : IDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         if (input.Length != FrameSize || output.Length < FrameSize)
         {
-            throw new ArgumentException($"RNNoise vereist exact {FrameSize} input- en outputsamples.");
+            throw new ArgumentException($"RNNoise requires exactly {FrameSize} input and output samples.");
         }
 
         for (var index = 0; index < FrameSize; index++)

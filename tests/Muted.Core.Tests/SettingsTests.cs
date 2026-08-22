@@ -1,3 +1,4 @@
+using Muted.Core.Audio;
 using Muted.Core.Settings;
 
 namespace Muted.Core.Tests;
@@ -81,6 +82,129 @@ public sealed class SettingsTests
         Assert.Equal(0.99f, profile.VoiceThreshold);
         Assert.Equal(0, profile.VoiceHoldMilliseconds);
         Assert.Equal("same", normalized.ActiveProfileId);
+    }
+
+    [Fact]
+    public void Normalize_ClampsTheProcessingChain()
+    {
+        var settings = new AppSettings
+        {
+            InputGain = 99,
+            OutputGain = 0,
+            HighPassFrequency = 5_000,
+            AutoGainTargetDb = 40,
+            MonitorVolume = 3,
+            Theme = (AppTheme)42,
+            UpdateChannel = (UpdateChannel)9
+        };
+
+        var normalized = settings.Normalize();
+
+        Assert.Equal(4f, normalized.InputGain);
+        Assert.Equal(0.25f, normalized.OutputGain);
+        Assert.Equal(200f, normalized.HighPassFrequency);
+        Assert.Equal(-6f, normalized.AutoGainTargetDb);
+        Assert.Equal(1f, normalized.MonitorVolume);
+        Assert.Equal(AppTheme.Dark, normalized.Theme);
+        Assert.Equal(UpdateChannel.Stable, normalized.UpdateChannel);
+    }
+
+    [Fact]
+    public void Normalize_CarriesTheProcessingChainIntoTheFirstProfile()
+    {
+        var settings = new AppSettings
+        {
+            InputGain = 2f,
+            HighPassEnabled = true,
+            HighPassFrequency = 120f,
+            LimiterEnabled = false,
+            AutoGainEnabled = true,
+            AutoGainTargetDb = -12f
+        };
+
+        var profile = settings.Normalize().Profiles[0];
+
+        Assert.Equal(2f, profile.InputGain);
+        Assert.True(profile.HighPassEnabled);
+        Assert.Equal(120f, profile.HighPassFrequency);
+        Assert.False(profile.LimiterEnabled);
+        Assert.True(profile.AutoGainEnabled);
+        Assert.Equal(-12f, profile.AutoGainTargetDb);
+    }
+
+    [Fact]
+    public void Normalize_FillsInEveryShortcut()
+    {
+        var settings = new AppSettings
+        {
+            Hotkeys =
+            [
+                new HotkeyBinding
+                {
+                    Action = HotkeyAction.PushToTalk,
+                    VirtualKey = 118,
+                    Modifiers = HotkeyModifiers.Control,
+                    Enabled = true
+                }
+            ]
+        };
+
+        var normalized = settings.Normalize();
+
+        Assert.Equal(Enum.GetValues<HotkeyAction>().Length, normalized.Hotkeys.Count);
+        var pushToTalk = normalized.Hotkeys.Single(binding => binding.Action == HotkeyAction.PushToTalk);
+        Assert.True(pushToTalk.IsAssigned);
+        Assert.True(pushToTalk.IsHold);
+        Assert.All(
+            normalized.Hotkeys.Where(binding => binding.Action != HotkeyAction.PushToTalk),
+            binding => Assert.False(binding.IsAssigned));
+    }
+
+    [Fact]
+    public void Hotkey_WithoutAKeyCannotBeEnabled()
+    {
+        var binding = new HotkeyBinding
+        {
+            Action = HotkeyAction.ToggleMute,
+            VirtualKey = 0,
+            Enabled = true
+        }.Normalize();
+
+        Assert.False(binding.Enabled);
+        Assert.False(binding.IsAssigned);
+    }
+
+    [Fact]
+    public void Settings_BuildTheirOwnSuppressionAndMonitorOptions()
+    {
+        var settings = new AppSettings
+        {
+            InputGain = 1.5f,
+            HighPassEnabled = true,
+            AutoGainEnabled = true,
+            MonitorEnabled = true,
+            MonitorDeviceId = "headset",
+            MonitorVolume = 0.4f
+        }.Normalize();
+
+        var suppression = settings.ToSuppressionOptions(isMuted: true);
+        var monitor = settings.ToMonitorOptions();
+
+        Assert.Equal(1.5f, suppression.InputGain);
+        Assert.True(suppression.HighPassEnabled);
+        Assert.True(suppression.AutoGainEnabled);
+        Assert.True(suppression.IsMuted);
+        Assert.True(monitor.IsActive);
+        Assert.Equal("headset", monitor.DeviceId);
+        Assert.Equal(0.4f, monitor.Volume);
+    }
+
+    [Fact]
+    public void Monitor_WithoutADeviceIsNotActive()
+    {
+        var monitor = new MonitorOptions(Enabled: true, DeviceId: null).Normalize();
+
+        Assert.False(monitor.IsActive);
     }
 
     [Fact]

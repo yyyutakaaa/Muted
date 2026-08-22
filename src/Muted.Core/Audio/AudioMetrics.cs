@@ -8,7 +8,13 @@ public readonly record struct AudioMetrics(
     double BufferedMilliseconds,
     long DroppedInputSamples,
     long DroppedOutputSamples,
-    long OutputUnderrunSamples)
+    long OutputUnderrunSamples,
+    float InputRms = 0f,
+    float OutputRms = 0f,
+    float NoiseReductionDb = 0f,
+    float LimiterReductionDb = 0f,
+    float AutoGainDb = 0f,
+    bool MonitorActive = false)
 {
     public static AudioMetrics Empty => new();
 }

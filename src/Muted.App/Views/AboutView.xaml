@@ -1,0 +1,87 @@
+<UserControl x:Class="Muted.App.Views.AboutView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Foreground="{StaticResource TextBrush}">
+    <StackPanel>
+        <TextBlock Margin="0,14,0,20" Style="{StaticResource PageTitleStyle}" Text="About" />
+
+        <Border Style="{StaticResource CardStyle}" Padding="22">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Image Width="44" Height="44"
+                           Source="pack://siteoforigin:,,,/icon.ico"
+                           Stretch="Uniform" />
+                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock FontSize="17" FontWeight="SemiBold" Text="Muted" />
+                        <TextBlock x:Name="VersionText" Margin="0,2,0,0" Style="{StaticResource CaptionStyle}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="What it is" />
+                <TextBlock Margin="0,6,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           FontSize="13"
+                           LineHeight="21"
+                           TextWrapping="Wrap"
+                           Text="Muted sits between your microphone and your apps. Everything your mic picks up goes through RNNoise first, a small neural network that learned what a human voice sounds like. Your voice passes through. The fan hum, mic hiss, and keyboard clatter mostly don't. All of this happens on your PC. Nothing is uploaded, nothing is recorded." />
+
+                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="How to set it up" />
+                <TextBlock Margin="0,6,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           FontSize="13"
+                           LineHeight="21"
+                           TextWrapping="Wrap">
+                    <Run Text="1.  Install a virtual audio cable like VB-CABLE, and restart Windows if the installer asks." />
+                    <LineBreak />
+                    <Run Text="2.  On the dashboard, pick your real microphone and the cable's playback side (usually CABLE Input)." />
+                    <LineBreak />
+                    <Run Text="3.  Flip the switch in the sidebar." />
+                    <LineBreak />
+                    <Run Text="4.  In Discord, Teams, or your game, pick the cable's recording side (usually CABLE Output) as your microphone." />
+                </TextBlock>
+
+                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="The processing chain" />
+                <TextBlock Margin="0,6,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           FontSize="13"
+                           LineHeight="21"
+                           TextWrapping="Wrap"
+                           Text="Input gain, then an optional high-pass for rumble, then RNNoise, then the voice gate, then automatic levelling, output gain and a limiter. Every stage is on the Audio page, and the meters on the dashboard show the result." />
+
+                <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="What it cannot do" />
+                <TextBlock Margin="0,6,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           FontSize="13"
+                           LineHeight="21"
+                           TextWrapping="Wrap"
+                           Text="RNNoise suppresses noise, it does not cancel echo. Sound coming back into your mic from speakers needs AEC, or just a headset. Hard keyboard clicks during speech can still partly leak through. That is a limit of the model, not a bug." />
+
+                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                <Grid>
+                    <StackPanel VerticalAlignment="Center" Margin="0,0,150,0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="Support Muted" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   Text="Muted is free and always will be. If it's useful to you, a coffee helps keep it maintained." />
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource TextButtonStyle}"
+                            Padding="16,9"
+                            Click="SupportButton_OnClick"
+                            AutomationProperties.Name="Support Muted on Buy Me a Coffee">
+                        <TextBlock Text="Buy me a coffee" />
+                    </Button>
+                </Grid>
+
+                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                <TextBlock Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Text="Muted is MIT-licensed. Bundled components: RNNoise (BSD-3-Clause) and NAudio (MIT). See THIRD-PARTY-NOTICES.md for details." />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

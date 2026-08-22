@@ -14,8 +14,11 @@ public partial class App : System.Windows.Application
     private SingleInstanceService? _singleInstance;
     private WasapiDeviceCatalog? _deviceCatalog;
     private TrayService? _tray;
+    private GlobalHotkeyService? _hotkeys;
+    private ThemeService? _theme;
     private MainViewModel? _viewModel;
     private MainWindow? _window;
+    private CompactWindow? _compactWindow;
     private FileLog? _log;
     private UpdateCoordinator? _updateCoordinator;
     private int _exitRequested;
@@ -46,6 +49,10 @@ public partial class App : System.Windows.Application
 
             var settingsStore = new JsonSettingsStore();
             var settings = await settingsStore.LoadAsync();
+
+            _theme = new ThemeService(Resources);
+            _theme.Apply(settings.Theme, settings.UseSystemAccentColor);
+
             _updateCoordinator = new UpdateCoordinator(new UpdateService(_log));
             _updateCoordinator.InstallStarted += (_, _) => Dispatcher.BeginInvoke(RequestExit);
             _deviceCatalog = new WasapiDeviceCatalog();
@@ -65,29 +72,22 @@ public partial class App : System.Windows.Application
             _window.StateChanged += OnWindowStateChanged;
             _window.IsVisibleChanged += OnWindowVisibilityChanged;
 
+            _hotkeys = new GlobalHotkeyService(_log);
+            _hotkeys.Triggered += OnHotkeyTriggered;
+            _viewModel.HotkeysChanged += (_, _) => RefreshHotkeys();
+            _viewModel.ShowWindowRequested += (_, _) => Dispatcher.BeginInvoke(ShowMainWindow);
+            RefreshHotkeys();
+
             _tray = new TrayService();
             _tray.OpenRequested += (_, _) => Dispatcher.Invoke(ShowMainWindow);
-            _tray.ToggleRequested += (_, _) => Dispatcher.Invoke(() =>
-            {
-                if (_viewModel.ToggleCommand.CanExecute(null))
-                {
-                    _viewModel.ToggleCommand.Execute(null);
-                }
-            });
-            _tray.MuteRequested += (_, _) => Dispatcher.Invoke(() =>
-            {
-                if (_viewModel.ToggleMuteCommand.CanExecute(null))
-                {
-                    _viewModel.ToggleMuteCommand.Execute(null);
-                }
-            });
-            _tray.SuppressionToggleRequested += (_, _) => Dispatcher.Invoke(() =>
-            {
-                if (_viewModel.ToggleSuppressionCommand.CanExecute(null))
-                {
-                    _viewModel.ToggleSuppressionCommand.Execute(null);
-                }
-            });
+            _tray.ToggleRequested += (_, _) => Dispatcher.Invoke(() => Execute(_viewModel.ToggleCommand));
+            _tray.MuteRequested += (_, _) => Dispatcher.Invoke(() => Execute(_viewModel.ToggleMuteCommand));
+            _tray.SuppressionToggleRequested += (_, _) =>
+                Dispatcher.Invoke(() => Execute(_viewModel.ToggleSuppressionCommand));
+            _tray.MonitorToggleRequested += (_, _) =>
+                Dispatcher.Invoke(() => _viewModel.MonitorEnabled = !_viewModel.MonitorEnabled);
+            _tray.CompactToggleRequested += (_, _) =>
+                Dispatcher.Invoke(() => _viewModel.CompactMode = !_viewModel.CompactMode);
             _tray.ProfileRequested += (_, args) => Dispatcher.Invoke(() =>
                 _ = _viewModel.ApplyProfileAsync(args.ProfileId));
             _tray.DiagnosticsRequested += (_, _) => Dispatcher.Invoke(() =>
@@ -102,7 +102,11 @@ public partial class App : System.Windows.Application
             var commandLineMinimized = eventArgs.Args.Any(argument =>
                 string.Equals(argument, "--minimized", StringComparison.OrdinalIgnoreCase));
             var startMinimized = commandLineMinimized || settings.StartMinimized;
-            if (!startMinimized)
+            if (_viewModel.CompactMode)
+            {
+                ApplyCompactMode(showWindow: !startMinimized);
+            }
+            else if (!startMinimized)
             {
                 _window.Show();
             }
@@ -128,16 +132,44 @@ public partial class App : System.Windows.Application
         }
     }
 
+    private static void Execute(System.Windows.Input.ICommand command)
+    {
+        if (command.CanExecute(null))
+        {
+            command.Execute(null);
+        }
+    }
+
     private async Task CheckForUpdateAsync()
     {
-        if (_updateCoordinator is null)
+        if (_updateCoordinator is null || _viewModel is null)
         {
             return;
         }
 
-        await _updateCoordinator.CheckAndPromptAsync(
+        var result = await _updateCoordinator.CheckAndPromptAsync(
             showNoUpdateMessage: false,
-            _window);
+            _window,
+            _viewModel.SkippedUpdateVersion,
+            _viewModel.UpdateChannel);
+        _viewModel.ReportUpdateStatus(result);
+    }
+
+    private void RefreshHotkeys()
+    {
+        if (_hotkeys is null || _viewModel is null)
+        {
+            return;
+        }
+
+        _hotkeys.Update(_viewModel.GetHotkeyBindings());
+        _viewModel.HotkeysActive = _hotkeys.IsActive;
+    }
+
+    private void OnHotkeyTriggered(object? sender, HotkeyEventArgs eventArgs)
+    {
+        // The hook runs on the UI thread, but a dispatch keeps the callback short.
+        Dispatcher.BeginInvoke(() => _viewModel?.HandleHotkey(eventArgs.Action, eventArgs.IsPressed));
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs eventArgs)
@@ -183,19 +215,94 @@ public partial class App : System.Windows.Application
     }
 
     private void OnWindowVisibilityChanged(object sender, DependencyPropertyChangedEventArgs eventArgs) =>
-        _viewModel?.SetUiVisible(_window?.IsVisible == true);
+        UpdateUiVisibility();
+
+    private void UpdateUiVisibility() =>
+        _viewModel?.SetUiVisible(_window?.IsVisible == true || _compactWindow?.IsVisible == true);
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs eventArgs)
     {
-        if (eventArgs.PropertyName is nameof(MainViewModel.EngineState)
-            or nameof(MainViewModel.IsMuted)
-            or nameof(MainViewModel.SuppressionEnabled)
-            or nameof(MainViewModel.SelectedProfile)
-            or nameof(MainViewModel.ActiveProfileId)
-            or nameof(MainViewModel.Profiles))
+        switch (eventArgs.PropertyName)
         {
-            UpdateTrayState();
+            case nameof(MainViewModel.EngineState):
+            case nameof(MainViewModel.IsMuted):
+            case nameof(MainViewModel.IsEffectivelyMuted):
+            case nameof(MainViewModel.SuppressionEnabled):
+            case nameof(MainViewModel.MonitorEnabled):
+            case nameof(MainViewModel.SelectedProfile):
+            case nameof(MainViewModel.ActiveProfileId):
+            case nameof(MainViewModel.Profiles):
+                UpdateTrayState();
+                break;
+            case nameof(MainViewModel.Theme):
+            case nameof(MainViewModel.UseSystemAccentColor):
+                ApplyTheme();
+                break;
+            case nameof(MainViewModel.CompactMode):
+                UpdateTrayState();
+                ApplyCompactMode(showWindow: true);
+                break;
         }
+    }
+
+    private void ApplyTheme()
+    {
+        if (_theme is null || _viewModel is null)
+        {
+            return;
+        }
+
+        _theme.Apply(_viewModel.Theme, _viewModel.UseSystemAccentColor);
+        _window?.ApplyWindowAppearance();
+        _compactWindow?.ApplyWindowAppearance();
+    }
+
+    /// <summary>Swaps between the full window and the small always-on-top panel.</summary>
+    private void ApplyCompactMode(bool showWindow)
+    {
+        if (_viewModel is null || _window is null)
+        {
+            return;
+        }
+
+        if (_viewModel.CompactMode)
+        {
+            _window.Hide();
+            if (_compactWindow is null)
+            {
+                _compactWindow = new CompactWindow(_viewModel);
+                _compactWindow.HideRequested += (_, _) => _compactWindow?.Hide();
+                _compactWindow.IsVisibleChanged += (_, _) => UpdateUiVisibility();
+                _compactWindow.Closing += OnCompactWindowClosing;
+            }
+
+            if (showWindow)
+            {
+                _compactWindow.Show();
+                _compactWindow.Activate();
+            }
+        }
+        else
+        {
+            _compactWindow?.Hide();
+            if (showWindow)
+            {
+                ShowMainWindow();
+            }
+        }
+
+        UpdateUiVisibility();
+    }
+
+    private void OnCompactWindowClosing(object? sender, CancelEventArgs eventArgs)
+    {
+        if (Volatile.Read(ref _exitRequested) != 0)
+        {
+            return;
+        }
+
+        eventArgs.Cancel = true;
+        _compactWindow?.Hide();
     }
 
     private void UpdateTrayState()
@@ -205,16 +312,26 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        _tray.UpdateState(
+        _tray.UpdateState(new TrayState(
             _viewModel.EngineState,
-            _viewModel.IsMuted,
+            _viewModel.IsEffectivelyMuted,
             _viewModel.SuppressionEnabled,
-            _viewModel.Profiles.ToArray(),
-            _viewModel.ActiveProfileId);
+            _viewModel.MonitorEnabled,
+            _viewModel.CompactMode,
+            _viewModel.ActiveProfileName,
+            _viewModel.ActiveProfileId,
+            _viewModel.Profiles.ToArray()));
     }
 
     private void ShowMainWindow()
     {
+        if (_viewModel?.CompactMode == true && _compactWindow is not null)
+        {
+            _compactWindow.Show();
+            _compactWindow.Activate();
+            return;
+        }
+
         if (_window is null)
         {
             return;
@@ -253,6 +370,15 @@ public partial class App : System.Windows.Application
         }
         finally
         {
+            if (_hotkeys is not null)
+            {
+                _hotkeys.Triggered -= OnHotkeyTriggered;
+                _hotkeys.Dispose();
+                _hotkeys = null;
+            }
+
+            _compactWindow?.Close();
+            _compactWindow = null;
             _tray?.Dispose();
             _tray = null;
             _deviceCatalog?.Dispose();

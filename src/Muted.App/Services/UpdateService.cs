@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Win32;
+using Muted.Core.Settings;
 
 namespace Muted.App.Services;
 
@@ -13,6 +14,8 @@ internal sealed class UpdateService
 {
     private const string LatestReleaseUrl =
         "https://api.github.com/repos/yyyutakaaa/Muted/releases/latest";
+    private const string ReleaseListUrl =
+        "https://api.github.com/repos/yyyutakaaa/Muted/releases?per_page=20";
     private static readonly string[] UninstallKeyNames =
     [
         @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}}_is1",
@@ -28,7 +31,9 @@ internal sealed class UpdateService
         _log = log;
     }
 
-    public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateCheckResult> CheckAsync(
+        UpdateChannel channel = UpdateChannel.Stable,
+        CancellationToken cancellationToken = default)
     {
         var currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0);
         if (!IsInstalledCopy())
@@ -40,25 +45,19 @@ internal sealed class UpdateService
 
         try
         {
-            using var response = await HttpClient.GetAsync(LatestReleaseUrl, cancellationToken)
-                .ConfigureAwait(false);
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            var release = channel == UpdateChannel.Beta
+                ? await FetchNewestReleaseAsync(cancellationToken).ConfigureAwait(false)
+                : await FetchLatestStableReleaseAsync(cancellationToken).ConfigureAwait(false);
+
+            if (release is null)
             {
                 return new UpdateCheckResult(
                     UpdateCheckStatus.Unavailable,
                     "No published Muted release is available yet.");
             }
 
-            response.EnsureSuccessStatusCode();
-            await using var releaseStream = await response.Content
-                .ReadAsStreamAsync(cancellationToken)
-                .ConfigureAwait(false);
-            var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(
-                    releaseStream,
-                    cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-
-            if (release is null || release.Draft || release.Prerelease ||
+            if (release.Draft ||
+                (release.Prerelease && channel != UpdateChannel.Beta) ||
                 !TryParseVersion(release.TagName, out var availableVersion))
             {
                 return new UpdateCheckResult(
@@ -75,9 +74,10 @@ internal sealed class UpdateService
 
             var versionText = availableVersion.ToString(3);
             var installerName = $"Muted-Setup-{versionText}.exe";
-            var checksumName = installerName + ".sha256";
-            var installerAsset = release.Assets?.FirstOrDefault(asset => asset.Name == installerName);
-            var checksumAsset = release.Assets?.FirstOrDefault(asset => asset.Name == checksumName);
+            var installerAsset = FindInstallerAsset(release, installerName);
+            var checksumAsset = installerAsset is null
+                ? null
+                : release.Assets?.FirstOrDefault(asset => asset.Name == installerAsset.Name + ".sha256");
             if (installerAsset is null || checksumAsset is null ||
                 installerAsset.Size <= 0 || installerAsset.Size > MaximumInstallerSize ||
                 checksumAsset.Size <= 0 || checksumAsset.Size > 4096)
@@ -91,13 +91,14 @@ internal sealed class UpdateService
             var update = new AvailableUpdate(
                 currentVersion,
                 availableVersion,
-                installerName,
+                installerAsset.Name,
                 installerAsset.DownloadUrl,
                 installerAsset.Size,
                 checksumAsset.DownloadUrl);
+            var suffix = release.Prerelease ? " (beta)" : string.Empty;
             return new UpdateCheckResult(
                 UpdateCheckStatus.UpdateAvailable,
-                $"Muted {versionText} is available.",
+                $"Muted {versionText}{suffix} is available.",
                 update);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -111,6 +112,67 @@ internal sealed class UpdateService
                 UpdateCheckStatus.Unavailable,
                 "Muted could not check for updates. Check your internet connection and try again.");
         }
+    }
+
+    private async Task<GitHubRelease?> FetchLatestStableReleaseAsync(CancellationToken cancellationToken)
+    {
+        using var response = await HttpClient.GetAsync(LatestReleaseUrl, cancellationToken)
+            .ConfigureAwait(false);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content
+            .ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return await JsonSerializer.DeserializeAsync<GitHubRelease>(
+                stream,
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Highest version across the recent releases, prereleases included.</summary>
+    private async Task<GitHubRelease?> FetchNewestReleaseAsync(CancellationToken cancellationToken)
+    {
+        using var response = await HttpClient.GetAsync(ReleaseListUrl, cancellationToken)
+            .ConfigureAwait(false);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content
+            .ReadAsStreamAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var releases = await JsonSerializer.DeserializeAsync<GitHubRelease[]>(
+                stream,
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        return releases?
+            .Where(release => release is { Draft: false })
+            .Select(release => (Release: release, Parsed: TryParseVersion(release.TagName, out var version), Version: version))
+            .Where(candidate => candidate.Parsed)
+            .OrderByDescending(candidate => candidate.Version)
+            .Select(candidate => candidate.Release)
+            .FirstOrDefault();
+    }
+
+    private static GitHubAsset? FindInstallerAsset(GitHubRelease release, string preferredName)
+    {
+        var assets = release.Assets;
+        if (assets is null)
+        {
+            return null;
+        }
+
+        return assets.FirstOrDefault(asset => asset.Name == preferredName)
+            ?? assets.SingleOrDefault(asset =>
+                asset.Name.StartsWith("Muted-Setup-", StringComparison.Ordinal) &&
+                asset.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
     }
 
     public async Task<bool> DownloadAndStartAsync(
@@ -184,6 +246,13 @@ internal sealed class UpdateService
         if (value?.StartsWith('v') == true)
         {
             value = value[1..];
+        }
+
+        // Prerelease tags such as v0.3.0-beta1 carry the same three numeric parts.
+        var suffixIndex = value?.IndexOf('-') ?? -1;
+        if (suffixIndex > 0)
+        {
+            value = value![..suffixIndex];
         }
 
         var parts = value?.Split('.');

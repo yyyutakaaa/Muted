@@ -21,11 +21,17 @@ jobs:
       - name: Validate tag and derive version
         shell: pwsh
         run: |
-          $version = '${{ github.ref_name }}'.TrimStart('v')
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "Release tags must look like v1.2.3."
+          $tag = '${{ github.ref_name }}'.TrimStart('v')
+          if ($tag -match '^(\d+\.\d+\.\d+)(-[0-9A-Za-z][0-9A-Za-z.]*)?$') {
+            # Assembly and installer versions stay strictly numeric; the suffix only
+            # marks the release as a prerelease for the beta update channel.
+            $prerelease = if ($Matches.Count -gt 2) { 'true' } else { 'false' }
+            "VERSION=$($Matches[1])" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "PRERELEASE=$prerelease" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
-          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          else {
+            throw "Release tags must look like v1.2.3 or v1.2.3-beta1."
+          }
 
       - name: Install Inno Setup
         shell: pwsh
@@ -40,10 +46,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create '${{ github.ref_name }}' `
-            "artifacts/Muted-Setup-$env:VERSION.exe" `
-            "artifacts/Muted-Setup-$env:VERSION.exe.sha256" `
-            "artifacts/Muted-win-x64.zip" `
-            --verify-tag `
-            --generate-notes `
-            --title "Muted $env:VERSION"
+          $arguments = @(
+            'release', 'create', '${{ github.ref_name }}',
+            "artifacts/Muted-Setup-$env:VERSION.exe",
+            "artifacts/Muted-Setup-$env:VERSION.exe.sha256",
+            "artifacts/Muted-win-x64.zip",
+            '--verify-tag',
+            '--generate-notes',
+            '--title', "Muted ${{ github.ref_name }}"
+          )
+          if ($env:PRERELEASE -eq 'true') {
+            $arguments += '--prerelease'
+          }
+          gh @arguments

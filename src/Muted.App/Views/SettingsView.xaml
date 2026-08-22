@@ -1,0 +1,291 @@
+<UserControl x:Class="Muted.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Foreground="{StaticResource TextBrush}">
+    <StackPanel>
+        <TextBlock Margin="0,14,0,20" Style="{StaticResource PageTitleStyle}" Text="Settings" />
+
+        <!-- ===================== Startup and window ===================== -->
+        <Border Style="{StaticResource CardStyle}" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Startup and window" />
+
+                <Grid Margin="0,18,0,0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Start with Windows" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Launch Muted automatically when you sign in." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding StartWithWindows}"
+                              AutomationProperties.Name="Start with Windows" />
+                </Grid>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Start minimized" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Open in the tray instead of showing the window." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding StartMinimized}"
+                              AutomationProperties.Name="Start minimized" />
+                </Grid>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Minimize to tray" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Keep filtering in the background when the window closes." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding MinimizeToTray}"
+                              AutomationProperties.Name="Minimize to tray" />
+                </Grid>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Compact window" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="A small always-on-top panel with just the meter and a mute button." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding CompactMode}"
+                              AutomationProperties.Name="Compact window" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Behaviour ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Behaviour" />
+
+                <Grid Margin="0,18,0,0">
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Follow the default microphone" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="Switch along whenever Windows changes its default input, instead of sticking to one device." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding FollowDefaultInput}"
+                              AutomationProperties.Name="Follow the default microphone" />
+                </Grid>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Reconnect automatically" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="If a device disappears mid-call, keep retrying until it comes back instead of staying silent." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding AutoRecoverDevices}"
+                              AutomationProperties.Name="Reconnect automatically" />
+                </Grid>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Start muted" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Begin every session with the microphone muted." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding StartMuted}"
+                              AutomationProperties.Name="Start muted" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Appearance ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Appearance" />
+
+                <TextBlock Margin="0,18,0,10" Style="{StaticResource SettingRowLabelStyle}" Text="Theme" />
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Style="{StaticResource PillRadioStyle}"
+                                 GroupName="Theme"
+                                 Content="Follow Windows"
+                                 IsChecked="{Binding Theme, Converter={StaticResource EnumToBoolean}, ConverterParameter=System}"
+                                 AutomationProperties.Name="Follow the Windows theme" />
+                    <RadioButton Style="{StaticResource PillRadioStyle}"
+                                 GroupName="Theme"
+                                 Content="Dark"
+                                 IsChecked="{Binding Theme, Converter={StaticResource EnumToBoolean}, ConverterParameter=Dark}"
+                                 AutomationProperties.Name="Dark theme" />
+                    <RadioButton Style="{StaticResource PillRadioStyle}"
+                                 GroupName="Theme"
+                                 Content="Light"
+                                 IsChecked="{Binding Theme, Converter={StaticResource EnumToBoolean}, ConverterParameter=Light}"
+                                 AutomationProperties.Name="Light theme" />
+                </StackPanel>
+
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Use the Windows accent colour" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Match the highlight colour you picked in Windows." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding UseSystemAccentColor}"
+                              AutomationProperties.Name="Use the Windows accent colour" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Profiles ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Audio profiles" />
+                <TextBlock Margin="0,4,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           Text="Save devices and the whole processing chain, then switch from here or the tray." />
+
+                <Grid Margin="0,18,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0"
+                              ItemsSource="{Binding Profiles}"
+                              SelectedItem="{Binding SelectedProfile}"
+                              DisplayMemberPath="Name"
+                              AutomationProperties.Name="Audio profile" />
+                    <Button Grid.Column="1"
+                            Margin="10,0,0,0"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding ApplyProfileCommand}"
+                            Content="Apply" />
+                    <Button Grid.Column="2"
+                            Margin="8,0,0,0"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding UpdateProfileCommand}"
+                            ToolTip="Overwrite this profile with the settings that are live right now"
+                            Content="Overwrite" />
+                    <Button Grid.Column="3"
+                            Margin="8,0,0,0"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding DeleteProfileCommand}"
+                            Content="Delete" />
+                </Grid>
+
+                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             MaxLength="40"
+                             Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="New profile name" />
+                    <Button Grid.Column="1"
+                            Margin="10,0,0,0"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding SaveProfileCommand}"
+                            Content="Save current setup" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Updates ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Updates" />
+
+                <Grid Margin="0,18,0,0">
+                    <StackPanel Margin="0,0,180,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Software updates" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding UpdateStatusText}" />
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding CheckForUpdatesCommand}"
+                            Content="Check for updates"
+                            AutomationProperties.Name="Check for updates" />
+                </Grid>
+
+                <TextBlock Margin="0,18,0,10" Style="{StaticResource SettingRowLabelStyle}" Text="Channel" />
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Style="{StaticResource PillRadioStyle}"
+                                 GroupName="Channel"
+                                 Content="Stable"
+                                 IsChecked="{Binding UpdateChannel, Converter={StaticResource EnumToBoolean}, ConverterParameter=Stable}"
+                                 AutomationProperties.Name="Stable update channel" />
+                    <RadioButton Style="{StaticResource PillRadioStyle}"
+                                 GroupName="Channel"
+                                 Content="Beta"
+                                 IsChecked="{Binding UpdateChannel, Converter={StaticResource EnumToBoolean}, ConverterParameter=Beta}"
+                                 AutomationProperties.Name="Beta update channel" />
+                </StackPanel>
+                <TextBlock Margin="0,10,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Text="Beta also offers prereleases. Installed copies update themselves; portable ZIP copies do not." />
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Maintenance ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22">
+            <StackPanel>
+                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Maintenance" />
+
+                <Grid Margin="0,18,0,0">
+                    <StackPanel Margin="0,0,150,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Settings and logs" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="settings.json and Muted.log both live in your local app data folder." />
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding OpenLogFolderCommand}"
+                            Content="Open folder"
+                            AutomationProperties.Name="Open the Muted data folder" />
+                </Grid>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Grid>
+                    <StackPanel Margin="0,0,150,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Reset everything" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="Puts every setting, profile and shortcut back to its default." />
+                    </StackPanel>
+                    <Button HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding ResetSettingsCommand}"
+                            Content="Reset"
+                            AutomationProperties.Name="Reset all settings" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
