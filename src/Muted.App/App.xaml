@@ -662,11 +662,15 @@
                     <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
                     <DataTrigger.EnterActions>
                         <BeginStoryboard Name="PulseStoryboard">
+                            <!-- This one never stops while Muted runs, so it is capped:
+                                 at 15 frames a second a slow pulse looks identical and
+                                 the compositor is not woken sixty times a second. -->
                             <Storyboard RepeatBehavior="Forever">
                                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                  From="0.35" To="1"
                                                  Duration="0:0:0.9"
-                                                 AutoReverse="True" />
+                                                 AutoReverse="True"
+                                                 Timeline.DesiredFrameRate="15" />
                             </Storyboard>
                         </BeginStoryboard>
                     </DataTrigger.EnterActions>

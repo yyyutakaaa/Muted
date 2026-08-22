@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
@@ -16,11 +17,17 @@ namespace Muted.App.Controls;
 /// A dBFS level meter with peak hold, scale ticks and a clip indicator. A plain
 /// progress bar hides everything that matters between -60 dB and -6 dB.
 /// </summary>
+/// <remarks>
+/// Everything that does not change per frame is cached: the scale is a single
+/// drawing, the gradient and pens are rebuilt only when their inputs change, and
+/// the decay of the peak marker runs on a timer that stops once it is done.
+/// </remarks>
 public sealed class LevelMeter : FrameworkElement
 {
     private const double FloorDecibels = -60d;
     private const double PeakHoldMilliseconds = 900d;
     private const double PeakDecayPerSecond = 0.55d;
+    private const double ClipFlashMilliseconds = 1200d;
 
     public static readonly DependencyProperty LevelProperty = DependencyProperty.Register(
         nameof(Level),
@@ -66,10 +73,40 @@ public sealed class LevelMeter : FrameworkElement
 
     private static readonly double[] TickDecibels = [-48, -36, -24, -18, -12, -6, -3];
 
+    private readonly DispatcherTimer _decayTimer;
+    private DrawingGroup? _scale;
+    private double _scaleWidth;
+    private double _scaleBarHeight;
+    private Color _scaleColor;
+    private Brush? _gradient;
+    private double _gradientWidth;
+    private Color _gradientFill;
+    private Color _gradientWarning;
+    private Color _gradientDanger;
+    private Pen? _peakPen;
+    private Color _peakPenColor;
     private double _peak;
     private long _peakTimestamp;
     private long _clipTimestamp;
     private long _lastRenderTimestamp = Environment.TickCount64;
+
+    public LevelMeter()
+    {
+        // Only runs while the peak marker or the clip dot still has somewhere to go.
+        _decayTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(60)
+        };
+        _decayTimer.Tick += (_, _) => InvalidateVisual();
+        IsVisibleChanged += (_, args) =>
+        {
+            if (args.NewValue is not true)
+            {
+                _decayTimer.Stop();
+            }
+        };
+        Unloaded += (_, _) => _decayTimer.Stop();
+    }
 
     public double Level
     {
@@ -163,41 +200,26 @@ public sealed class LevelMeter : FrameworkElement
         if (filled > 1)
         {
             context.PushClip(new RectangleGeometry(track, radius, radius));
-            context.DrawRectangle(BuildGradient(width), null, new Rect(0, 0, filled, barHeight));
+            context.DrawRectangle(GetGradient(width), null, new Rect(0, 0, filled, barHeight));
             context.Pop();
         }
 
         if (ShowScale)
         {
-            var tickPen = new Pen(TickBrush, 1) { DashStyle = DashStyles.Dot };
-            tickPen.Freeze();
-            var typeface = new Typeface("Segoe UI");
-            foreach (var decibels in TickDecibels)
-            {
-                var x = Math.Round(((decibels - FloorDecibels) / -FloorDecibels) * width) + 0.5;
-                context.DrawLine(tickPen, new Point(x, barHeight + 1), new Point(x, barHeight + 3));
-                var label = new FormattedText(
-                    decibels.ToString("0", CultureInfo.InvariantCulture),
-                    CultureInfo.InvariantCulture,
-                    System.Windows.FlowDirection.LeftToRight,
-                    typeface,
-                    8,
-                    TickBrush,
-                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                context.DrawText(label, new Point(x - (label.Width / 2d), barHeight + 2));
-            }
+            context.DrawDrawing(GetScale(width, barHeight));
         }
 
         if (_peak > 0.002d)
         {
-            var peakBrush = _peak >= 0.9d ? DangerBrush : _peak >= 0.7d ? WarningBrush : FillBrush;
+            var peakColor = ColorOf(
+                _peak >= 0.9d ? DangerBrush : _peak >= 0.7d ? WarningBrush : FillBrush,
+                Colors.MediumAquamarine);
             var peakX = Math.Clamp(Position(_peak) * width, 1.5d, width - 1.5d);
-            var peakPen = new Pen(peakBrush, 2);
-            peakPen.Freeze();
-            context.DrawLine(peakPen, new Point(peakX, 0), new Point(peakX, barHeight));
+            context.DrawLine(GetPeakPen(peakColor), new Point(peakX, 0), new Point(peakX, barHeight));
         }
 
-        if (now - _clipTimestamp < 1200)
+        var clipping = now - _clipTimestamp < ClipFlashMilliseconds;
+        if (clipping)
         {
             context.DrawEllipse(
                 DangerBrush,
@@ -207,12 +229,16 @@ public sealed class LevelMeter : FrameworkElement
                 barHeight / 3d);
         }
 
-        // Peak hold and clip both fade on their own, so keep repainting while they do.
-        if (_peak > level || now - _clipTimestamp < 1200)
+        // The level itself repaints on every change; this only covers the fade-out
+        // after the signal stops moving, and stops as soon as there is nothing left.
+        var needsDecay = _peak > level + 0.001d || clipping;
+        if (needsDecay && IsVisible)
         {
-            Dispatcher.BeginInvoke(
-                System.Windows.Threading.DispatcherPriority.Render,
-                new Action(InvalidateVisual));
+            _decayTimer.Start();
+        }
+        else
+        {
+            _decayTimer.Stop();
         }
     }
 
@@ -220,11 +246,20 @@ public sealed class LevelMeter : FrameworkElement
     /// Absolute mapping across the full track, so the colour at a given position always
     /// means the same level no matter how far the bar is filled.
     /// </summary>
-    private Brush BuildGradient(double width)
+    private Brush GetGradient(double width)
     {
-        var fill = (FillBrush as SolidColorBrush)?.Color ?? Colors.MediumAquamarine;
-        var warning = (WarningBrush as SolidColorBrush)?.Color ?? Colors.Goldenrod;
-        var danger = (DangerBrush as SolidColorBrush)?.Color ?? Colors.IndianRed;
+        var fill = ColorOf(FillBrush, Colors.MediumAquamarine);
+        var warning = ColorOf(WarningBrush, Colors.Goldenrod);
+        var danger = ColorOf(DangerBrush, Colors.IndianRed);
+
+        if (_gradient is not null &&
+            Math.Abs(_gradientWidth - width) < 0.5 &&
+            _gradientFill == fill &&
+            _gradientWarning == warning &&
+            _gradientDanger == danger)
+        {
+            return _gradient;
+        }
 
         var brush = new LinearGradientBrush
         {
@@ -240,6 +275,83 @@ public sealed class LevelMeter : FrameworkElement
             ]
         };
         brush.Freeze();
+
+        _gradient = brush;
+        _gradientWidth = width;
+        _gradientFill = fill;
+        _gradientWarning = warning;
+        _gradientDanger = danger;
         return brush;
     }
+
+    /// <summary>The ticks and their labels never move, so they are drawn once.</summary>
+    /// <remarks>
+    /// Keyed on the tick colour rather than the brush instance: the theme repaints the
+    /// shared brushes in place, so the reference stays the same while the colour changes.
+    /// The drawing gets its own frozen copy, because freezing anything that holds a
+    /// shared brush would freeze that brush too and break every later theme switch.
+    /// </remarks>
+    private Drawing GetScale(double width, double barHeight)
+    {
+        var tickColor = ColorOf(TickBrush, Colors.Gray);
+        if (_scale is not null &&
+            Math.Abs(_scaleWidth - width) < 0.5 &&
+            Math.Abs(_scaleBarHeight - barHeight) < 0.5 &&
+            _scaleColor == tickColor)
+        {
+            return _scale;
+        }
+
+        var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var typeface = new Typeface("Segoe UI");
+        var brush = new SolidColorBrush(tickColor);
+        brush.Freeze();
+        var pen = new Pen(brush, 1) { DashStyle = DashStyles.Dot };
+        pen.Freeze();
+
+        var drawing = new DrawingGroup();
+        using (var scaleContext = drawing.Open())
+        {
+            foreach (var decibels in TickDecibels)
+            {
+                var x = Math.Round(((decibels - FloorDecibels) / -FloorDecibels) * width) + 0.5;
+                scaleContext.DrawLine(pen, new Point(x, barHeight + 1), new Point(x, barHeight + 3));
+                var label = new FormattedText(
+                    decibels.ToString("0", CultureInfo.InvariantCulture),
+                    CultureInfo.InvariantCulture,
+                    System.Windows.FlowDirection.LeftToRight,
+                    typeface,
+                    8,
+                    brush,
+                    pixelsPerDip);
+                scaleContext.DrawText(label, new Point(x - (label.Width / 2d), barHeight + 2));
+            }
+        }
+
+        drawing.Freeze();
+        _scale = drawing;
+        _scaleWidth = width;
+        _scaleBarHeight = barHeight;
+        _scaleColor = tickColor;
+        return drawing;
+    }
+
+    private Pen GetPeakPen(Color color)
+    {
+        if (_peakPen is not null && _peakPenColor == color)
+        {
+            return _peakPen;
+        }
+
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        var pen = new Pen(brush, 2);
+        pen.Freeze();
+        _peakPen = pen;
+        _peakPenColor = color;
+        return pen;
+    }
+
+    private static Color ColorOf(Brush brush, Color fallback) =>
+        (brush as SolidColorBrush)?.Color ?? fallback;
 }
