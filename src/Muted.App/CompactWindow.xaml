@@ -22,29 +22,39 @@
                             UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
 
-    <Border Background="{StaticResource SurfaceBrush}"
+    <Border x:Name="Panel"
+            Background="{StaticResource SurfaceBrush}"
             BorderBrush="{StaticResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="12"
-            Padding="16,14">
+            Padding="16,14"
+            Opacity="0"
+            RenderTransformOrigin="0.5,1">
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="PanelShift" Y="14" />
+        </Border.RenderTransform>
+        <Border.Triggers>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="Panel"
+                                         Storyboard.TargetProperty="Opacity"
+                                         To="1" Duration="0:0:0.26" />
+                        <DoubleAnimation Storyboard.TargetName="PanelShift"
+                                         Storyboard.TargetProperty="Y"
+                                         To="0" Duration="0:0:0.4">
+                            <DoubleAnimation.EasingFunction>
+                                <BackEase EasingMode="EaseOut" Amplitude="0.4" />
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Border.Triggers>
         <StackPanel>
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse Width="8" Height="8" VerticalAlignment="Center">
-                        <Ellipse.Style>
-                            <Style TargetType="Ellipse">
-                                <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding IsRecovering}" Value="True">
-                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Ellipse.Style>
-                    </Ellipse>
+                    <Control Style="{StaticResource StatusDotStyle}" VerticalAlignment="Center" />
                     <TextBlock Margin="9,0,0,0"
                                FontSize="13"
                                FontWeight="SemiBold"

@@ -1,17 +1,18 @@
 <UserControl x:Class="Muted.App.Views.ShortcutsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
              xmlns:controls="clr-namespace:Muted.App.Controls"
              Foreground="{StaticResource TextBrush}">
     <StackPanel>
-        <StackPanel Margin="0,14,0,20">
+        <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Shortcuts" />
             <TextBlock Margin="0,5,0,0"
                        Style="{StaticResource CaptionStyle}"
                        Text="Work anywhere in Windows, including inside a full-screen game. Muted never swallows the key, so it still reaches whatever you are using." />
         </StackPanel>
 
-        <Border Style="{StaticResource CardStyle}" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Padding="22" infrastructure:Reveal.Delay="60">
             <StackPanel>
                 <ItemsControl ItemsSource="{Binding Hotkeys}">
                     <ItemsControl.ItemTemplate>
@@ -99,7 +100,7 @@
             </StackPanel>
         </Border>
 
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22" infrastructure:Reveal.Delay="130">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="How push to talk behaves" />
                 <TextBlock Margin="0,8,0,0"

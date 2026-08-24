@@ -1,9 +1,10 @@
 <UserControl x:Class="Muted.App.Views.DiagnosticsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
              Foreground="{StaticResource TextBrush}">
     <StackPanel>
-        <Grid Margin="0,14,0,20">
+        <Grid Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <StackPanel>
                 <TextBlock Style="{StaticResource PageTitleStyle}" Text="Setup check" />
                 <TextBlock Margin="0,5,0,0"
@@ -24,7 +25,7 @@
             </StackPanel>
         </Grid>
 
-        <Border Style="{StaticResource CardStyle}" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Padding="22" infrastructure:Reveal.Delay="60">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="{Binding DiagnosticStatus}" />
                 <TextBlock Margin="0,5,0,0"
@@ -76,7 +77,8 @@
             </StackPanel>
         </Border>
 
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22" infrastructure:Reveal.Delay="130"
+                Visibility="{Binding AdvancedMode, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="Live pipeline" />
                 <Grid Margin="0,16,0,0">

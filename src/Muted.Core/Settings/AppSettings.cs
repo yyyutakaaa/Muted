@@ -52,6 +52,12 @@ public sealed record AppSettings
     public AppTheme Theme { get; init; } = AppTheme.Dark;
     public bool UseSystemAccentColor { get; init; }
     public bool CompactMode { get; init; }
+
+    /// <summary>
+    /// Reveals the rest of the processing chain and the live numbers. Off by default:
+    /// most people want a microphone that works, not a mixing desk.
+    /// </summary>
+    public bool AdvancedMode { get; init; }
     public UpdateChannel UpdateChannel { get; init; } = UpdateChannel.Stable;
     public string? SkippedUpdateVersion { get; init; }
     public string? ActiveProfileId { get; init; }
@@ -112,24 +118,4 @@ public sealed record AppSettings
             Profiles = profiles
         };
     }
-
-    public SuppressionOptions ToSuppressionOptions(bool isMuted = false) => new(
-        SuppressionEnabled,
-        WetMix,
-        VoiceGateEnabled,
-        VoiceThreshold,
-        VoiceHoldMilliseconds,
-        InputGain,
-        OutputGain,
-        isMuted,
-        HighPassEnabled,
-        HighPassFrequency,
-        LimiterEnabled,
-        AutoGainEnabled,
-        AutoGainTargetDb);
-
-    public MonitorOptions ToMonitorOptions() => new(MonitorEnabled, MonitorDeviceId, MonitorVolume);
-
-    public EchoOptions ToEchoOptions() =>
-        new(EchoCancellationEnabled, EchoReferenceDeviceId, EchoStrength);
 }

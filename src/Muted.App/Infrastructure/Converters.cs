@@ -16,15 +16,6 @@ internal sealed class InverseBoolToVisibilityConverter : IValueConverter
         value is Visibility.Collapsed;
 }
 
-internal sealed class InverseBooleanConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is not true;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        value is not true;
-}
-
 /// <summary>Two-way match against an enum member named by the converter parameter.</summary>
 internal sealed class EnumToBooleanConverter : IValueConverter
 {
@@ -53,22 +44,6 @@ internal sealed class EnumToVisibilityConverter : IValueConverter
         string.Equals(value.ToString(), name, StringComparison.Ordinal)
             ? Visibility.Visible
             : Visibility.Collapsed;
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        Binding.DoNothing;
-}
-
-/// <summary>Maps a 0-1 amplitude onto the same dB scale the level meters draw.</summary>
-internal sealed class DecibelPositionConverter : IValueConverter
-{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        var amplitude = value is double number ? number : 0d;
-        var position = Controls.LevelMeter.Position(amplitude);
-        return parameter is string raw && double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var scale)
-            ? position * scale
-            : position;
-    }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         Binding.DoNothing;
