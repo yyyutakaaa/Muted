@@ -117,12 +117,13 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="22,26,22,24">
+                <!-- LogoBrush, not AccentBrush: the mark stays the brand colour. -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Rectangle Width="4" Height="12" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="22" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="30" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="18" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="10" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="12" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="22" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="30" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="18" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
+                    <Rectangle Width="4" Height="10" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
                 <TextBlock Margin="14,0,0,0"
                            VerticalAlignment="Center"

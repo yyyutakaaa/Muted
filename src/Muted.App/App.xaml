@@ -25,6 +25,11 @@
         <SolidColorBrush x:Key="TextMutedBrush" Color="#9499A8" />
         <SolidColorBrush x:Key="AccentBrush" Color="#8B7CFF" />
         <SolidColorBrush x:Key="AccentSoftBrush" Color="#2A254F" />
+
+        <!-- The brand mark, matching icon.ico. Deliberately not part of the theme:
+             a logo does not change colour because someone picked a light theme or a
+             different Windows accent. ThemeService leaves this one alone. -->
+        <SolidColorBrush x:Key="LogoBrush" Color="#8B7CFF" />
         <SolidColorBrush x:Key="SuccessBrush" Color="#48D6A2" />
         <SolidColorBrush x:Key="WarningBrush" Color="#F2B84B" />
         <SolidColorBrush x:Key="DangerBrush" Color="#FF6B7A" />
