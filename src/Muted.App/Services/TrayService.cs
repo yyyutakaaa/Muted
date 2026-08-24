@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.IO;
 using Muted.Core.Audio;
 using Muted.Core.Settings;
 
@@ -13,8 +14,7 @@ internal sealed class TrayService : IDisposable
     private readonly System.Windows.Forms.ToolStripMenuItem _monitorItem;
     private readonly System.Windows.Forms.ToolStripMenuItem _compactItem;
     private readonly System.Windows.Forms.ToolStripMenuItem _profilesItem;
-    private readonly TrayIconFactory _icons = new();
-    private TrayIconState _currentState = TrayIconState.Stopped;
+    private readonly Icon _appIcon;
 
     public TrayService()
     {
@@ -55,10 +55,11 @@ internal sealed class TrayService : IDisposable
         var exitItem = menu.Items.Add("Quit");
         exitItem.Click += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
 
+        _appIcon = LoadAppIcon();
         _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
             Text = "Muted — RNNoise",
-            Icon = _icons.Get(TrayIconState.Stopped),
+            Icon = _appIcon,
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -113,14 +114,6 @@ internal sealed class TrayService : IDisposable
             AudioEngineState.Faulted => "Muted — audio error",
             _ => "Muted — stopped"
         });
-
-        // The icon itself carries the state, so the tray is readable at a glance.
-        var iconState = TrayIconFactory.StateFor(state.EngineState, state.IsMuted);
-        if (iconState != _currentState)
-        {
-            _currentState = iconState;
-            _notifyIcon.Icon = _icons.Get(iconState);
-        }
     }
 
     private void UpdateProfiles(
@@ -157,7 +150,15 @@ internal sealed class TrayService : IDisposable
     {
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
-        _icons.Dispose();
+        _appIcon.Dispose();
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        var iconPath = Path.Combine(AppContext.BaseDirectory, "icon.ico");
+        return File.Exists(iconPath)
+            ? new Icon(iconPath, 64, 64)
+            : (Icon)SystemIcons.Information.Clone();
     }
 }
 
