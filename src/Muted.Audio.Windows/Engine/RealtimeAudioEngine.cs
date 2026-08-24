@@ -29,10 +29,14 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private MMDevice? _inputDevice;
     private MMDevice? _outputDevice;
     private MMDevice? _monitorDevice;
+    private MMDevice? _referenceDevice;
     private WasapiCapture? _capture;
+    private WasapiLoopbackCapture? _referenceCapture;
     private WasapiOut? _render;
     private WasapiOut? _monitorRender;
     private FloatRingBuffer? _inputBuffer;
+    private FloatRingBuffer? _referenceBuffer;
+    private float[] _referenceScratch = new float[4_096];
     private RealtimeFloatWaveProvider? _outputProvider;
     private RealtimeFloatWaveProvider? _monitorProvider;
     private RnnoiseProcessor? _rnnoise;
@@ -49,6 +53,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private float _noiseReductionDb;
     private float _limiterReductionDb;
     private float _autoGainDb;
+    private float _echoReductionDb;
     private int _faultHandling;
     private long _generation;
     private int _disposed;
@@ -59,6 +64,9 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
     /// <summary>Raised when only the monitor path failed; the main pipeline keeps running.</summary>
     public event EventHandler<Exception>? MonitorFaulted;
+
+    /// <summary>Raised when the echo reference could not be captured; the microphone keeps working.</summary>
+    public event EventHandler<Exception>? EchoFaulted;
 
     public AudioEngineState State => _state;
 
@@ -85,7 +93,9 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 Volatile.Read(ref _noiseReductionDb),
                 Volatile.Read(ref _limiterReductionDb),
                 Volatile.Read(ref _autoGainDb),
-                Volatile.Read(ref _monitorProvider) is not null);
+                Volatile.Read(ref _echoReductionDb),
+                Volatile.Read(ref _monitorProvider) is not null,
+                Volatile.Read(ref _referenceBuffer) is not null);
         }
     }
 
@@ -239,6 +249,57 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
     }
 
+    /// <summary>Starts, stops or re-points the echo reference while the pipeline runs.</summary>
+    public async Task UpdateEchoAsync(EchoOptions echo, CancellationToken cancellationToken = default)
+    {
+        echo = echo.Normalize();
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var current = Volatile.Read(ref _options);
+            if (current is not null)
+            {
+                Volatile.Write(ref _options, current with { Echo = echo });
+            }
+
+            if (_state != AudioEngineState.Running)
+            {
+                return;
+            }
+
+            var deviceChanged = !string.Equals(
+                _referenceDevice?.ID,
+                echo.ReferenceDeviceId,
+                StringComparison.Ordinal);
+            var isRunning = Volatile.Read(ref _referenceBuffer) is not null;
+            if (echo.IsActive && isRunning && !deviceChanged)
+            {
+                return;
+            }
+
+            await Task.Run(
+                    () =>
+                    {
+                        StopReferenceCore();
+                        if (echo.IsActive)
+                        {
+                            StartReferenceCore(echo);
+                        }
+                    },
+                    CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            StopReferenceCore();
+            Raise(EchoFaulted, exception);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
     private void StartCore(
         AudioEngineOptions options,
         long generation,
@@ -320,6 +381,93 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 RaiseMonitorFaulted(exception);
             }
         }
+
+        if (options.Echo?.IsActive == true)
+        {
+            try
+            {
+                StartReferenceCore(options.Echo);
+            }
+            catch (Exception exception)
+            {
+                StopReferenceCore();
+                Raise(EchoFaulted, exception);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Captures what the speakers are playing. Loopback taps the render mix before it
+    /// leaves the machine, so the reference always arrives before its own echo does.
+    /// </summary>
+    private void StartReferenceCore(EchoOptions echo)
+    {
+        var enumerator = _enumerator;
+        if (enumerator is null || string.IsNullOrWhiteSpace(echo.ReferenceDeviceId))
+        {
+            return;
+        }
+
+        _referenceDevice = enumerator.GetDevice(echo.ReferenceDeviceId);
+        var capture = new WasapiLoopbackCapture(_referenceDevice);
+        var format = capture.WaveFormat;
+        if (format.SampleRate != SampleRate)
+        {
+            capture.Dispose();
+            throw new NotSupportedException(
+                $"Echo cancellation needs a 48 kHz output; {_referenceDevice.FriendlyName} runs at " +
+                $"{format.SampleRate / 1000d:0.#} kHz.");
+        }
+
+        if (format.Encoding is not (WaveFormatEncoding.IeeeFloat or WaveFormatEncoding.Pcm) ||
+            (format.Encoding == WaveFormatEncoding.Pcm && format.BitsPerSample != 16))
+        {
+            capture.Dispose();
+            throw new NotSupportedException(
+                $"Echo cancellation cannot read the {format.Encoding} format of " +
+                $"{_referenceDevice.FriendlyName}.");
+        }
+
+        Volatile.Write(ref _referenceBuffer, new FloatRingBuffer(InputCapacitySamples));
+        _referenceCapture = capture;
+        capture.DataAvailable += OnReferenceDataAvailable;
+        capture.RecordingStopped += OnReferenceStopped;
+        capture.StartRecording();
+    }
+
+    private void StopReferenceCore()
+    {
+        Volatile.Write(ref _referenceBuffer, null);
+
+        var capture = _referenceCapture;
+        _referenceCapture = null;
+        if (capture is not null)
+        {
+            try
+            {
+                capture.DataAvailable -= OnReferenceDataAvailable;
+                capture.RecordingStopped -= OnReferenceStopped;
+                capture.StopRecording();
+                capture.Dispose();
+            }
+            catch
+            {
+                // A reference that will not close cleanly must not stall the pipeline.
+            }
+        }
+
+        var device = _referenceDevice;
+        _referenceDevice = null;
+        try
+        {
+            device?.Dispose();
+        }
+        catch
+        {
+            // Same reasoning as above.
+        }
+
+        Volatile.Write(ref _echoReductionDb, 0f);
     }
 
     private void StartMonitorCore(MonitorOptions monitor, int latencyMilliseconds)
@@ -392,6 +540,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         var driftOutput = new float[FrameSize + 1];
         var dryDelay = new SampleDelayLine(RnnoiseProcessor.AlgorithmicDelaySamples);
         var voiceGate = new VoiceGate();
+        var echoCanceller = new EchoCanceller();
+        var referenceFrame = new float[FrameSize];
         var highPass = new HighPassFilter(SampleRate);
         var limiter = new SoftLimiter(SampleRate);
         var autoGain = new AutoGainControl(SampleRate / (float)FrameSize);
@@ -424,6 +574,35 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 }
 
                 var started = Stopwatch.GetTimestamp();
+
+                // Echo first: the reference describes the raw sound in the room, so
+                // subtracting it before anything else keeps the filter's job linear.
+                var echo = Volatile.Read(ref _options)?.Echo;
+                var referenceBuffer = Volatile.Read(ref _referenceBuffer);
+                var echoEnabled = echo?.Enabled == true && referenceBuffer is not null;
+                if (echoEnabled)
+                {
+                    // Trim any backlog: a reference that lags behind describes audio
+                    // older than the echo it has to cancel, and the filter cannot
+                    // reach backwards in time.
+                    var backlog = referenceBuffer!.Count;
+                    if (backlog > FrameSize * 8)
+                    {
+                        referenceBuffer.Discard(backlog - (FrameSize * 2));
+                    }
+
+                    if (referenceBuffer.Count >= FrameSize)
+                    {
+                        referenceBuffer.Read(referenceFrame);
+                    }
+                    else
+                    {
+                        // Nothing playing means no echo to cancel.
+                        referenceFrame.AsSpan().Clear();
+                    }
+                }
+
+                echoCanceller.Process(input, referenceFrame, echoEnabled, echo?.Strength ?? 0f);
                 AudioMath.ApplyGainAndClamp(input, suppression.InputGain);
                 var inputPeak = AudioMath.Peak(input);
                 var inputRms = AudioMath.Rms(input);
@@ -513,6 +692,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 Volatile.Write(ref _noiseReductionDb, smoothedReduction);
                 Volatile.Write(ref _limiterReductionDb, limiter.GainReductionDb);
                 Volatile.Write(ref _autoGainDb, autoGain.CurrentGainDb);
+                Volatile.Write(ref _echoReductionDb, echoCanceller.ErleDb);
                 Scope.Push(outputPeak);
             }
         }
@@ -540,6 +720,83 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         var samples = MemoryMarshal.Cast<byte, float>(eventArgs.Buffer.AsSpan(0, usableBytes));
         buffer.Write(samples);
         _inputReady.Set();
+    }
+
+    /// <summary>Downmixes the loopback to the mono 48 kHz the canceller expects.</summary>
+    private void OnReferenceDataAvailable(object? sender, WaveInEventArgs eventArgs)
+    {
+        if (!ReferenceEquals(sender, _referenceCapture))
+        {
+            return;
+        }
+
+        var buffer = Volatile.Read(ref _referenceBuffer);
+        var format = _referenceCapture?.WaveFormat;
+        if (buffer is null || format is null || eventArgs.BytesRecorded <= 0)
+        {
+            return;
+        }
+
+        var channels = Math.Max(1, format.Channels);
+        var bytesPerSample = format.BitsPerSample / 8;
+        var frames = eventArgs.BytesRecorded / (bytesPerSample * channels);
+        if (frames <= 0)
+        {
+            return;
+        }
+
+        if (_referenceScratch.Length < frames)
+        {
+            _referenceScratch = new float[frames * 2];
+        }
+
+        var source = eventArgs.Buffer.AsSpan(0, frames * bytesPerSample * channels);
+        if (format.Encoding == WaveFormatEncoding.IeeeFloat)
+        {
+            var samples = MemoryMarshal.Cast<byte, float>(source);
+            for (var frame = 0; frame < frames; frame++)
+            {
+                var sum = 0f;
+                for (var channel = 0; channel < channels; channel++)
+                {
+                    sum += samples[(frame * channels) + channel];
+                }
+
+                _referenceScratch[frame] = sum / channels;
+            }
+        }
+        else
+        {
+            var samples = MemoryMarshal.Cast<byte, short>(source);
+            for (var frame = 0; frame < frames; frame++)
+            {
+                var sum = 0f;
+                for (var channel = 0; channel < channels; channel++)
+                {
+                    sum += samples[(frame * channels) + channel] / 32_768f;
+                }
+
+                _referenceScratch[frame] = sum / channels;
+            }
+        }
+
+        buffer.Write(_referenceScratch.AsSpan(0, frames));
+    }
+
+    private void OnReferenceStopped(object? sender, StoppedEventArgs eventArgs)
+    {
+        if (!ReferenceEquals(sender, _referenceCapture))
+        {
+            return;
+        }
+
+        // Losing the reference costs echo cancellation, never the microphone itself.
+        Volatile.Write(ref _referenceBuffer, null);
+        if (eventArgs.Exception is not null &&
+            _state is AudioEngineState.Running or AudioEngineState.Starting)
+        {
+            Raise(EchoFaulted, eventArgs.Exception);
+        }
     }
 
     private void OnCaptureStopped(object? sender, StoppedEventArgs eventArgs)
@@ -669,6 +926,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         TryCleanup(StopMonitorCore);
+        TryCleanup(StopReferenceCore);
 
         var capture = _capture;
         _capture = null;
@@ -773,6 +1031,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         Volatile.Write(ref _noiseReductionDb, 0f);
         Volatile.Write(ref _limiterReductionDb, 0f);
         Volatile.Write(ref _autoGainDb, 0f);
+        Volatile.Write(ref _echoReductionDb, 0f);
 
         return errors switch
         {

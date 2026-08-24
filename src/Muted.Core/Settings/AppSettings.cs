@@ -36,6 +36,9 @@ public sealed record AppSettings
     public bool LimiterEnabled { get; init; } = true;
     public bool AutoGainEnabled { get; init; }
     public float AutoGainTargetDb { get; init; } = -18f;
+    public bool EchoCancellationEnabled { get; init; }
+    public string? EchoReferenceDeviceId { get; init; }
+    public float EchoStrength { get; init; } = 0.5f;
     public bool MonitorEnabled { get; init; }
     public string? MonitorDeviceId { get; init; }
     public float MonitorVolume { get; init; } = 0.6f;
@@ -99,6 +102,7 @@ public sealed record AppSettings
             OutputGain = Math.Clamp(OutputGain, 0.25f, 4f),
             HighPassFrequency = Math.Clamp(HighPassFrequency, 40f, 200f),
             AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f),
+            EchoStrength = Math.Clamp(EchoStrength, 0f, 1f),
             MonitorVolume = Math.Clamp(MonitorVolume, 0f, 1f),
             TargetLatencyMilliseconds = Math.Clamp(TargetLatencyMilliseconds, 20, 100),
             Theme = Enum.IsDefined(Theme) ? Theme : AppTheme.Dark,
@@ -125,4 +129,7 @@ public sealed record AppSettings
         AutoGainTargetDb);
 
     public MonitorOptions ToMonitorOptions() => new(MonitorEnabled, MonitorDeviceId, MonitorVolume);
+
+    public EchoOptions ToEchoOptions() =>
+        new(EchoCancellationEnabled, EchoReferenceDeviceId, EchoStrength);
 }

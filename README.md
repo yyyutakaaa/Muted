@@ -8,6 +8,7 @@ filtered out along the way.
 ```text
 physical microphone
   → WASAPI shared mode (48 kHz mono)
+  → optional echo cancellation, against a loopback of your speakers
   → input gain and optional high-pass
   → RNNoise (480 samples per call, 20 ms delay)
   → optional voice gate
@@ -60,6 +61,10 @@ The hook is only installed once you actually assign a key.
 - exposes a live dry/wet mix with a correctly delayed dry path;
 - can optionally use RNNoise's own VAD to gate silence more aggressively, with
   an adjustable hold time;
+- cancels the echo of your own speakers, so a headset is no longer required:
+  a 200 ms adaptive filter learns the path from your speakers to your
+  microphone and subtracts it, and stops learning while you talk over the
+  other side;
 - adds input and output gain, a high-pass for desk rumble, slow automatic
   levelling, and a limiter that catches peaks instead of clipping them;
 - can send the processed voice to a second output so you hear what the other
@@ -87,10 +92,27 @@ The hook is only installed once you actually assign a key.
   `%LOCALAPPDATA%\Muted\Muted.log`, both reachable from Settings;
 - has no account, no cloud, no telemetry, and records nothing.
 
-RNNoise suppresses noise, it doesn't cancel echo. Sound coming back into your
-mic from your speakers needs AEC, or just a headset. Hard keyboard clicks
-during speech can still partly leak through. That's a limit of the model,
-not a bug.
+Hard keyboard clicks during speech can still partly leak through. That's a
+limit of the model, not a bug.
+
+## Speakers instead of a headset
+
+RNNoise removes noise; it has no idea what your speakers are playing, so on
+its own it cannot stop the other side from hearing themselves. Echo
+cancellation can, and it lives under **Audio**.
+
+Switch it on and pick the output you actually listen to. Muted takes a
+loopback of that device and learns, in about a second of sound, how it
+travels through the room into your microphone, then subtracts it. The tail
+covers 200 ms, which is enough for the render buffer, the speakers and the
+trip through the air. Adaptation stops while you talk over the far end,
+because a filter that adapts to your own voice would subtract that too.
+
+The reference device has to run at 48 kHz; the setup check says so if it
+doesn't. Move your speakers or change their volume and it relearns. What is
+left after the filter, mostly speaker distortion, is ducked by the residual
+strength slider; turn that down if you both sound choppy when talking at
+once.
 
 ## Requirements
 
@@ -181,7 +203,7 @@ Pins, exports, and build details are in
 ## Project layout
 
 ```text
-src/Muted.Core           allocation-free DSP primitives and settings
+src/Muted.Core           allocation-free DSP primitives, FFT, AEC and settings
 src/Muted.Audio.Windows  WASAPI engine, device catalog, and RNNoise wrapper
 src/Muted.App            WPF shell, views, controls, tray, and services
 native/rnnoise           reproducible official native build

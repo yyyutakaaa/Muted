@@ -62,6 +62,55 @@ internal sealed class DiagnosticsRunner(WasapiDeviceCatalog deviceCatalog)
         }
     }
 
+    /// <summary>
+    /// Echo cancellation reads the reference through loopback, which only works at the
+    /// device's own rate, and the canceller runs at 48 kHz.
+    /// </summary>
+    public DiagnosticCheck CheckEchoReference(AudioDeviceInfo? reference, bool enabled)
+    {
+        if (!enabled)
+        {
+            return new DiagnosticCheck(
+                "Echo cancellation",
+                "Switched off. Turn it on under Audio if the other side hears themselves.",
+                DiagnosticSeverity.Passed);
+        }
+
+        if (reference is null)
+        {
+            return new DiagnosticCheck(
+                "Echo cancellation",
+                "No output is selected to listen to, so there is no reference to subtract.",
+                DiagnosticSeverity.Failed);
+        }
+
+        if (WasapiDeviceCatalog.IsLikelyVirtualCable(reference.Name))
+        {
+            return new DiagnosticCheck(
+                "Echo cancellation",
+                $"{reference.Name} is a virtual cable, not something you hear. Pick your speakers.",
+                DiagnosticSeverity.Warning);
+        }
+
+        try
+        {
+            var format = _deviceCatalog.GetMixFormat(reference.Id);
+            return format.SampleRate == 48_000
+                ? new DiagnosticCheck(
+                    "Echo cancellation",
+                    $"Listening to {reference.Name} ({format.DisplayName}).",
+                    DiagnosticSeverity.Passed)
+                : new DiagnosticCheck(
+                    "Echo cancellation",
+                    $"{reference.Name} runs at {format.DisplayName}. Set it to 48 kHz.",
+                    DiagnosticSeverity.Failed);
+        }
+        catch (Exception exception)
+        {
+            return new DiagnosticCheck("Echo cancellation", exception.Message, DiagnosticSeverity.Failed);
+        }
+    }
+
     public DiagnosticCheck CheckRuntime()
     {
         var rnnoisePath = Path.Combine(AppContext.BaseDirectory, "rnnoise.dll");

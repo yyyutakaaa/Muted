@@ -46,7 +46,7 @@
                            FontSize="13"
                            LineHeight="21"
                            TextWrapping="Wrap"
-                           Text="Input gain, then an optional high-pass for rumble, then RNNoise, then the voice gate, then automatic levelling, output gain and a limiter. Every stage is on the Audio page, and the meters on the dashboard show the result." />
+                           Text="Optional echo cancellation first, then input gain, an optional high-pass for rumble, RNNoise, the voice gate, automatic levelling, output gain and a limiter. Every stage is on the Audio page, and the meters on the dashboard show the result." />
 
                 <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="What it cannot do" />
                 <TextBlock Margin="0,6,0,0"
@@ -54,7 +54,7 @@
                            FontSize="13"
                            LineHeight="21"
                            TextWrapping="Wrap"
-                           Text="RNNoise suppresses noise, it does not cancel echo. Sound coming back into your mic from speakers needs AEC, or just a headset. Hard keyboard clicks during speech can still partly leak through. That is a limit of the model, not a bug." />
+                           Text="RNNoise itself only suppresses noise. Sound coming back into your mic from your speakers is handled separately, by the echo cancellation under Audio, which needs a second to learn your room. Hard keyboard clicks during speech can still partly leak through. That is a limit of the model, not a bug." />
 
                 <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
 

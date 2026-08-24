@@ -14,7 +14,9 @@ public readonly record struct AudioMetrics(
     float NoiseReductionDb = 0f,
     float LimiterReductionDb = 0f,
     float AutoGainDb = 0f,
-    bool MonitorActive = false)
+    float EchoReductionDb = 0f,
+    bool MonitorActive = false,
+    bool EchoActive = false)
 {
     public static AudioMetrics Empty => new();
 }

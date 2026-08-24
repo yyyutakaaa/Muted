@@ -86,6 +86,10 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private bool _limiterEnabled = true;
     private bool _autoGainEnabled;
     private double _autoGainTargetDb = -18;
+    private bool _echoEnabled;
+    private double _echoStrength = 0.5;
+    private AudioDeviceInfo? _selectedEchoReference;
+    private string _echoReductionText = "0.0 dB";
     private bool _monitorEnabled;
     private double _monitorVolume = 0.6;
     private int _targetLatencyMilliseconds = 40;
@@ -166,6 +170,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _engine.StateChanged += OnEngineStateChanged;
         _engine.Faulted += OnEngineFaulted;
         _engine.MonitorFaulted += OnMonitorFaulted;
+        _engine.EchoFaulted += OnEchoFaulted;
         _deviceCatalog.DevicesChanged += OnDevicesChanged;
 
         // Background priority: meters may drop a frame, the mouse may not wait for one.
@@ -732,6 +737,69 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
     public string AutoGainTargetText => $"{AutoGainTargetDb:0} dB";
 
+    /// <summary>
+    /// Subtracts what your speakers play out of the microphone, so a headset stops
+    /// being a requirement.
+    /// </summary>
+    public bool EchoCancellationEnabled
+    {
+        get => _echoEnabled;
+        set
+        {
+            if (!SetProperty(ref _echoEnabled, value) || !_initialized)
+            {
+                return;
+            }
+
+            PushEchoOptions();
+            QueueSave();
+        }
+    }
+
+    public AudioDeviceInfo? SelectedEchoReference
+    {
+        get => _selectedEchoReference;
+        set
+        {
+            if (!SetProperty(ref _selectedEchoReference, value) || !_initialized)
+            {
+                return;
+            }
+
+            if (!_isRefreshingDevices)
+            {
+                PushEchoOptions();
+                QueueSave();
+            }
+        }
+    }
+
+    public double EchoStrength
+    {
+        get => _echoStrength;
+        set
+        {
+            if (!SetProperty(ref _echoStrength, Math.Clamp(value, 0, 1)) || !_initialized)
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(EchoStrengthText));
+            PushEchoOptions();
+            QueueSave();
+        }
+    }
+
+    public string EchoStrengthText => EchoStrength <= 0.01
+        ? "off"
+        : $"{EchoStrength * 100:0}%";
+
+    public string EchoReductionText
+    {
+        get => _echoReductionText;
+        private set => SetProperty(ref _echoReductionText, value);
+    }
+
     public bool MonitorEnabled
     {
         get => _monitorEnabled;
@@ -922,7 +990,11 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             ErrorMessage = "Startup setting could not be restored.";
         }
 
-        RefreshDevicesCore(_settings.InputDeviceId, _settings.OutputDeviceId, _settings.MonitorDeviceId);
+        RefreshDevicesCore(
+            _settings.InputDeviceId,
+            _settings.OutputDeviceId,
+            _settings.MonitorDeviceId,
+            _settings.EchoReferenceDeviceId);
         _initialized = true;
 
         if (_settings.WasRunningOnExit)
@@ -969,6 +1041,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _limiterEnabled = _settings.LimiterEnabled;
         _autoGainEnabled = _settings.AutoGainEnabled;
         _autoGainTargetDb = _settings.AutoGainTargetDb;
+        _echoEnabled = _settings.EchoCancellationEnabled;
+        _echoStrength = _settings.EchoStrength;
         _monitorEnabled = _settings.MonitorEnabled;
         _monitorVolume = _settings.MonitorVolume;
         _targetLatencyMilliseconds = _settings.TargetLatencyMilliseconds;
@@ -1009,7 +1083,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             nameof(InputGain), nameof(InputGainText), nameof(OutputGain), nameof(OutputGainText),
             nameof(HighPassEnabled), nameof(HighPassFrequency), nameof(HighPassText),
             nameof(LimiterEnabled), nameof(AutoGainEnabled), nameof(AutoGainTargetDb),
-            nameof(AutoGainTargetText), nameof(MonitorEnabled), nameof(MonitorVolume),
+            nameof(AutoGainTargetText), nameof(EchoCancellationEnabled), nameof(EchoStrength),
+            nameof(EchoStrengthText), nameof(MonitorEnabled), nameof(MonitorVolume),
             nameof(MonitorVolumeText), nameof(TargetLatencyMilliseconds), nameof(LatencyText),
             nameof(IsMuted), nameof(MuteStatusText), nameof(IsEffectivelyMuted),
             nameof(SelectedProfile), nameof(ActiveProfileId), nameof(ActiveProfileName),
@@ -1280,6 +1355,9 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
                 DiagnosticChecks.Add(check);
             }
 
+            DiagnosticChecks.Add(_diagnostics.CheckEchoReference(
+                SelectedEchoReference,
+                EchoCancellationEnabled));
             DiagnosticChecks.Add(_diagnostics.CheckRuntime());
 
             if (HasDevices && IsRoutingReady)
@@ -1403,7 +1481,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         try
         {
             LoadSettings(new AppSettings());
-            RefreshDevicesCore(null, null, null);
+            RefreshDevicesCore(null, null, null, null);
         }
         finally
         {
@@ -1455,7 +1533,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
                 SelectedOutput?.Id,
                 TargetLatencyMilliseconds,
                 BuildSuppressionOptions(),
-                BuildMonitorOptions());
+                BuildMonitorOptions(),
+                BuildEchoOptions());
             await _engine.StartAsync(options);
         }
         catch (DllNotFoundException exception)
@@ -1499,7 +1578,8 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private void RefreshDevicesCore(
         string? preferredInputId,
         string? preferredOutputId,
-        string? preferredMonitorId = null)
+        string? preferredMonitorId = null,
+        string? preferredEchoReferenceId = null)
     {
         var wasRefreshing = _isRefreshingDevices;
         _isRefreshingDevices = true;
@@ -1530,6 +1610,13 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
                 ?? outputs.FirstOrDefault(device => WasapiDeviceCatalog.IsLikelyVirtualCable(device.Name))
                 ?? outputs.FirstOrDefault(device => device.IsDefault)
                 ?? outputs.FirstOrDefault();
+
+            // The reference has to be what you actually listen on, never the cable.
+            var referenceId = preferredEchoReferenceId ?? SelectedEchoReference?.Id;
+            SelectedEchoReference = outputs.FirstOrDefault(device => device.Id == referenceId)
+                ?? outputs.FirstOrDefault(device =>
+                    device.IsDefault && !WasapiDeviceCatalog.IsLikelyVirtualCable(device.Name))
+                ?? outputs.FirstOrDefault(device => !WasapiDeviceCatalog.IsLikelyVirtualCable(device.Name));
 
             var monitorId = preferredMonitorId ?? SelectedMonitor?.Id;
             SelectedMonitor = outputs.FirstOrDefault(device => device.Id == monitorId)
@@ -1673,6 +1760,18 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             QueueSave();
         }, null);
 
+    private void OnEchoFaulted(object? sender, Exception exception) =>
+        _uiContext.Post(_ =>
+        {
+            _log.Write(exception, "Echo cancellation");
+            _echoEnabled = false;
+            OnPropertyChanged(nameof(EchoCancellationEnabled));
+            ErrorMessage = exception is NotSupportedException
+                ? exception.Message
+                : "Echo cancellation stopped because that output could not be captured.";
+            QueueSave();
+        }, null);
+
     private TimeSpan RecoveryDelay() => TimeSpan.FromSeconds(Math.Min(16, 1 << _recoveryAttempt));
 
     private void TriggerRecovery(TimeSpan delay)
@@ -1781,6 +1880,23 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private MonitorOptions BuildMonitorOptions() =>
         new(MonitorEnabled, SelectedMonitor?.Id, (float)MonitorVolume);
 
+    private EchoOptions BuildEchoOptions() =>
+        new(EchoCancellationEnabled, SelectedEchoReference?.Id, (float)EchoStrength);
+
+    private void PushEchoOptions() => _ = PushEchoOptionsAsync();
+
+    private async Task PushEchoOptionsAsync()
+    {
+        try
+        {
+            await _engine.UpdateEchoAsync(BuildEchoOptions());
+        }
+        catch (Exception exception)
+        {
+            _log.Write(exception, "Update echo cancellation");
+        }
+    }
+
     private AppSettings BuildSettings(bool? wasRunning = null) => new()
     {
         InputDeviceId = SelectedInput?.Id,
@@ -1798,6 +1914,9 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         LimiterEnabled = LimiterEnabled,
         AutoGainEnabled = AutoGainEnabled,
         AutoGainTargetDb = (float)AutoGainTargetDb,
+        EchoCancellationEnabled = EchoCancellationEnabled,
+        EchoReferenceDeviceId = SelectedEchoReference?.Id,
+        EchoStrength = (float)EchoStrength,
         MonitorEnabled = MonitorEnabled,
         MonitorDeviceId = SelectedMonitor?.Id,
         MonitorVolume = (float)MonitorVolume,
@@ -1918,6 +2037,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             InputLevelDb = "–∞ dB";
             OutputLevelDb = "–∞ dB";
             ReductionText = "0.0 dB";
+            EchoReductionText = "0.0 dB";
             HealthText = "Idle";
             DropoutText = "No dropouts";
         }
@@ -1941,6 +2061,9 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         InputLevelDb = FormatDecibels(InputLevel);
         OutputLevelDb = FormatDecibels(OutputLevel);
         ReductionText = $"{metrics.NoiseReductionDb:0.0} dB";
+        EchoReductionText = metrics.EchoActive
+            ? $"{metrics.EchoReductionDb:0.0} dB"
+            : "not running";
         HealthText = $"{metrics.BufferedMilliseconds:0} ms buffer · {metrics.ProcessingLoad * 100:0}% load";
 
         var dropped = metrics.DroppedInputSamples + metrics.DroppedOutputSamples;
@@ -1993,6 +2116,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _engine.StateChanged -= OnEngineStateChanged;
         _engine.Faulted -= OnEngineFaulted;
         _engine.MonitorFaulted -= OnMonitorFaulted;
+        _engine.EchoFaulted -= OnEchoFaulted;
         var wasRunning = IsRunning;
         try
         {
