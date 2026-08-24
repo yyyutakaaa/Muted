@@ -5,13 +5,34 @@ public sealed record AudioEngineOptions(
     string? OutputDeviceId,
     int LatencyMilliseconds,
     SuppressionOptions Suppression,
-    MonitorOptions? Monitor = null)
+    MonitorOptions? Monitor = null,
+    EchoOptions? Echo = null)
 {
     public AudioEngineOptions Normalize() => this with
     {
         LatencyMilliseconds = Math.Clamp(LatencyMilliseconds, 20, 100),
         Suppression = Suppression.Normalize(),
-        Monitor = (Monitor ?? MonitorOptions.Disabled).Normalize()
+        Monitor = (Monitor ?? MonitorOptions.Disabled).Normalize(),
+        Echo = (Echo ?? EchoOptions.Disabled).Normalize()
+    };
+}
+
+/// <summary>
+/// Echo cancellation needs a reference: a loopback of whatever the speakers are
+/// playing. Without a device to listen to there is nothing to subtract.
+/// </summary>
+public sealed record EchoOptions(
+    bool Enabled = false,
+    string? ReferenceDeviceId = null,
+    float Strength = 0.5f)
+{
+    public static EchoOptions Disabled { get; } = new();
+
+    public bool IsActive => Enabled && !string.IsNullOrWhiteSpace(ReferenceDeviceId);
+
+    public EchoOptions Normalize() => this with
+    {
+        Strength = Math.Clamp(Strength, 0f, 1f)
     };
 }
 

@@ -224,6 +224,72 @@
             </StackPanel>
         </Border>
 
+        <!-- ===================== Echo ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Echo cancellation" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="Muted listens to what your speakers play and subtracts it from your microphone, so the other side stops hearing themselves. This is what lets you drop the headset. RNNoise cannot do this: it removes noise, and it has no idea what your speakers are doing." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding EchoCancellationEnabled}"
+                              AutomationProperties.Name="Echo cancellation" />
+                </Grid>
+
+                <TextBlock Margin="0,18,0,8"
+                           Style="{StaticResource SettingRowLabelStyle}"
+                           Foreground="{StaticResource TextMutedBrush}"
+                           Text="Listen to" />
+                <ComboBox ItemsSource="{Binding OutputDevices}"
+                          SelectedItem="{Binding SelectedEchoReference}"
+                          DisplayMemberPath="DisplayName"
+                          IsEnabled="{Binding EchoCancellationEnabled}"
+                          AutomationProperties.Name="Echo reference device" />
+                <TextBlock Margin="0,6,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Text="Pick the output you actually hear, not the cable. It has to run at 48 kHz." />
+
+                <Grid Margin="0,18,0,0">
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Residual strength" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="How hard to duck whatever is left over, mostly speaker distortion. Turn it down if the far end sounds choppy when you both talk at once." />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding EchoStrengthText}" />
+                </Grid>
+                <Slider Margin="0,10,0,0"
+                        Minimum="0" Maximum="1"
+                        SmallChange="0.05" LargeChange="0.1"
+                        IsEnabled="{Binding EchoCancellationEnabled}"
+                        Value="{Binding EchoStrength}"
+                        AutomationProperties.Name="Residual echo strength" />
+
+                <Border Margin="0,18,0,0" Style="{StaticResource InsetCardStyle}">
+                    <Grid>
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Echo removed right now" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}"
+                                   Foreground="{StaticResource SuccessBrush}"
+                                   Text="{Binding EchoReductionText}" />
+                    </Grid>
+                </Border>
+                <TextBlock Margin="0,8,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Text="It needs a few seconds of sound coming out of your speakers to learn the room. Move the speakers or change their volume and it learns again." />
+            </StackPanel>
+        </Border>
+
         <!-- ===================== Monitoring ===================== -->
         <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
             <StackPanel>

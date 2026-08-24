@@ -47,9 +47,10 @@ user mode.
 Per frame van 480 samples, in deze volgorde:
 
 ```text
-inputgain → high-pass (optioneel) → dry-vertraging ∥ RNNoise
-  → dry/wet-menging → voice gate → automatisch niveau (optioneel)
-  → outputgain → limiter → mute → driftcorrectie → kabel
+echo-onderdrukking (optioneel) → inputgain → high-pass (optioneel)
+  → dry-vertraging ∥ RNNoise → dry/wet-menging → voice gate
+  → automatisch niveau (optioneel) → outputgain → limiter → mute
+  → driftcorrectie → kabel
 ```
 
 - De high-pass is een tweede-orde Butterworth vóór de vertraging, zodat dry en
@@ -69,6 +70,38 @@ Er worden in de capturecallback en per DSP-frame geen managed objecten
 gealloceerd. De UI leest alleen atomaire metingen op 30 Hz en pauzeert die timer
 wanneer geen venster zichtbaar is. De golfvorm in de UI leest een aparte
 ringbuffer met één piekwaarde per frame.
+
+## Echo-onderdrukking
+
+De referentie is een WASAPI-loopback van het renderendpoint dat de gebruiker
+hoort. Loopback tapt de rendermix af voordat die het apparaat verlaat, dus de
+referentie loopt per definitie voor op zijn eigen echo; een causaal filter is
+daarmee voldoende.
+
+- Het filter is een gepartitioneerd frequentiedomein-adaptief filter: twintig
+  partities van 480 taps, samen 200 ms staart, met overlap-save over een FFT
+  van 1024 punten. Per frame kost dat zes transformaties in plaats van twintig,
+  omdat per frame maar één partitie in het tijddomein wordt teruggesnoeid.
+- De stapgrootte is per bin genormaliseerd op de opgetelde referentievermogens
+  over de hele delaylijn (MDF-normalisatie).
+- Dubbelspraakdetectie: zodra het filter iets waard is, geldt simpelweg dat de
+  microfoon meer bevat dan het filter kan verklaren. Daarvoor is er nog geen
+  model, dus valt het terug op Geigel. Het vertrouwen in het model wordt apart
+  bijgehouden met een traag dalende piek, want de gerapporteerde ERLE stort in
+  op het moment dat je zelf praat, en een detector die dat gelooft gaat juist
+  dan op je eigen stem trainen.
+- Wat het lineaire filter niet modelleert, vooral vervorming van de luidspreker,
+  wordt breedbandig weggeduwd op basis van de verhouding tussen restfout en
+  geschatte echo. Tijdens dubbelspraak domineert je eigen stem die verhouding,
+  dus daar gebeurt niets.
+- Loopback levert niets zolang er niets speelt. De referentiebuffer loopt dan
+  leeg, het filter krijgt stilte, en zonder excitatie adapteert het niet. Bij
+  meer dan tachtig milliseconden achterstand wordt de buffer teruggesnoeid,
+  want een referentie die achterloopt beschrijft audio die ouder is dan de echo
+  die weg moet.
+
+Er is geen FFT in .NET, dus die staat in `Muted.Core.Dsp.Fft`: radix-2,
+in-place, met voorberekende twiddles en zonder allocatie per aanroep.
 
 ## Globale sneltoetsen
 

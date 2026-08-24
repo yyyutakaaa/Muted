@@ -315,6 +315,15 @@
                                    Foreground="{StaticResource SuccessBrush}"
                                    Text="{Binding ReductionText}" />
                     </Grid>
+                    <Grid Margin="0,12,0,0"
+                          Visibility="{Binding EchoCancellationEnabled, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   Text="Echo removed" />
+                        <TextBlock Style="{StaticResource ValueLabelStyle}"
+                                   Foreground="{StaticResource SuccessBrush}"
+                                   Text="{Binding EchoReductionText}" />
+                    </Grid>
                     <Grid Margin="0,12,0,0">
                         <TextBlock Style="{StaticResource SettingRowLabelStyle}"
                                    Foreground="{StaticResource TextMutedBrush}"
