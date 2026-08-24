@@ -175,53 +175,10 @@ public sealed class SettingsTests
     }
 
     [Fact]
-    public void Settings_BuildTheirOwnSuppressionAndMonitorOptions()
-    {
-        var settings = new AppSettings
-        {
-            InputGain = 1.5f,
-            HighPassEnabled = true,
-            AutoGainEnabled = true,
-            MonitorEnabled = true,
-            MonitorDeviceId = "headset",
-            MonitorVolume = 0.4f
-        }.Normalize();
-
-        var suppression = settings.ToSuppressionOptions(isMuted: true);
-        var monitor = settings.ToMonitorOptions();
-
-        Assert.Equal(1.5f, suppression.InputGain);
-        Assert.True(suppression.HighPassEnabled);
-        Assert.True(suppression.AutoGainEnabled);
-        Assert.True(suppression.IsMuted);
-        Assert.True(monitor.IsActive);
-        Assert.Equal("headset", monitor.DeviceId);
-        Assert.Equal(0.4f, monitor.Volume);
-    }
-
-    [Fact]
     public void Monitor_WithoutADeviceIsNotActive()
     {
         var monitor = new MonitorOptions(Enabled: true, DeviceId: null).Normalize();
 
         Assert.False(monitor.IsActive);
-    }
-
-    [Fact]
-    public void Profile_CreatesMutedSuppressionOptions()
-    {
-        var profile = new AudioProfile
-        {
-            SuppressionEnabled = false,
-            WetMix = 0.4f,
-            VoiceGateEnabled = false
-        };
-
-        var options = profile.ToSuppressionOptions(isMuted: true);
-
-        Assert.False(options.Enabled);
-        Assert.Equal(0.4f, options.WetMix);
-        Assert.False(options.VoiceGateEnabled);
-        Assert.True(options.IsMuted);
     }
 }

@@ -7,10 +7,8 @@
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         <infrastructure:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
-        <infrastructure:InverseBooleanConverter x:Key="InverseBoolean" />
         <infrastructure:EnumToBooleanConverter x:Key="EnumToBoolean" />
         <infrastructure:EnumToVisibilityConverter x:Key="EnumToVisibility" />
-        <infrastructure:DecibelPositionConverter x:Key="DecibelPosition" />
 
         <!-- Every colour lives here once. ThemeService repaints these brushes in
              place when the theme or accent changes, so StaticResource stays valid. -->
@@ -43,6 +41,52 @@
 
         <sys:Double x:Key="ToggleThumbTravel">18</sys:Double>
 
+        <Style TargetType="ToolTip">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MaxWidth" Value="280" />
+            <Setter Property="HasDropShadow" Value="False" />
+            <Setter Property="Placement" Value="Bottom" />
+            <Setter Property="VerticalOffset" Value="6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border x:Name="TipSurface"
+                                Background="{StaticResource SurfaceRaisedBrush}"
+                                BorderBrush="{StaticResource BorderStrongBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="11,8"
+                                Opacity="0"
+                                RenderTransformOrigin="0.5,0">
+                            <Border.RenderTransform>
+                                <TranslateTransform x:Name="TipShift" Y="-4" />
+                            </Border.RenderTransform>
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="TipSurface"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="0:0:0.14" />
+                                        <DoubleAnimation Storyboard.TargetName="TipShift"
+                                                         Storyboard.TargetProperty="Y"
+                                                         To="0" Duration="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut" />
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style TargetType="Window">
             <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI" />
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
@@ -64,12 +108,6 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="14,12" />
-        </Style>
-
-        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
         </Style>
 
         <Style x:Key="PageTitleStyle" TargetType="TextBlock">
@@ -415,6 +453,19 @@
                                     Background="{StaticResource AccentBrush}"
                                     CornerRadius="12"
                                     Opacity="0" />
+                            <Ellipse x:Name="ThumbGlow"
+                                     Width="18" Height="18" Margin="3"
+                                     HorizontalAlignment="Left"
+                                     Fill="{StaticResource AccentBrush}"
+                                     Opacity="0"
+                                     RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <TransformGroup>
+                                        <ScaleTransform x:Name="GlowScale" ScaleX="1" ScaleY="1" />
+                                        <TranslateTransform x:Name="GlowShift" X="0" />
+                                    </TransformGroup>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
                             <Ellipse x:Name="Thumb"
                                      Width="18" Height="18" Margin="3"
                                      HorizontalAlignment="Left"
@@ -433,15 +484,44 @@
                                             <DoubleAnimation Storyboard.TargetName="ThumbShift"
                                                              Storyboard.TargetProperty="X"
                                                              To="{StaticResource ToggleThumbTravel}"
-                                                             Duration="0:0:0.16">
+                                                             Duration="0:0:0.28">
                                                 <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut" />
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.9" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="GlowShift"
+                                                             Storyboard.TargetProperty="X"
+                                                             To="{StaticResource ToggleThumbTravel}"
+                                                             Duration="0:0:0.28">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.9" />
                                                 </DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                             <DoubleAnimation Storyboard.TargetName="TrackOn"
                                                              Storyboard.TargetProperty="Opacity"
                                                              To="1"
                                                              Duration="0:0:0.16" />
+                                            <!-- A ring blooms out of the thumb and is gone again. -->
+                                            <DoubleAnimation Storyboard.TargetName="ThumbGlow"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="0.5" To="0"
+                                                             Duration="0:0:0.45" />
+                                            <DoubleAnimation Storyboard.TargetName="GlowScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             From="1" To="2.4"
+                                                             Duration="0:0:0.45">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="GlowScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             From="1" To="2.4"
+                                                             Duration="0:0:0.45">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -451,9 +531,17 @@
                                             <DoubleAnimation Storyboard.TargetName="ThumbShift"
                                                              Storyboard.TargetProperty="X"
                                                              To="0"
-                                                             Duration="0:0:0.16">
+                                                             Duration="0:0:0.24">
                                                 <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut" />
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.5" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="GlowShift"
+                                                             Storyboard.TargetProperty="X"
+                                                             To="0"
+                                                             Duration="0:0:0.24">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.5" />
                                                 </DoubleAnimation.EasingFunction>
                                             </DoubleAnimation>
                                             <DoubleAnimation Storyboard.TargetName="TrackOn"
@@ -488,15 +576,51 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="10"
-                                Padding="{TemplateBinding Padding}">
+                                Padding="{TemplateBinding Padding}"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="ButtonScale" />
+                            </Border.RenderTransform>
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource SurfaceHoverBrush}" />
                             </Trigger>
+                            <!-- A button that gives way under the cursor feels like a button. -->
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.75" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="0.96" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="0.96" Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             To="1" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="ButtonScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="0.6" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
@@ -553,7 +677,12 @@
                                         Margin="-9,0,6,0"
                                         HorizontalAlignment="Left"
                                         Background="{StaticResource AccentBrush}"
-                                        Opacity="0" />
+                                        Opacity="0"
+                                        RenderTransformOrigin="0.5,0.5">
+                                    <Border.RenderTransform>
+                                        <ScaleTransform x:Name="NavMarkerScale" ScaleY="0.2" />
+                                    </Border.RenderTransform>
+                                </Border>
                                 <TextBlock x:Name="NavGlyph"
                                            FontFamily="Segoe MDL2 Assets"
                                            FontSize="16"
@@ -574,9 +703,36 @@
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="NavSurface" Property="Background" Value="{StaticResource SurfaceRaisedBrush}" />
-                                <Setter TargetName="NavMarker" Property="Opacity" Value="1" />
                                 <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
                                 <Setter TargetName="NavGlyph" Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavMarker"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetName="NavMarkerScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="1" Duration="0:0:0.32">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="1.1" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="NavMarker"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="NavMarkerScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             To="0.2" Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -615,28 +771,62 @@
             </Setter>
         </Style>
 
-        <!-- Pages fade and lift slightly when they become visible. -->
-        <Style x:Key="PageStyle" TargetType="FrameworkElement">
-            <Style.Triggers>
-                <Trigger Property="Visibility" Value="Visible">
-                    <Trigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 From="0" To="1"
-                                                 Duration="0:0:0.22" />
-                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                                 From="10" To="0"
-                                                 Duration="0:0:0.26">
-                                    <DoubleAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut" />
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.EnterActions>
-                </Trigger>
-            </Style.Triggers>
+        <!-- Dot plus halo. A Style cannot animate a sibling, so the pair lives in a
+             template, which gives the storyboard a name scope to aim at. -->
+        <Style x:Key="StatusDotStyle" TargetType="Control">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Control">
+                        <Grid>
+                            <Ellipse x:Name="Halo"
+                                     Fill="{StaticResource SuccessBrush}"
+                                     Opacity="0"
+                                     RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <ScaleTransform x:Name="HaloScale" ScaleX="1" ScaleY="1" />
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
+                            <Ellipse x:Name="Dot" Fill="{StaticResource TextMutedBrush}" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                <Setter TargetName="Dot" Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard Name="HaloStoryboard">
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetName="Halo"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             From="0.5" To="0"
+                                                             Duration="0:0:1.9"
+                                                             Timeline.DesiredFrameRate="15" />
+                                            <DoubleAnimation Storyboard.TargetName="HaloScale"
+                                                             Storyboard.TargetProperty="ScaleX"
+                                                             From="1" To="3.2"
+                                                             Duration="0:0:1.9"
+                                                             Timeline.DesiredFrameRate="15" />
+                                            <DoubleAnimation Storyboard.TargetName="HaloScale"
+                                                             Storyboard.TargetProperty="ScaleY"
+                                                             From="1" To="3.2"
+                                                             Duration="0:0:1.9"
+                                                             Timeline.DesiredFrameRate="15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <StopStoryboard BeginStoryboardName="HaloStoryboard" />
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                                <Setter TargetName="Dot" Property="Fill" Value="{StaticResource WarningBrush}" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="StageCircleStyle" TargetType="Border">

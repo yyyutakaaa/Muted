@@ -20,13 +20,11 @@ namespace Muted.Core.Dsp;
 public sealed class EchoCanceller
 {
     public const int FrameSize = 480;
-    public const int TailMilliseconds = PartitionCount * 10;
 
     private const int FftSize = 1024;
     private const int Overlap = FftSize - FrameSize;
     private const int PartitionCount = 20;
     private const float StepSize = 0.8f;
-    private const float PowerSmoothing = 0.85f;
     private const float ReferenceFloor = 1e-5f;
     private const int DoubleTalkHangoverFrames = 30;
     private const float DoubleTalkThreshold = 3f;

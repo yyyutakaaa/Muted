@@ -1,24 +1,26 @@
 <UserControl x:Class="Muted.App.Views.AudioView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
              Foreground="{StaticResource TextBrush}">
     <StackPanel>
-        <StackPanel Margin="0,14,0,20">
+        <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Audio" />
             <TextBlock Margin="0,5,0,0"
                        Style="{StaticResource CaptionStyle}"
-                       Text="The full chain, in the order the signal travels: gain, high-pass, RNNoise, gate, levelling, limiter." />
+                       Text="Four switches is all most microphones need." />
         </StackPanel>
 
-        <!-- ===================== Suppression ===================== -->
-        <Border Style="{StaticResource CardStyle}" Padding="22">
+        <!-- ===================== Essentials ===================== -->
+        <Border Style="{StaticResource CardStyle}" Padding="22" infrastructure:Reveal.Delay="60">
             <StackPanel>
-                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Noise suppression" />
-
-                <Grid Margin="0,18,0,0">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="RNNoise" />
-                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="The neural filter that separates your voice from the room." />
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Noise suppression" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="RNNoise keeps your voice and drops the fan, the hiss and the keyboard." />
                     </StackPanel>
                     <CheckBox HorizontalAlignment="Right"
                               VerticalAlignment="Center"
@@ -30,210 +32,12 @@
                 <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
 
                 <Grid>
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Filter strength" />
-                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Blends the filtered signal with your untouched microphone. Lower it if your voice sounds thin." />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding WetMixText}" />
-                </Grid>
-                <Grid Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Raw" />
-                    <Slider Grid.Column="1"
-                            Margin="12,0"
-                            VerticalAlignment="Center"
-                            Minimum="0" Maximum="1"
-                            SmallChange="0.05" LargeChange="0.1"
-                            IsEnabled="{Binding SuppressionEnabled}"
-                            Value="{Binding WetMix}"
-                            AutomationProperties.Name="Filter strength" />
-                    <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Full" />
-                </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- ===================== Voice gate ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
-            <StackPanel>
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Voice gate" />
-                        <TextBlock Margin="0,4,0,0" Style="{StaticResource CaptionStyle}" Text="Goes completely silent whenever RNNoise does not hear speech." />
-                    </StackPanel>
-                    <CheckBox HorizontalAlignment="Right"
-                              VerticalAlignment="Center"
-                              Style="{StaticResource ToggleStyle}"
-                              IsChecked="{Binding VoiceGateEnabled}"
-                              AutomationProperties.Name="Voice gate" />
-                </Grid>
-
-                <Grid Margin="0,18,0,0">
-                    <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Sensitivity" />
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" Text="{Binding VoiceSensitivityText}" />
-                </Grid>
-                <Grid Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Low" />
-                    <Slider Grid.Column="1"
-                            Margin="12,0"
-                            VerticalAlignment="Center"
-                            Minimum="0.05" Maximum="0.99"
-                            SmallChange="0.02" LargeChange="0.1"
-                            IsEnabled="{Binding VoiceGateEnabled}"
-                            Value="{Binding VoiceSensitivity}"
-                            AutomationProperties.Name="Voice gate sensitivity" />
-                    <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="High" />
-                </Grid>
-
-                <Grid Margin="0,18,0,0">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Hold time" />
-                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="How long the gate stays open after you stop talking, so word endings survive." />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding VoiceHoldText}" />
-                </Grid>
-                <Slider Margin="0,10,0,0"
-                        Minimum="0" Maximum="1000"
-                        SmallChange="10" LargeChange="50"
-                        TickFrequency="50"
-                        IsSnapToTickEnabled="True"
-                        IsEnabled="{Binding VoiceGateEnabled}"
-                        Value="{Binding VoiceHoldMilliseconds}"
-                        AutomationProperties.Name="Voice gate hold time" />
-            </StackPanel>
-        </Border>
-
-        <!-- ===================== Levels ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
-            <StackPanel>
-                <TextBlock Style="{StaticResource CardTitleStyle}" Text="Levels and tone" />
-
-                <Grid Margin="0,18,0,0">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Input gain" />
-                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Boost a quiet microphone before anything else touches the signal." />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding InputGainText}" />
-                </Grid>
-                <Slider Margin="0,10,0,0"
-                        Minimum="0.25" Maximum="4"
-                        SmallChange="0.05" LargeChange="0.25"
-                        Value="{Binding InputGain}"
-                        AutomationProperties.Name="Input gain" />
-
-                <Grid Margin="0,18,0,0">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Output gain" />
-                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Trim the level that reaches the cable." />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding OutputGainText}" />
-                </Grid>
-                <Slider Margin="0,10,0,0"
-                        Minimum="0.25" Maximum="4"
-                        SmallChange="0.05" LargeChange="0.25"
-                        Value="{Binding OutputGain}"
-                        AutomationProperties.Name="Output gain" />
-
-                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
-
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="High-pass filter" />
-                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" Text="Removes desk thumps and rumble below the speech band, which RNNoise leaves alone." />
-                    </StackPanel>
-                    <CheckBox HorizontalAlignment="Right"
-                              VerticalAlignment="Center"
-                              Style="{StaticResource ToggleStyle}"
-                              IsChecked="{Binding HighPassEnabled}"
-                              AutomationProperties.Name="High-pass filter" />
-                </Grid>
-                <Grid Margin="0,14,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Slider Grid.Column="0"
-                            Margin="0,0,12,0"
-                            VerticalAlignment="Center"
-                            Minimum="40" Maximum="200"
-                            SmallChange="5" LargeChange="20"
-                            IsEnabled="{Binding HighPassEnabled}"
-                            Value="{Binding HighPassFrequency}"
-                            AutomationProperties.Name="High-pass cutoff" />
-                    <TextBlock Grid.Column="1" Style="{StaticResource ValueLabelStyle}" Text="{Binding HighPassText}" />
-                </Grid>
-
-                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
-
-                <Grid>
                     <StackPanel Margin="0,0,60,0">
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Limiter" />
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Echo cancellation" />
                         <TextBlock Margin="0,3,0,0"
                                    Style="{StaticResource CaptionStyle}"
                                    TextWrapping="Wrap"
-                                   Text="Catches peaks smoothly instead of clipping them square. Leave this on whenever you add gain." />
-                    </StackPanel>
-                    <CheckBox HorizontalAlignment="Right"
-                              VerticalAlignment="Center"
-                              Style="{StaticResource ToggleStyle}"
-                              IsChecked="{Binding LimiterEnabled}"
-                              AutomationProperties.Name="Limiter" />
-                </Grid>
-
-                <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
-
-                <Grid>
-                    <StackPanel Margin="0,0,60,0">
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Automatic level" />
-                        <TextBlock Margin="0,3,0,0"
-                                   Style="{StaticResource CaptionStyle}"
-                                   TextWrapping="Wrap"
-                                   Text="Slowly evens out how loud you come across. It only adapts while you are actually speaking." />
-                    </StackPanel>
-                    <CheckBox HorizontalAlignment="Right"
-                              VerticalAlignment="Center"
-                              Style="{StaticResource ToggleStyle}"
-                              IsChecked="{Binding AutoGainEnabled}"
-                              AutomationProperties.Name="Automatic level" />
-                </Grid>
-                <Grid Margin="0,14,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Target" />
-                    <Slider Grid.Column="1"
-                            Margin="12,0"
-                            VerticalAlignment="Center"
-                            Minimum="-30" Maximum="-6"
-                            SmallChange="1" LargeChange="3"
-                            IsEnabled="{Binding AutoGainEnabled}"
-                            Value="{Binding AutoGainTargetDb}"
-                            AutomationProperties.Name="Automatic level target" />
-                    <TextBlock Grid.Column="2" Style="{StaticResource ValueLabelStyle}" Text="{Binding AutoGainTargetText}" />
-                </Grid>
-            </StackPanel>
-        </Border>
-
-        <!-- ===================== Echo ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
-            <StackPanel>
-                <Grid>
-                    <StackPanel Margin="0,0,60,0">
-                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Echo cancellation" />
-                        <TextBlock Margin="0,4,0,0"
-                                   Style="{StaticResource CaptionStyle}"
-                                   TextWrapping="Wrap"
-                                   Text="Muted listens to what your speakers play and subtracts it from your microphone, so the other side stops hearing themselves. This is what lets you drop the headset. RNNoise cannot do this: it removes noise, and it has no idea what your speakers are doing." />
+                                   Text="Subtracts what your speakers play, so the other side stops hearing themselves. This is what lets you drop the headset." />
                     </StackPanel>
                     <CheckBox HorizontalAlignment="Right"
                               VerticalAlignment="Center"
@@ -242,144 +46,361 @@
                               AutomationProperties.Name="Echo cancellation" />
                 </Grid>
 
-                <TextBlock Margin="0,18,0,8"
-                           Style="{StaticResource SettingRowLabelStyle}"
-                           Foreground="{StaticResource TextMutedBrush}"
-                           Text="Listen to" />
-                <ComboBox ItemsSource="{Binding OutputDevices}"
-                          SelectedItem="{Binding SelectedEchoReference}"
-                          DisplayMemberPath="DisplayName"
-                          IsEnabled="{Binding EchoCancellationEnabled}"
-                          AutomationProperties.Name="Echo reference device" />
-                <TextBlock Margin="0,6,0,0"
-                           Style="{StaticResource CaptionStyle}"
-                           TextWrapping="Wrap"
-                           Text="Pick the output you actually hear, not the cable. It has to run at 48 kHz." />
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
 
-                <Grid Margin="0,18,0,0">
+                <Grid>
                     <StackPanel Margin="0,0,60,0">
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Residual strength" />
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Voice gate" />
                         <TextBlock Margin="0,3,0,0"
                                    Style="{StaticResource CaptionStyle}"
                                    TextWrapping="Wrap"
-                                   Text="How hard to duck whatever is left over, mostly speaker distortion. Turn it down if the far end sounds choppy when you both talk at once." />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding EchoStrengthText}" />
-                </Grid>
-                <Slider Margin="0,10,0,0"
-                        Minimum="0" Maximum="1"
-                        SmallChange="0.05" LargeChange="0.1"
-                        IsEnabled="{Binding EchoCancellationEnabled}"
-                        Value="{Binding EchoStrength}"
-                        AutomationProperties.Name="Residual echo strength" />
-
-                <Border Margin="0,18,0,0" Style="{StaticResource InsetCardStyle}">
-                    <Grid>
-                        <TextBlock Style="{StaticResource SettingRowLabelStyle}"
-                                   Foreground="{StaticResource TextMutedBrush}"
-                                   Text="Echo removed right now" />
-                        <TextBlock Style="{StaticResource ValueLabelStyle}"
-                                   Foreground="{StaticResource SuccessBrush}"
-                                   Text="{Binding EchoReductionText}" />
-                    </Grid>
-                </Border>
-                <TextBlock Margin="0,8,0,0"
-                           Style="{StaticResource CaptionStyle}"
-                           TextWrapping="Wrap"
-                           Text="It needs a few seconds of sound coming out of your speakers to learn the room. Move the speakers or change their volume and it learns again." />
-            </StackPanel>
-        </Border>
-
-        <!-- ===================== Monitoring ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
-            <StackPanel>
-                <Grid>
-                    <StackPanel Margin="0,0,60,0">
-                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Hear yourself" />
-                        <TextBlock Margin="0,4,0,0"
-                                   Style="{StaticResource CaptionStyle}"
-                                   TextWrapping="Wrap"
-                                   Text="Sends the processed voice to a second output as well, so you can hear exactly what the other side gets." />
+                                   Text="Goes completely silent whenever you are not talking." />
                     </StackPanel>
                     <CheckBox HorizontalAlignment="Right"
                               VerticalAlignment="Center"
                               Style="{StaticResource ToggleStyle}"
-                              IsChecked="{Binding MonitorEnabled}"
-                              AutomationProperties.Name="Monitor output" />
+                              IsChecked="{Binding VoiceGateEnabled}"
+                              AutomationProperties.Name="Voice gate" />
                 </Grid>
-
-                <ComboBox Margin="0,16,0,0"
-                          ItemsSource="{Binding OutputDevices}"
-                          SelectedItem="{Binding SelectedMonitor}"
-                          DisplayMemberPath="DisplayName"
-                          IsEnabled="{Binding MonitorEnabled}"
-                          AutomationProperties.Name="Monitor device" />
-
-                <Grid Margin="0,16,0,0">
+                <Grid Margin="0,12,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Volume" />
+                    <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Lets more through" />
                     <Slider Grid.Column="1"
                             Margin="12,0"
                             VerticalAlignment="Center"
-                            Minimum="0" Maximum="1"
-                            SmallChange="0.05" LargeChange="0.1"
-                            IsEnabled="{Binding MonitorEnabled}"
-                            Value="{Binding MonitorVolume}"
-                            AutomationProperties.Name="Monitor volume" />
-                    <TextBlock Grid.Column="2" Style="{StaticResource ValueLabelStyle}" Text="{Binding MonitorVolumeText}" />
+                            Minimum="0.05" Maximum="0.99"
+                            SmallChange="0.02" LargeChange="0.1"
+                            IsEnabled="{Binding VoiceGateEnabled}"
+                            Value="{Binding VoiceSensitivity}"
+                            AutomationProperties.Name="Voice gate sensitivity" />
+                    <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Stricter" />
                 </Grid>
 
-                <Border Margin="0,16,0,0"
-                        Padding="12,10"
-                        CornerRadius="10"
-                        Background="{StaticResource WarningSurfaceBrush}"
-                        BorderBrush="{StaticResource WarningBrush}"
-                        BorderThickness="1"
-                        Visibility="{Binding MonitorFeedbackWarning, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Foreground="{StaticResource WarningBrush}"
-                               FontSize="12"
-                               TextWrapping="Wrap"
-                               Text="Monitoring into speakers feeds the room back into your microphone. Use headphones." />
-                </Border>
-            </StackPanel>
-        </Border>
+                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
 
-        <!-- ===================== Latency ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22">
-            <StackPanel>
                 <Grid>
                     <StackPanel Margin="0,0,60,0">
-                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Buffer size" />
-                        <TextBlock Margin="0,4,0,0"
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Microphone boost" />
+                        <TextBlock Margin="0,3,0,0"
                                    Style="{StaticResource CaptionStyle}"
                                    TextWrapping="Wrap"
-                                   Text="Lower means less delay, higher means fewer dropouts on a busy machine. RNNoise itself always adds 20 ms. Change this while Muted is stopped." />
+                                   Text="Turn this up if people say you sound quiet." />
                     </StackPanel>
-                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding LatencyText}" />
+                    <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding InputGainText}" />
                 </Grid>
-                <Grid Margin="0,14,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="20 ms" />
-                    <Slider Grid.Column="1"
-                            Margin="12,0"
-                            VerticalAlignment="Center"
-                            Minimum="20" Maximum="100"
-                            TickFrequency="5"
-                            IsSnapToTickEnabled="True"
-                            IsEnabled="{Binding IsStopped}"
-                            Value="{Binding TargetLatencyMilliseconds}"
-                            AutomationProperties.Name="Buffer size" />
-                    <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="100 ms" />
-                </Grid>
+                <Slider Margin="0,12,0,0"
+                        Minimum="0.25" Maximum="4"
+                        SmallChange="0.05" LargeChange="0.25"
+                        Value="{Binding InputGain}"
+                        AutomationProperties.Name="Microphone boost" />
             </StackPanel>
         </Border>
+
+        <!-- Everything below is hidden until Advanced is switched on in Settings. -->
+        <Border Style="{StaticResource InsetCardStyle}"
+                Margin="0,16,0,24"
+                infrastructure:Reveal.Delay="120"
+                Visibility="{Binding AdvancedMode, Converter={StaticResource InverseBoolToVisibility}}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Style="{StaticResource GlyphStyle}" Text="&#xE713;" />
+                <TextBlock Margin="10,0,0,0"
+                           VerticalAlignment="Center"
+                           Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Text="The rest of the chain, the levels and the live numbers live behind Advanced, under Settings." />
+            </StackPanel>
+        </Border>
+
+        <StackPanel Visibility="{Binding AdvancedMode, Converter={StaticResource BoolToVisibility}}">
+            <!-- ===================== Fine tuning ===================== -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="120">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="Fine tuning" />
+
+                    <Grid Margin="0,18,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Filter strength" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Blends the filtered signal with your untouched microphone. Lower it if your voice sounds thin." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding WetMixText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            IsEnabled="{Binding SuppressionEnabled}"
+                            Value="{Binding WetMix}"
+                            AutomationProperties.Name="Filter strength" />
+
+                    <Grid Margin="0,18,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Gate hold time" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="How long the gate stays open after you stop talking, so word endings survive." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding VoiceHoldText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1000"
+                            SmallChange="10" LargeChange="50"
+                            TickFrequency="50"
+                            IsSnapToTickEnabled="True"
+                            IsEnabled="{Binding VoiceGateEnabled}"
+                            Value="{Binding VoiceHoldMilliseconds}"
+                            AutomationProperties.Name="Voice gate hold time" />
+
+                    <Grid Margin="0,18,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Output gain" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       Text="Trims the level that reaches the cable." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding OutputGainText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0.25" Maximum="4"
+                            SmallChange="0.05" LargeChange="0.25"
+                            Value="{Binding OutputGain}"
+                            AutomationProperties.Name="Output gain" />
+
+                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                    <Grid>
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="High-pass filter" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Removes desk thumps and rumble below the speech band, which RNNoise leaves alone." />
+                        </StackPanel>
+                        <CheckBox HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource ToggleStyle}"
+                                  IsChecked="{Binding HighPassEnabled}"
+                                  AutomationProperties.Name="High-pass filter" />
+                    </Grid>
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider Grid.Column="0"
+                                Margin="0,0,12,0"
+                                VerticalAlignment="Center"
+                                Minimum="40" Maximum="200"
+                                SmallChange="5" LargeChange="20"
+                                IsEnabled="{Binding HighPassEnabled}"
+                                Value="{Binding HighPassFrequency}"
+                                AutomationProperties.Name="High-pass cutoff" />
+                        <TextBlock Grid.Column="1" Style="{StaticResource ValueLabelStyle}" Text="{Binding HighPassText}" />
+                    </Grid>
+
+                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                    <Grid>
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Limiter" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Catches peaks smoothly instead of clipping them square. Leave this on whenever you add gain." />
+                        </StackPanel>
+                        <CheckBox HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource ToggleStyle}"
+                                  IsChecked="{Binding LimiterEnabled}"
+                                  AutomationProperties.Name="Limiter" />
+                    </Grid>
+
+                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+
+                    <Grid>
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Automatic level" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Slowly evens out how loud you come across. It only adapts while you are actually speaking." />
+                        </StackPanel>
+                        <CheckBox HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource ToggleStyle}"
+                                  IsChecked="{Binding AutoGainEnabled}"
+                                  AutomationProperties.Name="Automatic level" />
+                    </Grid>
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Target" />
+                        <Slider Grid.Column="1"
+                                Margin="12,0"
+                                VerticalAlignment="Center"
+                                Minimum="-30" Maximum="-6"
+                                SmallChange="1" LargeChange="3"
+                                IsEnabled="{Binding AutoGainEnabled}"
+                                Value="{Binding AutoGainTargetDb}"
+                                AutomationProperties.Name="Automatic level target" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource ValueLabelStyle}" Text="{Binding AutoGainTargetText}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ===================== Echo details ===================== -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="180">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="Echo cancellation" />
+                    <TextBlock Margin="0,4,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="A 200 ms adaptive filter learns how your speakers reach your microphone and subtracts it. It needs a few seconds of sound to learn the room, and it stops learning while you talk over the far end." />
+
+                    <TextBlock Margin="0,18,0,8"
+                               Style="{StaticResource SettingRowLabelStyle}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               Text="Listen to" />
+                    <ComboBox ItemsSource="{Binding OutputDevices}"
+                              SelectedItem="{Binding SelectedEchoReference}"
+                              DisplayMemberPath="DisplayName"
+                              IsEnabled="{Binding EchoCancellationEnabled}"
+                              AutomationProperties.Name="Echo reference device" />
+                    <TextBlock Margin="0,6,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="The output you actually hear, not the cable. It has to run at 48 kHz." />
+
+                    <Grid Margin="0,18,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Residual strength" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="How hard to duck what is left over, mostly speaker distortion. Turn it down if you sound choppy when you both talk at once." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding EchoStrengthText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            IsEnabled="{Binding EchoCancellationEnabled}"
+                            Value="{Binding EchoStrength}"
+                            AutomationProperties.Name="Residual echo strength" />
+
+                    <Border Margin="0,18,0,0" Style="{StaticResource InsetCardStyle}">
+                        <Grid>
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       Text="Echo removed right now" />
+                            <TextBlock Style="{StaticResource ValueLabelStyle}"
+                                       Foreground="{StaticResource SuccessBrush}"
+                                       Text="{Binding EchoReductionText}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- ===================== Monitoring ===================== -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="240">
+                <StackPanel>
+                    <Grid>
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="Hear yourself" />
+                            <TextBlock Margin="0,4,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Sends the processed voice to a second output as well, so you can hear exactly what the other side gets." />
+                        </StackPanel>
+                        <CheckBox HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource ToggleStyle}"
+                                  IsChecked="{Binding MonitorEnabled}"
+                                  AutomationProperties.Name="Monitor output" />
+                    </Grid>
+
+                    <ComboBox Margin="0,16,0,0"
+                              ItemsSource="{Binding OutputDevices}"
+                              SelectedItem="{Binding SelectedMonitor}"
+                              DisplayMemberPath="DisplayName"
+                              IsEnabled="{Binding MonitorEnabled}"
+                              AutomationProperties.Name="Monitor device" />
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Volume" />
+                        <Slider Grid.Column="1"
+                                Margin="12,0"
+                                VerticalAlignment="Center"
+                                Minimum="0" Maximum="1"
+                                SmallChange="0.05" LargeChange="0.1"
+                                IsEnabled="{Binding MonitorEnabled}"
+                                Value="{Binding MonitorVolume}"
+                                AutomationProperties.Name="Monitor volume" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource ValueLabelStyle}" Text="{Binding MonitorVolumeText}" />
+                    </Grid>
+
+                    <Border Margin="0,16,0,0"
+                            Padding="12,10"
+                            CornerRadius="10"
+                            Background="{StaticResource WarningSurfaceBrush}"
+                            BorderBrush="{StaticResource WarningBrush}"
+                            BorderThickness="1"
+                            Visibility="{Binding MonitorFeedbackWarning, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Foreground="{StaticResource WarningBrush}"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   Text="Monitoring into speakers feeds the room back into your microphone. Use headphones, or leave echo cancellation on." />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- ===================== Buffer ===================== -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22" infrastructure:Reveal.Delay="300">
+                <StackPanel>
+                    <Grid>
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="Buffer size" />
+                            <TextBlock Margin="0,4,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Lower means less delay, higher means fewer dropouts on a busy machine. RNNoise itself always adds 20 ms. Change this while Muted is stopped." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding LatencyText}" />
+                    </Grid>
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="20 ms" />
+                        <Slider Grid.Column="1"
+                                Margin="12,0"
+                                VerticalAlignment="Center"
+                                Minimum="20" Maximum="100"
+                                TickFrequency="5"
+                                IsSnapToTickEnabled="True"
+                                IsEnabled="{Binding IsStopped}"
+                                Value="{Binding TargetLatencyMilliseconds}"
+                                AutomationProperties.Name="Buffer size" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="100 ms" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
     </StackPanel>
 </UserControl>

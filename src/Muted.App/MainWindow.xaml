@@ -102,7 +102,35 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid x:Name="Shell" Opacity="0" RenderTransformOrigin="0.5,0.5">
+        <Grid.RenderTransform>
+            <ScaleTransform x:Name="ShellScale" ScaleX="0.985" ScaleY="0.985" />
+        </Grid.RenderTransform>
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetName="Shell"
+                                         Storyboard.TargetProperty="Opacity"
+                                         To="1" Duration="0:0:0.32" />
+                        <DoubleAnimation Storyboard.TargetName="ShellScale"
+                                         Storyboard.TargetProperty="ScaleX"
+                                         To="1" Duration="0:0:0.45">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut" />
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetName="ShellScale"
+                                         Storyboard.TargetProperty="ScaleY"
+                                         To="1" Duration="0:0:0.45">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut" />
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="252" />
             <ColumnDefinition Width="*" />
@@ -180,21 +208,7 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="7" Height="7" VerticalAlignment="Center">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IsRecovering}" Value="True">
-                                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
+                                    <Control Style="{StaticResource StatusDotStyle}" VerticalAlignment="Center" />
                                     <TextBlock Margin="7,0,0,0" FontSize="13" FontWeight="SemiBold">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock">
@@ -305,47 +319,29 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="34,0,34,0">
                 <Grid>
-                    <views:DashboardView Style="{StaticResource PageStyle}"
-                                         Visibility="{Binding SelectedPage, Converter={StaticResource EnumToVisibility}, ConverterParameter=Dashboard}">
-                        <views:DashboardView.RenderTransform>
-                            <TranslateTransform />
-                        </views:DashboardView.RenderTransform>
-                    </views:DashboardView>
+                    <views:DashboardView Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=Dashboard}" />
 
-                    <views:AudioView Style="{StaticResource PageStyle}"
-                                     Visibility="{Binding SelectedPage, Converter={StaticResource EnumToVisibility}, ConverterParameter=Audio}">
-                        <views:AudioView.RenderTransform>
-                            <TranslateTransform />
-                        </views:AudioView.RenderTransform>
-                    </views:AudioView>
+                    <views:AudioView Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=Audio}" />
 
-                    <views:ShortcutsView Style="{StaticResource PageStyle}"
-                                         Visibility="{Binding SelectedPage, Converter={StaticResource EnumToVisibility}, ConverterParameter=Shortcuts}">
-                        <views:ShortcutsView.RenderTransform>
-                            <TranslateTransform />
-                        </views:ShortcutsView.RenderTransform>
-                    </views:ShortcutsView>
+                    <views:ShortcutsView Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=Shortcuts}" />
 
-                    <views:SettingsView Style="{StaticResource PageStyle}"
-                                        Visibility="{Binding SelectedPage, Converter={StaticResource EnumToVisibility}, ConverterParameter=Settings}">
-                        <views:SettingsView.RenderTransform>
-                            <TranslateTransform />
-                        </views:SettingsView.RenderTransform>
-                    </views:SettingsView>
+                    <views:SettingsView Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=Settings}" />
 
-                    <views:DiagnosticsView Style="{StaticResource PageStyle}"
-                                           Visibility="{Binding SelectedPage, Converter={StaticResource EnumToVisibility}, ConverterParameter=Diagnostics}">
-                        <views:DiagnosticsView.RenderTransform>
-                            <TranslateTransform />
-                        </views:DiagnosticsView.RenderTransform>
-                    </views:DiagnosticsView>
+                    <views:DiagnosticsView Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=Diagnostics}" />
 
-                    <views:AboutView Style="{StaticResource PageStyle}"
-                                     Visibility="{Binding SelectedPage, Converter={StaticResource EnumToVisibility}, ConverterParameter=About}">
-                        <views:AboutView.RenderTransform>
-                            <TranslateTransform />
-                        </views:AboutView.RenderTransform>
-                    </views:AboutView>
+                    <views:AboutView Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=About}" />
                 </Grid>
             </ScrollViewer>
 

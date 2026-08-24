@@ -37,6 +37,9 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private FloatRingBuffer? _inputBuffer;
     private FloatRingBuffer? _referenceBuffer;
     private float[] _referenceScratch = new float[4_096];
+    private WaveFormatEncoding _referenceEncoding;
+    private int _referenceChannels = 1;
+    private int _referenceBytesPerSample = 4;
     private RealtimeFloatWaveProvider? _outputProvider;
     private RealtimeFloatWaveProvider? _monitorProvider;
     private RnnoiseProcessor? _rnnoise;
@@ -67,8 +70,6 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
     /// <summary>Raised when the echo reference could not be captured; the microphone keeps working.</summary>
     public event EventHandler<Exception>? EchoFaulted;
-
-    public AudioEngineState State => _state;
 
     /// <summary>Rolling frame peaks for the live waveform in the UI.</summary>
     public WaveformScope Scope { get; } = new(256);
@@ -178,12 +179,6 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         {
             _lifecycleGate.Release();
         }
-    }
-
-    public async Task RestartAsync(AudioEngineOptions options, CancellationToken cancellationToken = default)
-    {
-        await StopAsync(cancellationToken).ConfigureAwait(false);
-        await StartAsync(options, cancellationToken).ConfigureAwait(false);
     }
 
     public void UpdateSuppression(SuppressionOptions suppression)
@@ -410,29 +405,61 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
         _referenceDevice = enumerator.GetDevice(echo.ReferenceDeviceId);
         var capture = new WasapiLoopbackCapture(_referenceDevice);
-        var format = capture.WaveFormat;
+        var format = ResolveFormat(capture.WaveFormat);
+        var name = _referenceDevice.FriendlyName;
+
+        if (format is null)
+        {
+            capture.Dispose();
+            throw new NotSupportedException($"Windows did not describe the format of {name}.");
+        }
+
         if (format.SampleRate != SampleRate)
         {
             capture.Dispose();
             throw new NotSupportedException(
-                $"Echo cancellation needs a 48 kHz output; {_referenceDevice.FriendlyName} runs at " +
+                $"Echo cancellation needs a 48 kHz output; {name} runs at " +
                 $"{format.SampleRate / 1000d:0.#} kHz.");
         }
 
-        if (format.Encoding is not (WaveFormatEncoding.IeeeFloat or WaveFormatEncoding.Pcm) ||
-            (format.Encoding == WaveFormatEncoding.Pcm && format.BitsPerSample != 16))
+        var supported =
+            (format.Encoding == WaveFormatEncoding.IeeeFloat && format.BitsPerSample == 32) ||
+            (format.Encoding == WaveFormatEncoding.Pcm && format.BitsPerSample == 16);
+        if (!supported)
         {
             capture.Dispose();
             throw new NotSupportedException(
-                $"Echo cancellation cannot read the {format.Encoding} format of " +
-                $"{_referenceDevice.FriendlyName}.");
+                $"Echo cancellation cannot read {name}: Windows offers it as " +
+                $"{format.BitsPerSample}-bit {format.Encoding}.");
         }
 
+        _referenceEncoding = format.Encoding;
+        _referenceChannels = Math.Max(1, format.Channels);
+        _referenceBytesPerSample = format.BitsPerSample / 8;
         Volatile.Write(ref _referenceBuffer, new FloatRingBuffer(InputCapacitySamples));
         _referenceCapture = capture;
         capture.DataAvailable += OnReferenceDataAvailable;
         capture.RecordingStopped += OnReferenceStopped;
         capture.StartRecording();
+    }
+
+    /// <summary>
+    /// WASAPI hands out the device mix format, which is almost always extensible: its
+    /// encoding reads "Extensible" and the real one hides in the sub-format. Taking it
+    /// at face value would reject nearly every sound card there is.
+    /// </summary>
+    private static WaveFormat? ResolveFormat(WaveFormat format)
+    {
+        try
+        {
+            return format is WaveFormatExtensible extensible
+                ? extensible.ToStandardWaveFormat()
+                : format;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     private void StopReferenceCore()
@@ -731,14 +758,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         var buffer = Volatile.Read(ref _referenceBuffer);
-        var format = _referenceCapture?.WaveFormat;
-        if (buffer is null || format is null || eventArgs.BytesRecorded <= 0)
+        if (buffer is null || eventArgs.BytesRecorded <= 0)
         {
             return;
         }
 
-        var channels = Math.Max(1, format.Channels);
-        var bytesPerSample = format.BitsPerSample / 8;
+        var channels = _referenceChannels;
+        var bytesPerSample = _referenceBytesPerSample;
         var frames = eventArgs.BytesRecorded / (bytesPerSample * channels);
         if (frames <= 0)
         {
@@ -751,7 +777,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         var source = eventArgs.Buffer.AsSpan(0, frames * bytesPerSample * channels);
-        if (format.Encoding == WaveFormatEncoding.IeeeFloat)
+        if (_referenceEncoding == WaveFormatEncoding.IeeeFloat)
         {
             var samples = MemoryMarshal.Cast<byte, float>(source);
             for (var frame = 0; frame < frames; frame++)

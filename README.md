@@ -43,6 +43,17 @@ Turn off your call app's built-in noise suppression if you hear pumping or
 distortion. Two suppressors stacked on top of each other don't always beat
 one.
 
+## Simple by default
+
+The Audio page shows four switches: noise suppression, echo cancellation, the
+voice gate and a microphone boost. That is what a microphone needs.
+
+Everything else, the dry/wet mix, the high-pass, the limiter, automatic
+levelling, gate hold time, output gain, buffer size, monitoring, the echo
+reference device and every live number, sits behind **Advanced** in Settings.
+Switching it on changes nothing about how Muted sounds; it only stops hiding
+the details.
+
 ## Shortcuts
 
 Assign a push-to-talk key under **Shortcuts** and Muted stays muted until you
@@ -81,6 +92,8 @@ The hook is only installed once you actually assign a key.
   with autostart;
 - has a compact always-on-top panel for the meter and a mute button;
 - follows the Windows light/dark theme and optionally its accent colour;
+- keeps the interface to four switches unless you ask for the rest under
+  Advanced, which then also brings back the dB scales and live readings;
 - saves reusable audio profiles, including the whole processing chain, and
   switches them from the app or tray;
 - offers tray controls for mute, RNNoise, monitoring, profiles, the compact

@@ -1,9 +1,30 @@
 <UserControl x:Class="Muted.App.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
              Foreground="{StaticResource TextBrush}">
     <StackPanel>
-        <TextBlock Margin="0,14,0,20" Style="{StaticResource PageTitleStyle}" Text="Settings" />
+        <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
+            <TextBlock Style="{StaticResource PageTitleStyle}" Text="Settings" />
+        </StackPanel>
+
+        <!-- ===================== Advanced ===================== -->
+        <Border Style="{StaticResource CardStyle}" Padding="22" infrastructure:Reveal.Delay="40">
+            <Grid>
+                <StackPanel Margin="0,0,60,0">
+                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="Advanced" />
+                    <TextBlock Margin="0,4,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="Adds the rest of the processing chain to the Audio page, the dB scales and live numbers to the dashboard, and the pipeline readings to the setup check. Nothing changes about how Muted sounds; it only stops hiding the details." />
+                </StackPanel>
+                <CheckBox HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Style="{StaticResource ToggleStyle}"
+                          IsChecked="{Binding AdvancedMode}"
+                          AutomationProperties.Name="Advanced settings" />
+            </Grid>
+        </Border>
 
         <!-- ===================== Startup and window ===================== -->
         <Border Style="{StaticResource CardStyle}" Padding="22">
@@ -64,7 +85,7 @@
         </Border>
 
         <!-- ===================== Behaviour ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="90">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="Behaviour" />
 
@@ -113,7 +134,7 @@
         </Border>
 
         <!-- ===================== Appearance ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="140">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="Appearance" />
 
@@ -152,7 +173,7 @@
         </Border>
 
         <!-- ===================== Profiles ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="190">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="Audio profiles" />
                 <TextBlock Margin="0,4,0,0"
@@ -209,7 +230,7 @@
         </Border>
 
         <!-- ===================== Updates ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="240">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="Updates" />
 
@@ -229,6 +250,7 @@
                             AutomationProperties.Name="Check for updates" />
                 </Grid>
 
+                <StackPanel Visibility="{Binding AdvancedMode, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Margin="0,18,0,10" Style="{StaticResource SettingRowLabelStyle}" Text="Channel" />
                 <StackPanel Orientation="Horizontal">
                     <RadioButton Style="{StaticResource PillRadioStyle}"
@@ -246,11 +268,12 @@
                            Style="{StaticResource CaptionStyle}"
                            TextWrapping="Wrap"
                            Text="Beta also offers prereleases. Installed copies update themselves; portable ZIP copies do not." />
+                </StackPanel>
             </StackPanel>
         </Border>
 
         <!-- ===================== Maintenance ===================== -->
-        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22">
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,24" Padding="22" infrastructure:Reveal.Delay="290">
             <StackPanel>
                 <TextBlock Style="{StaticResource CardTitleStyle}" Text="Maintenance" />
 

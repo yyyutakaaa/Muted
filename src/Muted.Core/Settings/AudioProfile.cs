@@ -1,5 +1,3 @@
-using Muted.Core.Audio;
-
 namespace Muted.Core.Settings;
 
 public sealed record AudioProfile
@@ -44,21 +42,6 @@ public sealed record AudioProfile
             AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f)
         };
     }
-
-    public SuppressionOptions ToSuppressionOptions(bool isMuted = false) => new(
-        SuppressionEnabled,
-        WetMix,
-        VoiceGateEnabled,
-        VoiceThreshold,
-        VoiceHoldMilliseconds,
-        InputGain,
-        OutputGain,
-        isMuted,
-        HighPassEnabled,
-        HighPassFrequency,
-        LimiterEnabled,
-        AutoGainEnabled,
-        AutoGainTargetDb);
 
     public static IReadOnlyList<AudioProfile> CreateDefaults(
         string? inputDeviceId = null,

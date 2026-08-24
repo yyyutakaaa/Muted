@@ -55,6 +55,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private AppTheme _theme = AppTheme.Dark;
     private bool _useSystemAccentColor;
     private bool _compactMode;
+    private bool _advancedMode;
     private UpdateChannel _updateChannel = UpdateChannel.Stable;
     private AppPage _selectedPage = AppPage.Dashboard;
     private AudioEngineState _engineState;
@@ -163,7 +164,6 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         OpenLogFolderCommand = new RelayCommand(() => Shell.OpenFolder(AppPaths.DataDirectory));
         OpenCableDownloadCommand = new RelayCommand(() => Shell.Open(VirtualCableUrl));
         ResetSettingsCommand = new AsyncRelayCommand(ResetSettingsAsync, () => !IsBusy);
-        ShowPageCommand = new RelayCommand<AppPage>(page => SelectedPage = page);
         ClearHotkeyCommand = new RelayCommand<HotkeyBindingViewModel>(binding => binding?.Clear());
         ToggleCompactCommand = new RelayCommand(() => CompactMode = !CompactMode);
 
@@ -226,8 +226,6 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     public RelayCommand OpenCableDownloadCommand { get; }
 
     public AsyncRelayCommand ResetSettingsCommand { get; }
-
-    public RelayCommand<AppPage> ShowPageCommand { get; }
 
     public RelayCommand<HotkeyBindingViewModel> ClearHotkeyCommand { get; }
 
@@ -455,6 +453,19 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         set
         {
             if (SetProperty(ref _compactMode, value) && _initialized)
+            {
+                QueueSave();
+            }
+        }
+    }
+
+    /// <summary>Shows the full chain and the live numbers, for people who want them.</summary>
+    public bool AdvancedMode
+    {
+        get => _advancedMode;
+        set
+        {
+            if (SetProperty(ref _advancedMode, value) && _initialized)
             {
                 QueueSave();
             }
@@ -1028,6 +1039,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         _theme = _settings.Theme;
         _useSystemAccentColor = _settings.UseSystemAccentColor;
         _compactMode = _settings.CompactMode;
+        _advancedMode = _settings.AdvancedMode;
         _updateChannel = _settings.UpdateChannel;
         _suppressionEnabled = _settings.SuppressionEnabled;
         _wetMix = _settings.WetMix;
@@ -1075,7 +1087,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         [
             nameof(StartWithWindows), nameof(StartMinimized), nameof(MinimizeToTray),
             nameof(AutoRecoverDevices), nameof(StartMuted), nameof(FollowDefaultInput),
-            nameof(Theme), nameof(UseSystemAccentColor), nameof(CompactMode),
+            nameof(Theme), nameof(UseSystemAccentColor), nameof(CompactMode), nameof(AdvancedMode),
             nameof(UpdateChannel),
             nameof(SuppressionEnabled), nameof(SuppressionStatusText), nameof(WetMix),
             nameof(WetMixText), nameof(VoiceGateEnabled), nameof(VoiceSensitivity),
@@ -1930,6 +1942,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         Theme = Theme,
         UseSystemAccentColor = UseSystemAccentColor,
         CompactMode = CompactMode,
+        AdvancedMode = AdvancedMode,
         UpdateChannel = UpdateChannel,
         SkippedUpdateVersion = _skippedUpdateVersion,
         ActiveProfileId = ActiveProfileId,
@@ -2073,7 +2086,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     }
 
     private static string FormatDecibels(double level) =>
-        level <= 0.001 ? "–∞ dB" : $"{20 * Math.Log10(level):0.0} dB";
+        level <= 0.001 ? "–∞ dB" : $"{AudioMath.ToDecibels((float)level):0.0} dB";
 
     private static string FormatGain(double gain) =>
         gain <= 0 ? "muted" : $"{20 * Math.Log10(gain):+0.0;-0.0;0.0} dB";
