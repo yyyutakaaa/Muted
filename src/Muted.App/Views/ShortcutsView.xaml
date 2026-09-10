@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
              xmlns:controls="clr-namespace:Muted.App.Controls"
-             Foreground="{StaticResource TextBrush}">
+             Foreground="{DynamicResource TextBrush}">
     <StackPanel>
         <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Shortcuts" />
@@ -74,10 +74,10 @@
                         <Ellipse Width="8" Height="8" VerticalAlignment="Center">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="{StaticResource TextMutedBrush}" />
+                                    <Setter Property="Fill" Value="{DynamicResource TextMutedBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding HotkeysActive}" Value="True">
-                                            <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
+                                            <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

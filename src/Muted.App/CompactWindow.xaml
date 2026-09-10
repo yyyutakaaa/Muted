@@ -10,9 +10,9 @@
         WindowStyle="None"
         ShowInTaskbar="False"
         Topmost="True"
-        Foreground="{StaticResource TextBrush}"
+        Foreground="{DynamicResource TextBrush}"
         FontFamily="Segoe UI Variable Text, Segoe UI"
-        Background="{StaticResource BackgroundBrush}"
+        Background="{DynamicResource BackgroundBrush}"
         MouseLeftButtonDown="Window_OnMouseLeftButtonDown">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
@@ -23,8 +23,8 @@
     </shell:WindowChrome.WindowChrome>
 
     <Border x:Name="Panel"
-            Background="{StaticResource SurfaceBrush}"
-            BorderBrush="{StaticResource BorderBrush}"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
             BorderThickness="1"
             CornerRadius="12"
             Padding="16,14"
@@ -68,7 +68,7 @@
                             Style="{StaticResource TextButtonStyle}"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource TextMutedBrush}"
+                            Foreground="{DynamicResource TextMutedBrush}"
                             FontFamily="Segoe MDL2 Assets"
                             FontSize="12"
                             Content="&#xE740;"
@@ -81,7 +81,7 @@
                             Style="{StaticResource TextButtonStyle}"
                             Background="Transparent"
                             BorderThickness="0"
-                            Foreground="{StaticResource TextMutedBrush}"
+                            Foreground="{DynamicResource TextMutedBrush}"
                             FontFamily="Segoe MDL2 Assets"
                             FontSize="12"
                             Content="&#xE921;"
@@ -120,11 +120,11 @@
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Text" Value="&#xE720;" />
-                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsEffectivelyMuted}" Value="True">
                                             <Setter Property="Text" Value="&#xE74F;" />
-                                            <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -147,11 +147,11 @@
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Text" Value="&#xE768;" />
-                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsRunning}" Value="True">
                                         <Setter Property="Text" Value="&#xE71A;" />
-                                        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
