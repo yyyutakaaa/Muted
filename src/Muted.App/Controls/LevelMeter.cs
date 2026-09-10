@@ -45,7 +45,7 @@ public sealed class LevelMeter : FrameworkElement
         nameof(FillBrush),
         typeof(Brush),
         typeof(LevelMeter),
-        new FrameworkPropertyMetadata(Brushes.MediumAquamarine, FrameworkPropertyMetadataOptions.AffectsRender));
+        new FrameworkPropertyMetadata(Brushes.MediumPurple, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty WarningBrushProperty = DependencyProperty.Register(
         nameof(WarningBrush),
@@ -213,7 +213,7 @@ public sealed class LevelMeter : FrameworkElement
         {
             var peakColor = ColorOf(
                 _peak >= 0.9d ? DangerBrush : _peak >= 0.7d ? WarningBrush : FillBrush,
-                Colors.MediumAquamarine);
+                Colors.MediumPurple);
             var peakX = Math.Clamp(Position(_peak) * width, 1.5d, width - 1.5d);
             context.DrawLine(GetPeakPen(peakColor), new Point(peakX, 0), new Point(peakX, barHeight));
         }
@@ -248,7 +248,7 @@ public sealed class LevelMeter : FrameworkElement
     /// </summary>
     private Brush GetGradient(double width)
     {
-        var fill = ColorOf(FillBrush, Colors.MediumAquamarine);
+        var fill = ColorOf(FillBrush, Colors.MediumPurple);
         var warning = ColorOf(WarningBrush, Colors.Goldenrod);
         var danger = ColorOf(DangerBrush, Colors.IndianRed);
 
@@ -286,10 +286,10 @@ public sealed class LevelMeter : FrameworkElement
 
     /// <summary>The ticks and their labels never move, so they are drawn once.</summary>
     /// <remarks>
-    /// Keyed on the tick colour rather than the brush instance: the theme repaints the
-    /// shared brushes in place, so the reference stays the same while the colour changes.
-    /// The drawing gets its own frozen copy, because freezing anything that holds a
-    /// shared brush would freeze that brush too and break every later theme switch.
+    /// Keyed on the tick colour rather than the brush instance, so a theme that hands
+    /// over an identical colour in a new brush does not redraw the scale for nothing.
+    /// The drawing gets its own copy of the brush, because freezing the drawing would
+    /// otherwise freeze whatever shared brush it holds.
     /// </remarks>
     private Drawing GetScale(double width, double barHeight)
     {

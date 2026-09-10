@@ -50,7 +50,7 @@ public sealed class LiveWaveform : FrameworkElement
         nameof(SecondaryStroke),
         typeof(Brush),
         typeof(LiveWaveform),
-        new FrameworkPropertyMetadata(Brushes.MediumAquamarine, FrameworkPropertyMetadataOptions.AffectsRender));
+        new FrameworkPropertyMetadata(Brushes.Plum, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty VoiceProbabilityProperty = DependencyProperty.Register(
         nameof(VoiceProbability),
@@ -244,7 +244,7 @@ public sealed class LiveWaveform : FrameworkElement
     private void UpdateBrushes(bool active)
     {
         var accent = (Stroke as SolidColorBrush)?.Color ?? Colors.MediumPurple;
-        var secondary = (SecondaryStroke as SolidColorBrush)?.Color ?? Colors.MediumAquamarine;
+        var secondary = (SecondaryStroke as SolidColorBrush)?.Color ?? Colors.Plum;
 
         // Quantised, so ordinary speech does not rebuild four brushes every frame.
         var voice = active ? Math.Round(Math.Clamp(VoiceProbability, 0d, 1d) * 8d) / 8d : 0d;
