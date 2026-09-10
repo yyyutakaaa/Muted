@@ -17,7 +17,7 @@ public enum UpdateChannel
 
 public sealed record AppSettings
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
     public const int MaximumProfiles = 20;
 
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -49,7 +49,14 @@ public sealed record AppSettings
     public bool AutoRecoverDevices { get; init; } = true;
     public bool StartMuted { get; init; }
     public bool WasRunningOnExit { get; init; }
-    public AppTheme Theme { get; init; } = AppTheme.Dark;
+
+    /// <summary>Follows Windows by default, and keeps following while it changes.</summary>
+    public AppTheme Theme { get; init; } = AppTheme.System;
+
+    /// <summary>
+    /// Trades Muted's violet for whatever highlight colour Windows is set to. Off by
+    /// default, because the accent is the one place the app's own colour shows.
+    /// </summary>
     public bool UseSystemAccentColor { get; init; }
     public bool CompactMode { get; init; }
 
@@ -98,9 +105,15 @@ public sealed record AppSettings
             ? ActiveProfileId
             : profiles[0].Id;
 
+        // Schema 4 rebuilt the palette around one violet. A settings file older than
+        // that predates the change, so the Windows accent override is cleared once and
+        // the new colours actually get seen; turning it back on is a click away.
+        var useSystemAccentColor = SchemaVersion >= 4 && UseSystemAccentColor;
+
         return this with
         {
             SchemaVersion = CurrentSchemaVersion,
+            UseSystemAccentColor = useSystemAccentColor,
             WetMix = Math.Clamp(WetMix, 0f, 1f),
             VoiceThreshold = Math.Clamp(VoiceThreshold, 0.05f, 0.99f),
             VoiceHoldMilliseconds = Math.Clamp(VoiceHoldMilliseconds, 0, 2_000),
@@ -111,7 +124,7 @@ public sealed record AppSettings
             EchoStrength = Math.Clamp(EchoStrength, 0f, 1f),
             MonitorVolume = Math.Clamp(MonitorVolume, 0f, 1f),
             TargetLatencyMilliseconds = Math.Clamp(TargetLatencyMilliseconds, 20, 100),
-            Theme = Enum.IsDefined(Theme) ? Theme : AppTheme.Dark,
+            Theme = Enum.IsDefined(Theme) ? Theme : AppTheme.System,
             UpdateChannel = Enum.IsDefined(UpdateChannel) ? UpdateChannel : UpdateChannel.Stable,
             ActiveProfileId = activeProfileId,
             Hotkeys = HotkeyBinding.Complete(Hotkeys),

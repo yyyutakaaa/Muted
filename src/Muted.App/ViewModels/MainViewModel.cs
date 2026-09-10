@@ -52,7 +52,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private bool _autoRecoverDevices = true;
     private bool _startMuted;
     private bool _followDefaultInput;
-    private AppTheme _theme = AppTheme.Dark;
+    private AppTheme _theme = AppTheme.System;
     private bool _useSystemAccentColor;
     private bool _compactMode;
     private bool _advancedMode;

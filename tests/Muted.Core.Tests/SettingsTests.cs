@@ -105,8 +105,18 @@ public sealed class SettingsTests
         Assert.Equal(200f, normalized.HighPassFrequency);
         Assert.Equal(-6f, normalized.AutoGainTargetDb);
         Assert.Equal(1f, normalized.MonitorVolume);
-        Assert.Equal(AppTheme.Dark, normalized.Theme);
+        Assert.Equal(AppTheme.System, normalized.Theme);
         Assert.Equal(UpdateChannel.Stable, normalized.UpdateChannel);
+    }
+
+    [Fact]
+    public void Normalize_ClearsTheWindowsAccentOverrideFromOlderSettings()
+    {
+        var older = new AppSettings { SchemaVersion = 3, UseSystemAccentColor = true };
+        var current = new AppSettings { UseSystemAccentColor = true };
+
+        Assert.False(older.Normalize().UseSystemAccentColor);
+        Assert.True(current.Normalize().UseSystemAccentColor);
     }
 
     [Fact]

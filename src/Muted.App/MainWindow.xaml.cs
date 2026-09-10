@@ -12,6 +12,8 @@ public partial class MainWindow : Window
     private const int DwmUseImmersiveDarkMode = 20;
     private const int DwmWindowCornerPreference = 33;
     private const int DwmSystemBackdropType = 38;
+    private const int DwmsbtNone = 1;
+    private const int DwmsbtMainWindow = 2;
 
     private readonly MainViewModel _viewModel;
 
@@ -78,24 +80,30 @@ public partial class MainWindow : Window
             return;
         }
 
-        var dark = System.Windows.Application.Current.Resources["BackgroundBrush"]
-            is System.Windows.Media.SolidColorBrush background && IsDark(background.Color)
-            ? 1
-            : 0;
+        var background = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["BackgroundBrush"];
+        var appIsDark = background is System.Windows.Media.SolidColorBrush solid && IsDark(solid.Color);
+        var dark = appIsDark ? 1 : 0;
         _ = DwmSetWindowAttribute(handle, DwmUseImmersiveDarkMode, ref dark, sizeof(int));
 
         // DWMWCP_ROUND on Windows 11; older Windows versions safely ignore it.
         var rounded = 2;
         _ = DwmSetWindowAttribute(handle, DwmWindowCornerPreference, ref rounded, sizeof(int));
 
-        // DWMSBT_MAINWINDOW is Mica, and it only shows through a transparent window
-        // background, so the solid brush stays wherever Mica is unavailable.
-        var backdrop = 2;
-        var micaEnabled = Environment.OSVersion.Version.Build >= 22621 &&
+        // Mica is painted by Windows in the Windows theme, not in ours, so it is only
+        // used while the two agree. Picking Light under a dark Windows used to leave
+        // dark text on a dark backdrop, which is what made the light theme look broken.
+        var matchesWindows = appIsDark != Services.ThemeService.SystemPrefersLight();
+
+        // DWMSBT_MAINWINDOW is Mica; DWMSBT_NONE also turns an earlier one back off,
+        // which is what a switch away from the Windows theme needs.
+        var backdrop = matchesWindows ? DwmsbtMainWindow : DwmsbtNone;
+        var backdropApplied = Environment.OSVersion.Version.Build >= 22621 &&
             DwmSetWindowAttribute(handle, DwmSystemBackdropType, ref backdrop, sizeof(int)) == 0;
-        Background = micaEnabled
-            ? System.Windows.Media.Brushes.Transparent
-            : (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["BackgroundBrush"];
+
+        // Mica only shows through a transparent window background, so the solid brush
+        // stays wherever Mica is unavailable or unwanted.
+        var micaEnabled = matchesWindows && backdropApplied;
+        Background = micaEnabled ? System.Windows.Media.Brushes.Transparent : background;
     }
 
     private static bool IsDark(System.Windows.Media.Color color) =>
