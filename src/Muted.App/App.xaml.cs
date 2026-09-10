@@ -50,7 +50,8 @@ public partial class App : System.Windows.Application
             var settingsStore = new JsonSettingsStore();
             var settings = await settingsStore.LoadAsync();
 
-            _theme = new ThemeService(Resources);
+            _theme = new ThemeService(Resources, Dispatcher);
+            _theme.Changed += OnThemeChanged;
             _theme.Apply(settings.Theme, settings.UseSystemAccentColor);
 
             _updateCoordinator = new UpdateCoordinator(new UpdateService(_log));
@@ -253,6 +254,14 @@ public partial class App : System.Windows.Application
         }
 
         _theme.Apply(_viewModel.Theme, _viewModel.UseSystemAccentColor);
+    }
+
+    /// <summary>
+    /// The titlebar and the Mica backdrop are Windows' to draw, so they are told about
+    /// the new palette separately. This also covers a switch Windows started itself.
+    /// </summary>
+    private void OnThemeChanged(object? sender, EventArgs eventArgs)
+    {
         _window?.ApplyWindowAppearance();
         _compactWindow?.ApplyWindowAppearance();
     }
@@ -375,6 +384,13 @@ public partial class App : System.Windows.Application
                 _hotkeys.Triggered -= OnHotkeyTriggered;
                 _hotkeys.Dispose();
                 _hotkeys = null;
+            }
+
+            if (_theme is not null)
+            {
+                _theme.Changed -= OnThemeChanged;
+                _theme.Dispose();
+                _theme = null;
             }
 
             _compactWindow?.Close();

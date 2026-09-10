@@ -2,7 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
-             Foreground="{StaticResource TextBrush}">
+             Foreground="{DynamicResource TextBrush}">
     <StackPanel>
         <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Audio" />
@@ -29,7 +29,7 @@
                               AutomationProperties.Name="Noise suppression" />
                 </Grid>
 
-                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Rectangle Height="1" Margin="0,16" Fill="{DynamicResource BorderBrush}" />
 
                 <Grid>
                     <StackPanel Margin="0,0,60,0">
@@ -46,7 +46,7 @@
                               AutomationProperties.Name="Echo cancellation" />
                 </Grid>
 
-                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Rectangle Height="1" Margin="0,16" Fill="{DynamicResource BorderBrush}" />
 
                 <Grid>
                     <StackPanel Margin="0,0,60,0">
@@ -80,7 +80,7 @@
                     <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Stricter" />
                 </Grid>
 
-                <Rectangle Height="1" Margin="0,16" Fill="{StaticResource BorderBrush}" />
+                <Rectangle Height="1" Margin="0,16" Fill="{DynamicResource BorderBrush}" />
 
                 <Grid>
                     <StackPanel Margin="0,0,60,0">
@@ -172,7 +172,7 @@
                             Value="{Binding OutputGain}"
                             AutomationProperties.Name="Output gain" />
 
-                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                    <Rectangle Height="1" Margin="0,18" Fill="{DynamicResource BorderBrush}" />
 
                     <Grid>
                         <StackPanel Margin="0,0,60,0">
@@ -204,7 +204,7 @@
                         <TextBlock Grid.Column="1" Style="{StaticResource ValueLabelStyle}" Text="{Binding HighPassText}" />
                     </Grid>
 
-                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                    <Rectangle Height="1" Margin="0,18" Fill="{DynamicResource BorderBrush}" />
 
                     <Grid>
                         <StackPanel Margin="0,0,60,0">
@@ -221,7 +221,7 @@
                                   AutomationProperties.Name="Limiter" />
                     </Grid>
 
-                    <Rectangle Height="1" Margin="0,18" Fill="{StaticResource BorderBrush}" />
+                    <Rectangle Height="1" Margin="0,18" Fill="{DynamicResource BorderBrush}" />
 
                     <Grid>
                         <StackPanel Margin="0,0,60,0">
@@ -268,7 +268,7 @@
 
                     <TextBlock Margin="0,18,0,8"
                                Style="{StaticResource SettingRowLabelStyle}"
-                               Foreground="{StaticResource TextMutedBrush}"
+                               Foreground="{DynamicResource TextMutedBrush}"
                                Text="Listen to" />
                     <ComboBox ItemsSource="{Binding OutputDevices}"
                               SelectedItem="{Binding SelectedEchoReference}"
@@ -300,10 +300,10 @@
                     <Border Margin="0,18,0,0" Style="{StaticResource InsetCardStyle}">
                         <Grid>
                             <TextBlock Style="{StaticResource SettingRowLabelStyle}"
-                                       Foreground="{StaticResource TextMutedBrush}"
+                                       Foreground="{DynamicResource TextMutedBrush}"
                                        Text="Echo removed right now" />
                             <TextBlock Style="{StaticResource ValueLabelStyle}"
-                                       Foreground="{StaticResource SuccessBrush}"
+                                       Foreground="{DynamicResource SuccessBrush}"
                                        Text="{Binding EchoReductionText}" />
                         </Grid>
                     </Border>
@@ -356,11 +356,11 @@
                     <Border Margin="0,16,0,0"
                             Padding="12,10"
                             CornerRadius="10"
-                            Background="{StaticResource WarningSurfaceBrush}"
-                            BorderBrush="{StaticResource WarningBrush}"
+                            Background="{DynamicResource WarningSurfaceBrush}"
+                            BorderBrush="{DynamicResource WarningBrush}"
                             BorderThickness="1"
                             Visibility="{Binding MonitorFeedbackWarning, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Foreground="{StaticResource WarningBrush}"
+                        <TextBlock Foreground="{DynamicResource WarningBrush}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    Text="Monitoring into speakers feeds the room back into your microphone. Use headphones, or leave echo cancellation on." />

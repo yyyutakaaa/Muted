@@ -10,9 +10,9 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize"
-        Foreground="{StaticResource TextBrush}"
+        Foreground="{DynamicResource TextBrush}"
         FontFamily="Segoe UI Variable Text, Segoe UI"
-        Background="{StaticResource BackgroundBrush}"
+        Background="{DynamicResource BackgroundBrush}"
         MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
@@ -31,7 +31,7 @@
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         </Style>
 
@@ -43,15 +43,15 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid Width="46" Height="26">
-                            <Border Background="{StaticResource ToggleTrackBrush}" CornerRadius="13" />
+                            <Border Background="{DynamicResource ToggleTrackBrush}" CornerRadius="13" />
                             <Border x:Name="TrackOn"
-                                    Background="{StaticResource AccentBrush}"
+                                    Background="{DynamicResource AccentBrush}"
                                     CornerRadius="13"
                                     Opacity="0" />
                             <Ellipse x:Name="Thumb"
                                      Width="20" Height="20" Margin="3"
                                      HorizontalAlignment="Left"
-                                     Fill="{StaticResource ToggleThumbBrush}">
+                                     Fill="{DynamicResource ToggleThumbBrush}">
                                 <Ellipse.RenderTransform>
                                     <TranslateTransform x:Name="ThumbShift" X="0" />
                                 </Ellipse.RenderTransform>
@@ -137,7 +137,7 @@
         </Grid.ColumnDefinitions>
 
         <!-- ======================= Sidebar ======================= -->
-        <Grid Grid.Column="0" Background="{StaticResource SidebarBrush}">
+        <Grid Grid.Column="0" Background="{DynamicResource SidebarBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -197,8 +197,8 @@
             <StackPanel Grid.Row="2" Margin="14,0,14,16">
                 <Border Padding="14,12"
                         CornerRadius="12"
-                        Background="{StaticResource SurfaceBrush}"
-                        BorderBrush="{StaticResource BorderBrush}"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1">
                     <StackPanel>
                         <Grid>
@@ -222,7 +222,7 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                 </StackPanel>
-                                <TextBlock Margin="14,3,0,0" FontSize="11" Foreground="{StaticResource TextMutedBrush}">
+                                <TextBlock Margin="14,3,0,0" FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="Your mic is unfiltered" />
@@ -261,11 +261,11 @@
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Text" Value="&#xE720;" />
-                                            <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsEffectivelyMuted}" Value="True">
                                                     <Setter Property="Text" Value="&#xE74F;" />
-                                                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -349,7 +349,7 @@
             <Grid Grid.Row="2" Margin="34,10,34,16">
                 <StackPanel Orientation="Horizontal">
                     <Path VerticalAlignment="Center"
-                          Fill="{StaticResource TextMutedBrush}"
+                          Fill="{DynamicResource TextMutedBrush}"
                           Data="M7,0 L14,2.6 V7 C14,11.4 11.2,13.8 7,15.4 C2.8,13.8 0,11.4 0,7 V2.6 Z M6.2,9.9 L3.9,7.6 L4.9,6.6 L6.2,7.9 L9.1,5 L10.1,6 Z" />
                     <TextBlock Margin="10,0,0,0"
                                VerticalAlignment="Center"
@@ -358,7 +358,7 @@
                                Text="Local processing only" />
                     <TextBlock Margin="10,0"
                                VerticalAlignment="Center"
-                               Foreground="{StaticResource TextMutedBrush}"
+                               Foreground="{DynamicResource TextMutedBrush}"
                                Text="•" />
                     <TextBlock VerticalAlignment="Center"
                                Style="{StaticResource CaptionStyle}"
@@ -374,11 +374,11 @@
                     <Border Margin="10,0,0,0"
                             Padding="10,4"
                             CornerRadius="8"
-                            Background="{StaticResource SuccessSurfaceBrush}">
+                            Background="{DynamicResource SuccessSurfaceBrush}">
                         <TextBlock x:Name="FooterVersionText"
                                    FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource SuccessBrush}" />
+                                   Foreground="{DynamicResource SuccessBrush}" />
                     </Border>
                 </StackPanel>
             </Grid>

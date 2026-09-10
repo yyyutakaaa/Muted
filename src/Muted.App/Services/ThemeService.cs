@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Muted.Core.Settings;
 
@@ -11,64 +12,94 @@ using SolidColorBrush = System.Windows.Media.SolidColorBrush;
 namespace Muted.App.Services;
 
 /// <summary>
-/// Repaints the shared brushes in <see cref="Application.Resources"/> instead of
-/// swapping dictionaries, so every existing StaticResource reference follows along.
+/// Swaps the shared brushes in <see cref="Application.Resources"/> for the palette the
+/// current theme asks for. The XAML reaches them through DynamicResource, so a swap
+/// reaches every control that is already on screen.
 /// </summary>
-internal sealed class ThemeService
+/// <remarks>
+/// The brushes have to be replaced rather than repainted in place: WPF freezes a
+/// brush the moment a Style that uses it as a setter value is sealed, and a frozen
+/// brush cannot change colour again, which is what used to leave the light theme
+/// looking like it did nothing at all.
+/// <para>
+/// Both palettes are one violet family on purpose: the accent, the running dot, the
+/// meters and the waveform are all shades of the same hue, and only a genuine warning
+/// or failure is allowed to break out of it in amber or rose.
+/// </para>
+/// </remarks>
+internal sealed class ThemeService : IDisposable
 {
     private static readonly Palette Dark = new(
-        Background: "#0B0C10",
-        Surface: "#13151B",
-        SurfaceRaised: "#191C24",
-        SurfaceHover: "#242834",
-        Sidebar: "#0E1015",
-        Border: "#292D38",
-        BorderStrong: "#454A59",
-        Text: "#F5F6FA",
-        TextMuted: "#9499A8",
-        Accent: "#8B7CFF",
-        AccentSoft: "#2A254F",
-        Success: "#48D6A2",
-        Warning: "#F2B84B",
-        Danger: "#FF6B7A",
-        MeterTrack: "#222630",
-        ToggleTrack: "#303440",
-        ToggleThumb: "#D9DCE5",
-        DangerSurface: "#2A151A",
-        DangerBorder: "#66313B",
-        SuccessSurface: "#14261F",
-        WarningSurface: "#2A2312");
+        Background: "#0A0713",
+        Surface: "#141024",
+        SurfaceRaised: "#1B1631",
+        SurfaceHover: "#262040",
+        Sidebar: "#0D0A19",
+        Border: "#2A2342",
+        BorderStrong: "#4A3F70",
+        Text: "#F4F1FC",
+        TextMuted: "#A69EC4",
+        Accent: "#A78BFA",
+        AccentSoft: "#2C2450",
+        Success: "#C6B4FF",
+        Warning: "#F5B94D",
+        Danger: "#FF6E8F",
+        MeterTrack: "#221C39",
+        ToggleTrack: "#352D52",
+        ToggleThumb: "#E9E4FA",
+        DangerSurface: "#2B1425",
+        DangerBorder: "#6B3352",
+        SuccessSurface: "#221A3D",
+        WarningSurface: "#2C2313");
 
     private static readonly Palette Light = new(
-        Background: "#F3F4F8",
+        Background: "#F5F3FC",
         Surface: "#FFFFFF",
-        SurfaceRaised: "#F1F2F7",
-        SurfaceHover: "#E5E7F0",
-        Sidebar: "#EBECF2",
-        Border: "#DCDEE8",
-        BorderStrong: "#C2C6D4",
-        Text: "#14161C",
-        TextMuted: "#5A6072",
-        Accent: "#6350E0",
-        AccentSoft: "#E4E0FA",
-        Success: "#12916B",
-        Warning: "#A96C0C",
-        Danger: "#CC3446",
-        MeterTrack: "#DFE1EA",
-        ToggleTrack: "#C7CAD6",
+        SurfaceRaised: "#F1EDFB",
+        SurfaceHover: "#E6DFF8",
+        Sidebar: "#EEE9F9",
+        Border: "#E2DCF1",
+        BorderStrong: "#BCB0DC",
+        Text: "#1A1430",
+        TextMuted: "#5C5480",
+        Accent: "#6D28D9",
+        AccentSoft: "#EAE2FC",
+        Success: "#7C3AED",
+        Warning: "#A2670A",
+        Danger: "#C42A55",
+        MeterTrack: "#E3DDF2",
+        ToggleTrack: "#C6BCE2",
         ToggleThumb: "#FFFFFF",
-        DangerSurface: "#FCEDEF",
-        DangerBorder: "#F0C3C8",
-        SuccessSurface: "#E5F5EF",
-        WarningSurface: "#FBF1DE");
+        DangerSurface: "#FCEBF0",
+        DangerBorder: "#F0C6D4",
+        SuccessSurface: "#F0E9FD",
+        WarningSurface: "#FBF2DE");
 
     private readonly ResourceDictionary _resources;
+    private readonly Dispatcher _dispatcher;
+    private AppTheme _theme = AppTheme.System;
+    private bool _useSystemAccent;
+    private bool _applied;
+    private bool _appliedDark;
+    private bool _appliedUseSystemAccent;
+    private Color _appliedAccent;
+    private bool _disposed;
 
-    public ThemeService(ResourceDictionary resources)
+    public ThemeService(ResourceDictionary resources, Dispatcher dispatcher)
     {
         _resources = resources;
+        _dispatcher = dispatcher;
+
+        // Windows announces a light/dark switch and an accent change through the same
+        // event, so "Follow Windows" keeps following after startup instead of only at it.
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
     }
 
+    /// <summary>
+    /// Raised on the UI thread once the resource dictionary holds the new palette.
+    /// DynamicResource carries the swap into the visual tree by itself; this is for
+    /// the few things Windows draws for us, such as the titlebar and the backdrop.
+    /// </summary>
     public event EventHandler? Changed;
 
     public bool IsDark { get; private set; } = true;
@@ -77,7 +108,39 @@ internal sealed class ThemeService
 
     public void Apply(AppTheme theme, bool useSystemAccent)
     {
-        var dark = theme switch
+        _theme = theme;
+        _useSystemAccent = useSystemAccent;
+        ApplyCore();
+    }
+
+    public static bool SystemPrefersLight()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            return key?.GetValue("AppsUseLightTheme") is int value && value != 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
+    }
+
+    private void ApplyCore()
+    {
+        var dark = _theme switch
         {
             AppTheme.Light => false,
             AppTheme.Dark => true,
@@ -86,11 +149,29 @@ internal sealed class ThemeService
 
         var palette = dark ? Dark : Light;
         var accent = Parse(palette.Accent);
-        if (useSystemAccent && TryReadSystemAccent(out var systemAccent))
+        if (_useSystemAccent && TryReadSystemAccent(out var systemAccent))
         {
             accent = MakeReadable(systemAccent, dark);
         }
 
+        // Windows repeats its notification several times per change, and every swap
+        // costs the controls a redraw, so identical work is skipped.
+        var moved = !_applied ||
+            _appliedDark != dark ||
+            _appliedUseSystemAccent != _useSystemAccent ||
+            _appliedAccent != accent;
+        if (!moved)
+        {
+            // Still worth telling: whether the Mica backdrop may be used depends on
+            // the Windows theme, which can move while ours stands still.
+            Changed?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        _applied = true;
+        _appliedDark = dark;
+        _appliedUseSystemAccent = _useSystemAccent;
+        _appliedAccent = accent;
         IsDark = dark;
         AccentColor = accent;
 
@@ -114,25 +195,32 @@ internal sealed class ThemeService
         SetBrush("SuccessSurfaceBrush", palette.SuccessSurface);
         SetBrush("WarningSurfaceBrush", palette.WarningSurface);
         SetColor("AccentBrush", accent);
-        SetColor("AccentSoftBrush", useSystemAccent
+        SetColor("AccentSoftBrush", _useSystemAccent
             ? Blend(accent, dark ? Parse(palette.Surface) : Colors.White, dark ? 0.72f : 0.78f)
             : Parse(palette.AccentSoft));
 
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public static bool SystemPrefersLight()
+    private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs eventArgs)
     {
-        try
+        if (eventArgs.Category is not (UserPreferenceCategory.General
+            or UserPreferenceCategory.Color
+            or UserPreferenceCategory.VisualStyle))
         {
-            using var key = Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-            return key?.GetValue("AppsUseLightTheme") is int value && value != 0;
+            return;
         }
-        catch
+
+        // No shortcut for a fixed Light or Dark: even then the Windows theme decides
+        // whether the window may keep its Mica backdrop.
+        // Windows raises this on its own thread, and the brushes belong to the UI one.
+        _ = _dispatcher.BeginInvoke(() =>
         {
-            return false;
-        }
+            if (!_disposed)
+            {
+                ApplyCore();
+            }
+        });
     }
 
     private static bool TryReadSystemAccent(out Color color)
@@ -190,14 +278,14 @@ internal sealed class ThemeService
 
     private void SetColor(string key, Color color)
     {
-        if (_resources[key] is SolidColorBrush brush && !brush.IsFrozen)
+        if (_resources[key] is SolidColorBrush brush && brush.Color == color)
         {
-            brush.Color = color;
+            return;
         }
-        else
-        {
-            _resources[key] = new SolidColorBrush(color);
-        }
+
+        var replacement = new SolidColorBrush(color);
+        replacement.Freeze();
+        _resources[key] = replacement;
     }
 
     private static Color Parse(string hex) => (Color)ColorConverter.ConvertFromString(hex);

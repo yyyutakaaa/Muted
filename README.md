@@ -91,7 +91,9 @@ The hook is only installed once you actually assign a key.
 - refreshes devices automatically on hotplug, and can minimize to the tray
   with autostart;
 - has a compact always-on-top panel for the meter and a mute button;
-- follows the Windows light/dark theme and optionally its accent colour;
+- follows the Windows light/dark theme while Windows is switching, in a violet
+  palette that both themes share, and optionally takes the Windows accent
+  colour instead;
 - keeps the interface to four switches unless you ask for the rest under
   Advanced, which then also brings back the dB scales and live readings;
 - saves reusable audio profiles, including the whole processing chain, and
