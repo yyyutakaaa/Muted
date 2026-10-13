@@ -60,6 +60,16 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private int _faultHandling;
     private long _generation;
     private int _disposed;
+    private AudioClipBuffer? _clip;
+    private SessionAccumulator _session = new();
+    public SessionStatistics Session => Volatile.Read(ref _session).Snapshot();
+    public void BeginClip(AudioClipBuffer clip)
+    {
+        if (_state != AudioEngineState.Running) throw new InvalidOperationException("Start audio before recording.");
+        if (Interlocked.CompareExchange(ref _clip, clip, null) is not null)
+            throw new InvalidOperationException("A recording is already active.");
+    }
+    public float[] EndClip() => Interlocked.Exchange(ref _clip, null)?.Finish() ?? [];
 
     public event EventHandler<AudioEngineState>? StateChanged;
 
@@ -127,6 +137,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             Interlocked.Exchange(ref _faultHandling, 0);
             Volatile.Write(ref _options, options.Normalize());
             Scope.Clear();
+            Volatile.Write(ref _session, new SessionAccumulator());
             SetState(AudioEngineState.Starting);
 
             await Task.Run(
@@ -669,6 +680,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 {
                     mixed.AsSpan().Clear();
                 }
+                Volatile.Read(ref _clip)?.Write(mixed);
 
                 // How much RNNoise actually removed, measured before and after the model.
                 var dryRms = AudioMath.Rms(delayedDry);
@@ -720,6 +732,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 Volatile.Write(ref _limiterReductionDb, limiter.GainReductionDb);
                 Volatile.Write(ref _autoGainDb, autoGain.CurrentGainDb);
                 Volatile.Write(ref _echoReductionDb, echoCanceller.ErleDb);
+                _session.Add(voiceProbability, suppression.IsMuted, smoothedReduction, limiter.GainReductionDb, inputPeak);
                 Scope.Push(outputPeak);
             }
         }

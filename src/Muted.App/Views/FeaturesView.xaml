@@ -1,0 +1,78 @@
+<UserControl x:Class="Muted.App.Views.FeaturesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Foreground="{DynamicResource TextBrush}">
+    <UserControl.Resources>
+        <Style TargetType="Button" BasedOn="{StaticResource TextButtonStyle}" />
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+        </Style>
+    </UserControl.Resources>
+    <StackPanel>
+        <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,0">
+            <StackPanel>
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Voice presets" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,6,0,12" TextWrapping="Wrap"
+                           Text="Natural keeps pauses open. Gaming uses a tighter gate. Podcast levels your voice. Meeting adds echo cancellation. Applying a preset briefly restarts running audio." />
+                <WrapPanel>
+                    <Button Content="Natural" Command="{Binding NaturalPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Gaming" Command="{Binding GamingPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Podcast" Command="{Binding PodcastPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Meeting mode" Command="{Binding MeetingPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
+                </WrapPanel>
+                <TextBlock Margin="0,8" TextWrapping="Wrap" Style="{StaticResource CaptionStyle}" Text="Share saved profiles. Applying an imported profile keeps your local microphone and cable selection." />
+                <DockPanel Margin="0,0,0,12">
+                    <Button DockPanel.Dock="Right" Content="Apply profile" Command="{Binding ApplyProfileCommand}" Margin="8,0,0,0" />
+                    <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" DisplayMemberPath="Name"
+                              AutomationProperties.Name="Saved audio profile" />
+                </DockPanel>
+                <WrapPanel>
+                    <Button Content="Import profiles…" Command="{Binding ImportProfilesCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Export selected…" Command="{Binding ExportSelectedProfileCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Export all…" Command="{Binding ExportProfilesCommand}" Margin="0,0,8,8" Padding="12,8" />
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,0">
+            <StackPanel>
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Microphone test &amp; diagnosis" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,6,0,12" TextWrapping="Wrap"
+                           Text="Start audio, press Record, and stop whenever you are finished. Recordings contain your processed output, including mute, and can last up to 2 minutes. They stay in memory until replaced, deleted, or the app closes. Saved WAV files remain on disk." />
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,0,0,6" Text="Playback and push-to-talk sound output (headphones recommended)" />
+                <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="DisplayName"
+                          AutomationProperties.Name="Test playback output" Margin="0,0,0,12" />
+                <WrapPanel>
+                    <Button Content="{Binding RecordingButtonText}" Command="{Binding StartRecordingCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Stop recording" Command="{Binding StopRecordingCommand}" Margin="0,0,8,8" Padding="12,8" />
+                </WrapPanel>
+                <Grid Margin="0,4,0,10">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <Slider Grid.Column="0" Minimum="0" Maximum="{Binding ClipDuration}" Value="{Binding ClipPosition}"
+                            IsMoveToPointEnabled="True" AutomationProperties.Name="Recording playback position" />
+                    <TextBlock Grid.Column="1" Text="{Binding ClipTimeText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                </Grid>
+                <WrapPanel>
+                    <Button Content="{Binding PlayPauseText}" Command="{Binding PlayPauseClipCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Rewind 10s" Command="{Binding RewindClipCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Replay" Command="{Binding ReplayClipCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Save diagnosis WAV…" Command="{Binding SaveClipCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Delete temporary clip" Command="{Binding DeleteClipCommand}" Margin="0,0,8,8" Padding="12,8" />
+                </WrapPanel>
+                <TextBlock Text="{Binding FeatureStatus}" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite" />
+            </StackPanel>
+        </Border>
+        <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,0">
+            <StackPanel>
+                <TextBlock FontSize="16" FontWeight="SemiBold" Text="Feedback &amp; session" />
+                <CheckBox Content="Show speaking activity in the tray" IsChecked="{Binding SpeakingTrayEnabled}" Margin="0,12,0,8" />
+                <CheckBox Content="Remind me when I speak while manually muted" IsChecked="{Binding MuteReminderEnabled}" Margin="0,0,0,8" />
+                <CheckBox Content="Play push-to-talk open / close sounds" IsChecked="{Binding PushToTalkSoundsEnabled}" Margin="0,0,0,8" />
+                <CheckBox Content="Warn about audio processing load and dropouts" IsChecked="{Binding HealthWarningsEnabled}" Margin="0,0,0,12" />
+                <TextBlock Text="{Binding HealthWarning}" TextWrapping="Wrap" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Text="{Binding SessionText}" TextWrapping="Wrap" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Text="Statistics cover the current or last audio run and reset when audio restarts. Speaking time is an estimate; limiter events count separate attenuation periods. No session audio is stored automatically." />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

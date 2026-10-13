@@ -25,7 +25,7 @@
                            FontSize="13"
                            LineHeight="21"
                            TextWrapping="Wrap"
-                           Text="Muted sits between your microphone and your apps. Everything your mic picks up goes through RNNoise first, a small neural network that learned what a human voice sounds like. Your voice passes through. The fan hum, mic hiss, and keyboard clatter mostly don't. All of this happens on your PC. Nothing is uploaded, nothing is recorded." />
+                           Text="Muted sits between your microphone and your apps. Everything your mic picks up goes through RNNoise first, a small neural network that learned what a human voice sounds like. Your voice passes through. The fan hum, mic hiss, and keyboard clatter mostly don't. All processing happens on your PC. Nothing is uploaded. Audio is recorded only when you start a microphone test or diagnosis clip." />
 
                 <TextBlock Margin="0,18,0,0" FontSize="14" FontWeight="SemiBold" Text="How to set it up" />
                 <TextBlock Margin="0,6,0,0"

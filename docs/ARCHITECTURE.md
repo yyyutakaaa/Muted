@@ -71,6 +71,16 @@ gealloceerd. De UI leest alleen atomaire metingen op 30 Hz en pauzeert die timer
 wanneer geen venster zichtbaar is. De golfvorm in de UI leest een aparte
 ringbuffer met één piekwaarde per frame.
 
+Een losse timer op 5 Hz verzorgt tray-spraakstatus en optionele meldingen, ook wanneer
+het venster verborgen is. Sessietellers worden per audioframe opgebouwd; venster- of
+timervertraging beïnvloedt de gemeten spreektijd niet. Een sessie is één engine-run.
+
+Expliciet gestarte tests/diagnoseclips kopiëren post-mute samples naar een vooraf
+gealloceerde buffer van maximaal 30 seconden. De audiothread schrijft nooit bestanden.
+Sealen voorkomt writes na beëindiging; WAV-conversie en opslaan gebeuren buiten de
+realtimeketen. Afspelen gebruikt een apart WASAPI-renderpad naar een luisterapparaat
+en dempt tijdelijk de microfoonuitgang. Zonder export blijft de clip alleen in geheugen.
+
 ## Echo-onderdrukking
 
 De referentie is een WASAPI-loopback van het renderendpoint dat de gebruiker

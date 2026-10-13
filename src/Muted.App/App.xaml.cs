@@ -80,6 +80,7 @@ public partial class App : System.Windows.Application
             RefreshHotkeys();
 
             _tray = new TrayService();
+            _viewModel.NotificationRequested += (_, message) => _tray?.ShowBalloon("Muted", message);
             _tray.OpenRequested += (_, _) => Dispatcher.Invoke(ShowMainWindow);
             _tray.ToggleRequested += (_, _) => Dispatcher.Invoke(() => Execute(_viewModel.ToggleCommand));
             _tray.MuteRequested += (_, _) => Dispatcher.Invoke(() => Execute(_viewModel.ToggleMuteCommand));
@@ -226,6 +227,7 @@ public partial class App : System.Windows.Application
         switch (eventArgs.PropertyName)
         {
             case nameof(MainViewModel.EngineState):
+            case nameof(MainViewModel.TraySpeaking):
             case nameof(MainViewModel.IsMuted):
             case nameof(MainViewModel.IsEffectivelyMuted):
             case nameof(MainViewModel.SuppressionEnabled):
@@ -329,7 +331,8 @@ public partial class App : System.Windows.Application
             _viewModel.CompactMode,
             _viewModel.ActiveProfileName,
             _viewModel.ActiveProfileId,
-            _viewModel.Profiles.ToArray()));
+            _viewModel.Profiles.ToArray(),
+            _viewModel.TraySpeaking));
     }
 
     private void ShowMainWindow()

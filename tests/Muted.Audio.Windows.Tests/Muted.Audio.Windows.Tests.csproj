@@ -4,6 +4,7 @@
     <TargetFramework>net9.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
     <IsPackable>false</IsPackable>
     <PlatformTarget>x64</PlatformTarget>
     <Platforms>x64</Platforms>
@@ -22,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Muted.Audio.Windows\Muted.Audio.Windows.csproj" />
+    <ProjectReference Include="..\..\src\Muted.App\Muted.App.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="Exists('..\..\src\Muted.Audio.Windows\runtimes\win-x64\native\rnnoise.dll')">
