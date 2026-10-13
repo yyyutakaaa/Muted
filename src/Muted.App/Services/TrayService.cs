@@ -15,6 +15,11 @@ internal sealed class TrayService : IDisposable
     private readonly System.Windows.Forms.ToolStripMenuItem _compactItem;
     private readonly System.Windows.Forms.ToolStripMenuItem _profilesItem;
     private readonly Icon _appIcon;
+    private readonly Icon _speakingIcon = CreateStatusIcon(Color.MediumSeaGreen);
+    private readonly Icon _mutedIcon = CreateStatusIcon(Color.IndianRed);
+    private readonly Icon _stoppedIcon = CreateStatusIcon(Color.Gray);
+    private readonly Icon _errorIcon = CreateStatusIcon(Color.DarkOrange);
+    private string? _profileMenuKey;
 
     public TrayService()
     {
@@ -86,6 +91,9 @@ internal sealed class TrayService : IDisposable
 
     public void UpdateState(TrayState state)
     {
+        _notifyIcon.Icon = state.EngineState == AudioEngineState.Faulted ? _errorIcon
+            : state.EngineState != AudioEngineState.Running ? _stoppedIcon
+            : state.IsMuted ? _mutedIcon : state.Speaking ? _speakingIcon : _appIcon;
         var isBusy = state.EngineState is AudioEngineState.Starting or AudioEngineState.Stopping;
         _toggleItem.Enabled = !isBusy;
         _toggleItem.Text = state.EngineState switch
@@ -110,6 +118,7 @@ internal sealed class TrayService : IDisposable
             AudioEngineState.Starting => "Muted — starting…",
             AudioEngineState.Stopping => "Muted — stopping…",
             AudioEngineState.Running when state.IsMuted => "Muted — microphone muted",
+            AudioEngineState.Running when state.Speaking => "Muted — speaking",
             AudioEngineState.Running => $"Muted — active ({state.ActiveProfileName})",
             AudioEngineState.Faulted => "Muted — audio error",
             _ => "Muted — stopped"
@@ -121,7 +130,15 @@ internal sealed class TrayService : IDisposable
         string? activeProfileId,
         bool isBusy)
     {
-        _profilesItem.DropDownItems.Clear();
+        var key = $"{isBusy}|{activeProfileId}|" + string.Join("|", profiles.Select(p => p.Id + ":" + p.Name));
+        if (_profileMenuKey == key) return;
+        _profileMenuKey = key;
+        while (_profilesItem.DropDownItems.Count > 0)
+        {
+            var item = _profilesItem.DropDownItems[0];
+            _profilesItem.DropDownItems.RemoveAt(0);
+            item.Dispose();
+        }
         _profilesItem.Enabled = profiles.Count > 0 && !isBusy;
         foreach (var profile in profiles)
         {
@@ -151,6 +168,27 @@ internal sealed class TrayService : IDisposable
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
         _appIcon.Dispose();
+        _speakingIcon.Dispose();
+        _mutedIcon.Dispose();
+        _stoppedIcon.Dispose();
+        _errorIcon.Dispose();
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool DestroyIcon(IntPtr handle);
+
+    private static Icon CreateStatusIcon(Color color)
+    {
+        using var bitmap = new Bitmap(32, 32);
+        using var graphics = Graphics.FromImage(bitmap);
+        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using var brush = new SolidBrush(color);
+        graphics.FillEllipse(brush, 3, 3, 26, 26);
+        using var pen = new Pen(Color.White, 3);
+        graphics.DrawLine(pen, 16, 9, 16, 23);
+        var handle = bitmap.GetHicon();
+        try { return (Icon)Icon.FromHandle(handle).Clone(); }
+        finally { DestroyIcon(handle); }
     }
 
     private static Icon LoadAppIcon()
@@ -170,7 +208,8 @@ internal sealed record TrayState(
     bool CompactMode,
     string ActiveProfileName,
     string? ActiveProfileId,
-    IReadOnlyList<AudioProfile> Profiles);
+    IReadOnlyList<AudioProfile> Profiles,
+    bool Speaking = false);
 
 internal sealed class ProfileRequestedEventArgs(string profileId) : EventArgs
 {

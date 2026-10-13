@@ -22,7 +22,7 @@ internal enum AppPage
     About
 }
 
-internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
+internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
 {
     private const string NoDevicesError = "Windows did not report any usable audio devices.";
     private const string DeviceReadError = "Audio devices could not be read.";
@@ -185,6 +185,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             Interval = TimeSpan.FromSeconds(2)
         };
         _recoveryTimer.Tick += OnRecoveryTick;
+        InitializeFeatures();
     }
 
     public event EventHandler? ShowWindowRequested;
@@ -505,6 +506,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
                 RunDiagnosticsCommand.RaiseCanExecuteChanged();
                 ResetSettingsCommand.RaiseCanExecuteChanged();
                 UpdateMeterTimer();
+                FeatureEngineChanged();
             }
         }
     }
@@ -904,7 +906,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    public bool IsEffectivelyMuted => IsMuted || (IsPushToTalkArmed && !_pushToTalkHeld) || _pushToMuteHeld;
+    public bool IsEffectivelyMuted => _previewMuted || IsMuted || (IsPushToTalkArmed && !_pushToTalkHeld) || _pushToMuteHeld;
 
     public bool IsPushToTalkArmed => Hotkeys.Any(hotkey =>
         hotkey.Action == HotkeyAction.PushToTalk && hotkey.Enabled && hotkey.IsAssigned);
@@ -1030,6 +1032,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
     private void LoadSettings(AppSettings settings)
     {
         _settings = settings.Normalize();
+        LoadFeatureSettings(_settings);
         _startWithWindows = _settings.StartWithWindows;
         _startMinimized = _settings.StartMinimized;
         _minimizeToTray = _settings.MinimizeToTray;
@@ -1176,6 +1179,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         ApplySuppression();
         OnPropertyChanged(nameof(MuteStatusText));
         OnPropertyChanged(nameof(IsEffectivelyMuted));
+        UpdateTalkCue();
     }
 
     private void OnHotkeyBindingChanged()
@@ -1248,6 +1252,10 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
             LimiterEnabled = profile.LimiterEnabled;
             AutoGainEnabled = profile.AutoGainEnabled;
             AutoGainTargetDb = profile.AutoGainTargetDb;
+            EchoStrength = profile.EchoStrength;
+            SelectedEchoReference = OutputDevices.FirstOrDefault(device => device.Id == profile.EchoReferenceDeviceId)
+                ?? SelectedEchoReference;
+            EchoCancellationEnabled = profile.EchoCancellationEnabled;
             ApplySuppression();
             ActiveProfileId = profile.Id;
         }
@@ -1281,7 +1289,10 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         HighPassFrequency = (float)HighPassFrequency,
         LimiterEnabled = LimiterEnabled,
         AutoGainEnabled = AutoGainEnabled,
-        AutoGainTargetDb = (float)AutoGainTargetDb
+        AutoGainTargetDb = (float)AutoGainTargetDb,
+        EchoCancellationEnabled = EchoCancellationEnabled,
+        EchoReferenceDeviceId = SelectedEchoReference?.Id,
+        EchoStrength = (float)EchoStrength
     }.Normalize();
 
     private void SaveCurrentProfile()
@@ -1943,6 +1954,10 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
         UseSystemAccentColor = UseSystemAccentColor,
         CompactMode = CompactMode,
         AdvancedMode = AdvancedMode,
+        SpeakingTrayEnabled = SpeakingTrayEnabled,
+        MuteReminderEnabled = MuteReminderEnabled,
+        PushToTalkSoundsEnabled = PushToTalkSoundsEnabled,
+        HealthWarningsEnabled = HealthWarningsEnabled,
         UpdateChannel = UpdateChannel,
         SkippedUpdateVersion = _skippedUpdateVersion,
         ActiveProfileId = ActiveProfileId,
@@ -2123,6 +2138,7 @@ internal sealed class MainViewModel : ObservableObject, IAsyncDisposable
 
         _meterTimer.Stop();
         _meterTimer.Tick -= OnMeterTick;
+        DisposeFeatures();
         _recoveryTimer.Stop();
         _recoveryTimer.Tick -= OnRecoveryTick;
         _deviceCatalog.DevicesChanged -= OnDevicesChanged;

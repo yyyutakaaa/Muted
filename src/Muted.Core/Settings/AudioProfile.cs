@@ -20,6 +20,9 @@ public sealed record AudioProfile
     public bool LimiterEnabled { get; init; } = true;
     public bool AutoGainEnabled { get; init; }
     public float AutoGainTargetDb { get; init; } = -18f;
+    public bool EchoCancellationEnabled { get; init; }
+    public string? EchoReferenceDeviceId { get; init; }
+    public float EchoStrength { get; init; } = 0.5f;
 
     public AudioProfile Normalize()
     {
@@ -39,7 +42,8 @@ public sealed record AudioProfile
             InputGain = Math.Clamp(InputGain, 0.25f, 4f),
             OutputGain = Math.Clamp(OutputGain, 0.25f, 4f),
             HighPassFrequency = Math.Clamp(HighPassFrequency, 40f, 200f),
-            AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f)
+            AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f),
+            EchoStrength = Math.Clamp(EchoStrength, 0f, 1f)
         };
     }
 

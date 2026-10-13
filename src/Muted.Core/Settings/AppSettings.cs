@@ -17,7 +17,7 @@ public enum UpdateChannel
 
 public sealed record AppSettings
 {
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
     public const int MaximumProfiles = 20;
 
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -65,6 +65,10 @@ public sealed record AppSettings
     /// most people want a microphone that works, not a mixing desk.
     /// </summary>
     public bool AdvancedMode { get; init; }
+    public bool SpeakingTrayEnabled { get; init; } = true;
+    public bool MuteReminderEnabled { get; init; } = true;
+    public bool PushToTalkSoundsEnabled { get; init; }
+    public bool HealthWarningsEnabled { get; init; } = true;
     public UpdateChannel UpdateChannel { get; init; } = UpdateChannel.Stable;
     public string? SkippedUpdateVersion { get; init; }
     public string? ActiveProfileId { get; init; }
@@ -75,7 +79,12 @@ public sealed record AppSettings
     {
         var profiles = (Profiles ?? [])
             .Where(profile => profile is not null)
-            .Select(profile => profile.Normalize())
+            .Select(profile => (SchemaVersion < 5 ? profile with
+            {
+                EchoCancellationEnabled = EchoCancellationEnabled,
+                EchoReferenceDeviceId = EchoReferenceDeviceId,
+                EchoStrength = EchoStrength
+            } : profile).Normalize())
             .DistinctBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
             .Take(MaximumProfiles)
             .ToList();
@@ -96,7 +105,10 @@ public sealed record AppSettings
                 HighPassFrequency = HighPassFrequency,
                 LimiterEnabled = LimiterEnabled,
                 AutoGainEnabled = AutoGainEnabled,
-                AutoGainTargetDb = AutoGainTargetDb
+                AutoGainTargetDb = AutoGainTargetDb,
+                EchoCancellationEnabled = EchoCancellationEnabled,
+                EchoReferenceDeviceId = EchoReferenceDeviceId,
+                EchoStrength = EchoStrength
             }).Normalize();
         }
 

@@ -105,7 +105,42 @@ The hook is only installed once you actually assign a key.
   result as text for a bug report;
 - stores settings in `%LOCALAPPDATA%\Muted\settings.json` and logs errors to
   `%LOCALAPPDATA%\Muted\Muted.log`, both reachable from Settings;
-- has no account, no cloud, no telemetry, and records nothing.
+- has no account, no cloud, and no telemetry; records audio only when you explicitly start a test or diagnosis clip.
+
+## Voice tools
+
+The Audio page includes Natural, Gaming, Podcast and Meeting presets. Meeting enables
+levelling and echo cancellation when a listening device is available; check that the
+echo reference matches your speakers. Presets briefly restart running audio and can
+be customized using the existing profile controls. Echo settings are now part of
+profiles. Older settings retain their previous global echo settings during migration.
+
+Import and export selected or all saved profiles as JSON. Device identifiers are
+excluded, imported profiles receive new identifiers, and duplicate names receive a
+suffix. Imports are validated before adding any profiles; the limit remains 20.
+
+With audio running, **Start recording** captures processed, post-mute audio until you
+press **Stop recording**, with a two-minute memory limit. The result can be played,
+paused, scrubbed on the timeline, rewound by 10 seconds, replayed from the start,
+deleted, and exported as WAV.
+Select headphones or speakers as the playback output; virtual
+cable playback is rejected. The microphone output is temporarily muted during replay
+to prevent feedback. Cancel stops the operation. Temporary clips stay in memory and
+are discarded when replaced, deleted, or the app closes. Only an explicit **Save
+diagnosis WAV** action writes audio to disk; exported files remain until you delete them.
+
+The tray shows speaking, muted, stopped and error states. Optional mute reminders
+appear after sustained speech during manual mute, at most once per minute; idle
+push-to-talk does not trigger reminders. Optional open/close sounds play through the
+selected listening output (headphones recommended).
+
+Audio health warnings detect sustained processing load, buffer buildup and recurring
+dropouts, with a one-minute notification cooldown. Processing load measures the audio
+frame time budget, not total system CPU; buffer time is not end-to-end latency.
+Session statistics continue while minimized and show processed duration, estimated
+unmuted speaking time, separate limiter attenuation periods, average noise reduction
+and peak input. They cover the current or last audio run, reset on restart (including
+profile changes/device recovery), and are not saved across application exits.
 
 Hard keyboard clicks during speech can still partly leak through. That's a
 limit of the model, not a bug.
