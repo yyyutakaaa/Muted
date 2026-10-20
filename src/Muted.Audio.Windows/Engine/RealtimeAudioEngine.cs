@@ -129,7 +129,10 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
             if (_state != AudioEngineState.Stopped)
             {
-                var priorCleanupException = CleanupCore();
+                // Cleanup releases COM objects made on a thread-pool (MTA) thread, so it
+                // runs there too rather than on the caller's (often STA) thread.
+                var priorCleanupException = await Task.Run(CleanupCore, CancellationToken.None)
+                    .ConfigureAwait(false);
                 if (priorCleanupException is not null)
                 {
                     throw new InvalidOperationException(
@@ -155,7 +158,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
         catch (Exception startException)
         {
-            var cleanupException = CleanupCore();
+            var cleanupException = await Task.Run(CleanupCore, CancellationToken.None)
+                .ConfigureAwait(false);
             SetState(AudioEngineState.Faulted);
             if (cleanupException is not null)
             {
@@ -1190,7 +1194,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
         if (_processorThread is not { IsAlive: true })
         {
-            var finalCleanupException = CleanupCore();
+            var finalCleanupException = await Task.Run(CleanupCore, CancellationToken.None)
+                .ConfigureAwait(false);
             if (finalCleanupException is not null)
             {
                 disposeException = disposeException is null
