@@ -48,6 +48,14 @@ public partial class AdvancedPanel : System.Windows.Controls.UserControl
         }
     }
 
+    private void Calibrate_OnClick(object sender, RoutedEventArgs eventArgs)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SelectedPage = AppPage.Audio;
+        }
+    }
+
     private void ManageProfiles_OnClick(object sender, RoutedEventArgs eventArgs)
     {
         if (DataContext is MainViewModel viewModel)
