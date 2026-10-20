@@ -48,10 +48,27 @@ Per frame van 480 samples, in deze volgorde:
 
 ```text
 echo-onderdrukking (optioneel) → inputgain → high-pass (optioneel)
-  → dry-vertraging ∥ RNNoise → dry/wet-menging → voice gate
-  → automatisch niveau (optioneel) → outputgain → limiter → mute
-  → driftcorrectie → kabel
+  → [schreeuwanalyse] → dry-vertraging ∥ RNNoise → dry/wet-menging → voice gate
+  → stemkarakter (optioneel) → automatisch niveau (optioneel) → outputgain
+  → schreeuwbeveiliging (optioneel) → limiter → mute → driftcorrectie → kabel
 ```
+
+- Het stemkarakter (`VoiceCharacter`) is low-shelf, proximity-bel en -dip,
+  high-shelf met split-band de-esser, een RMS-compressor met zachte knie en
+  make-up die stilte niet optilt, en 2x overgesamplede asymmetrische tanh-saturatie.
+  Aan staat het 15 samples (0,31 ms) later; uit is het bit-exact.
+- De schreeuwbeveiliging (`ShoutGuard`) analyseert het inputframe vóór RNNoise en
+  past de gain toe op het verwerkte frame. Omdat dat precies de 960 samples van
+  RNNoise en de dry-vertraging later is, krijgt de beveiliging die look-ahead
+  gratis: de gain is volledig dicht vóór het eerste te luide sample, houdt 400 ms
+  vast en opent in 150 ms.
+- Kalibratie en automatisch afstellen kijken naar de microfoon vóór de inputgain.
+  Tijdens een kalibratie kopieert de audiothread elk ruw frame plus de
+  spraakkans van RNNoise naar een vooraf gealloceerde `CalibrationRecorder`;
+  `VoiceAnalyzer` meet en adviseert daarna buiten de realtimeketen. `VoiceTracker`
+  draait altijd mee, zonder allocaties, en houdt traag spraakniveau, ruisvloer en
+  het 95e percentiel van de spraakkans in stille momenten bij. `AutoTuner` leest
+  die op de UI-timer en stelt in kleine, begrensde stappen boost en gate bij.
 
 - De high-pass is een tweede-orde Butterworth vóór de vertraging, zodat dry en
   wet dezelfde filtering krijgen. Denormals worden per frame weggeschreven.
