@@ -8,7 +8,7 @@ namespace Muted.App.Views;
 
 public partial class DashboardView : System.Windows.Controls.UserControl
 {
-    private static readonly string[] BuiltInPresets = ["Natural", "Gaming", "Podcast", "Meeting"];
+    private static readonly string[] BuiltInPresets = ["Natural", "Gaming", "Podcast", "Meeting", "Warm Radio"];
     private MainViewModel? _viewModel;
     private bool _syncingPresets;
 
@@ -116,6 +116,7 @@ public partial class DashboardView : System.Windows.Controls.UserControl
             "Gaming" => viewModel.GamingPresetCommand,
             "Podcast" => viewModel.PodcastPresetCommand,
             "Meeting" => viewModel.MeetingPresetCommand,
+            "Warm Radio" => viewModel.WarmRadioPresetCommand,
             _ => viewModel.NaturalPresetCommand
         };
 
