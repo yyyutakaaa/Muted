@@ -30,6 +30,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private MMDevice? _outputDevice;
     private MMDevice? _monitorDevice;
     private MMDevice? _referenceDevice;
+
+    // Plain copies of the open device IDs. The MMDevice objects are created on a
+    // thread-pool (MTA) thread; reading their properties from the UI (STA) thread
+    // crosses COM apartments and fails with E_NOINTERFACE.
+    private volatile string? _monitorDeviceId;
+    private volatile string? _referenceDeviceId;
     private WasapiCapture? _capture;
     private WasapiLoopbackCapture? _referenceCapture;
     private WasapiOut? _render;
@@ -150,7 +156,10 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
             if (_state != AudioEngineState.Stopped)
             {
-                var priorCleanupException = CleanupCore();
+                // Cleanup releases COM objects made on a thread-pool (MTA) thread, so it
+                // runs there too rather than on the caller's (often STA) thread.
+                var priorCleanupException = await Task.Run(CleanupCore, CancellationToken.None)
+                    .ConfigureAwait(false);
                 if (priorCleanupException is not null)
                 {
                     throw new InvalidOperationException(
@@ -176,7 +185,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
         catch (Exception startException)
         {
-            var cleanupException = CleanupCore();
+            var cleanupException = await Task.Run(CleanupCore, CancellationToken.None)
+                .ConfigureAwait(false);
             SetState(AudioEngineState.Faulted);
             if (cleanupException is not null)
             {
@@ -250,7 +260,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             }
 
             var deviceChanged = !string.Equals(
-                _monitorDevice?.ID,
+                _monitorDeviceId,
                 monitor.DeviceId,
                 StringComparison.Ordinal);
             var isRunning = Volatile.Read(ref _monitorProvider) is not null;
@@ -301,7 +311,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             }
 
             var deviceChanged = !string.Equals(
-                _referenceDevice?.ID,
+                _referenceDeviceId,
                 echo.ReferenceDeviceId,
                 StringComparison.Ordinal);
             var isRunning = Volatile.Read(ref _referenceBuffer) is not null;
@@ -442,6 +452,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         _referenceDevice = enumerator.GetDevice(echo.ReferenceDeviceId);
+        _referenceDeviceId = echo.ReferenceDeviceId;
         var capture = new WasapiLoopbackCapture(_referenceDevice);
         var format = ResolveFormat(capture.WaveFormat);
         var name = _referenceDevice.FriendlyName;
@@ -523,6 +534,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
         var device = _referenceDevice;
         _referenceDevice = null;
+        _referenceDeviceId = null;
         try
         {
             device?.Dispose();
@@ -544,6 +556,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         _monitorDevice = enumerator.GetDevice(monitor.DeviceId);
+        _monitorDeviceId = monitor.DeviceId;
         var provider = new RealtimeFloatWaveProvider(
             SampleRate,
             OutputCapacitySamples,
@@ -585,6 +598,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
         var device = _monitorDevice;
         _monitorDevice = null;
+        _monitorDeviceId = null;
         try
         {
             device?.Dispose();
@@ -1247,7 +1261,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
         if (_processorThread is not { IsAlive: true })
         {
-            var finalCleanupException = CleanupCore();
+            var finalCleanupException = await Task.Run(CleanupCore, CancellationToken.None)
+                .ConfigureAwait(false);
             if (finalCleanupException is not null)
             {
                 disposeException = disposeException is null
