@@ -19,17 +19,17 @@
              the right colour; ThemeService takes over before the window is shown.
              One violet family throughout: only WarningBrush and DangerBrush leave it,
              and only where something genuinely needs attention. -->
-        <SolidColorBrush x:Key="BackgroundBrush" Color="#0A0713" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#141024" />
-        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#1B1631" />
-        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#262040" />
-        <SolidColorBrush x:Key="SidebarBrush" Color="#0D0A19" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#2A2342" />
-        <SolidColorBrush x:Key="BorderStrongBrush" Color="#4A3F70" />
-        <SolidColorBrush x:Key="TextBrush" Color="#F4F1FC" />
-        <SolidColorBrush x:Key="TextMutedBrush" Color="#A69EC4" />
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#08070C" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#0F0E15" />
+        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#16141E" />
+        <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#211E2C" />
+        <SolidColorBrush x:Key="SidebarBrush" Color="#0B0A10" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#221F2C" />
+        <SolidColorBrush x:Key="BorderStrongBrush" Color="#3B3649" />
+        <SolidColorBrush x:Key="TextBrush" Color="#F2F0F7" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#8F8A9E" />
         <SolidColorBrush x:Key="AccentBrush" Color="#A78BFA" />
-        <SolidColorBrush x:Key="AccentSoftBrush" Color="#2C2450" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#251E3B" />
 
         <!-- The brand mark, matching icon.ico. Deliberately not part of the theme:
              a logo does not change colour because someone picked a light theme or a
@@ -41,13 +41,15 @@
         <SolidColorBrush x:Key="SuccessBrush" Color="#C6B4FF" />
         <SolidColorBrush x:Key="WarningBrush" Color="#F5B94D" />
         <SolidColorBrush x:Key="DangerBrush" Color="#FF6E8F" />
-        <SolidColorBrush x:Key="MeterTrackBrush" Color="#221C39" />
-        <SolidColorBrush x:Key="ToggleTrackBrush" Color="#352D52" />
+        <SolidColorBrush x:Key="MeterTrackBrush" Color="#26232F" />
+        <SolidColorBrush x:Key="ToggleTrackBrush" Color="#35313F" />
         <SolidColorBrush x:Key="ToggleThumbBrush" Color="#E9E4FA" />
         <SolidColorBrush x:Key="DangerSurfaceBrush" Color="#2B1425" />
         <SolidColorBrush x:Key="DangerBorderBrush" Color="#6B3352" />
-        <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#221A3D" />
+        <SolidColorBrush x:Key="SuccessSurfaceBrush" Color="#1C1730" />
         <SolidColorBrush x:Key="WarningSurfaceBrush" Color="#2C2313" />
+
+        <SolidColorBrush x:Key="SliderThumbBrush" Color="#FFFFFF" />
 
         <sys:Double x:Key="ToggleThumbTravel">18</sys:Double>
 
@@ -206,7 +208,7 @@
             <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Padding" Value="12,7" />
             <Setter Property="MinHeight" Value="40" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
@@ -223,6 +225,7 @@
                                           Background="{TemplateBinding Background}"
                                           BorderBrush="{TemplateBinding BorderBrush}"
                                           BorderThickness="{TemplateBinding BorderThickness}"
+                                          Padding="{TemplateBinding Padding}"
                                           IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
@@ -231,7 +234,7 @@
                                                 BorderBrush="{TemplateBinding BorderBrush}"
                                                 BorderThickness="{TemplateBinding BorderThickness}"
                                                 CornerRadius="10"
-                                                Padding="12,7">
+                                                Padding="{TemplateBinding Padding}">
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
@@ -243,11 +246,14 @@
                                                                   ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
                                                                   TextElement.Foreground="{TemplateBinding Foreground}" />
                                                 <Path Grid.Column="1"
-                                                      Width="8" Height="5"
                                                       HorizontalAlignment="Right"
                                                       VerticalAlignment="Center"
-                                                      Data="M0,0 L4,4 L8,0 Z"
-                                                      Fill="{DynamicResource TextMutedBrush}" />
+                                                      Data="M0,0 L4.5,4.5 L9,0"
+                                                      StrokeThickness="1.4"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"
+                                                      Stroke="{DynamicResource TextMutedBrush}" />
                                             </Grid>
                                         </Border>
                                         <ControlTemplate.Triggers>
@@ -363,13 +369,13 @@
                                     <RepeatButton Command="{x:Static Slider.DecreaseLarge}" Background="{DynamicResource AccentBrush}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="4" Background="{TemplateBinding Background}" CornerRadius="2" />
+                                                <Border Height="5" Background="{TemplateBinding Background}" CornerRadius="2.5" />
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
                                 </Track.DecreaseRepeatButton>
                                 <Track.Thumb>
-                                    <Thumb Width="16" Height="16">
+                                    <Thumb Width="17" Height="17">
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
                                                 <Grid>
@@ -377,9 +383,9 @@
                                                              Fill="{DynamicResource AccentBrush}"
                                                              Opacity="0"
                                                              Margin="-6" />
-                                                    <Ellipse Fill="{DynamicResource ToggleThumbBrush}"
-                                                             Stroke="{DynamicResource AccentBrush}"
-                                                             StrokeThickness="3" />
+                                                    <Ellipse Fill="{DynamicResource SliderThumbBrush}"
+                                                             Stroke="{DynamicResource BorderStrongBrush}"
+                                                             StrokeThickness="0.5" />
                                                 </Grid>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
@@ -397,7 +403,7 @@
                                     <RepeatButton Command="{x:Static Slider.IncreaseLarge}" Background="{DynamicResource MeterTrackBrush}">
                                         <RepeatButton.Template>
                                             <ControlTemplate TargetType="RepeatButton">
-                                                <Border Height="4" Background="{TemplateBinding Background}" CornerRadius="2" />
+                                                <Border Height="5" Background="{TemplateBinding Background}" CornerRadius="2.5" />
                                             </ControlTemplate>
                                         </RepeatButton.Template>
                                     </RepeatButton>
@@ -895,6 +901,315 @@
             <Setter Property="Stroke" Value="{DynamicResource BorderBrush}" />
             <Setter Property="StrokeThickness" Value="2" />
             <Setter Property="StrokeDashArray" Value="1 3" />
+        </Style>
+
+        <!-- ======================= Shell layout ======================= -->
+
+        <Style TargetType="controls:BarWaveform">
+            <Setter Property="Accent" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Idle" Value="{DynamicResource BorderStrongBrush}" />
+        </Style>
+
+        <Style TargetType="controls:SegmentMeter">
+            <Setter Property="Height" Value="14" />
+            <Setter Property="FillBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="TrackBrush" Value="{DynamicResource MeterTrackBrush}" />
+            <Setter Property="DangerBrush" Value="{DynamicResource DangerBrush}" />
+        </Style>
+
+        <!-- Small grey capitals that head each block of the Advanced panel. -->
+        <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+
+        <Style x:Key="TileCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="18,16" />
+        </Style>
+
+        <Style x:Key="TileTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style x:Key="TileCaptionStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,5,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <Style x:Key="TileGlyphStyle" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+
+        <Style x:Key="TileIconPathStyle" TargetType="Path">
+            <Setter Property="Stroke" Value="{DynamicResource TextBrush}" />
+            <Setter Property="StrokeThickness" Value="1.6" />
+            <Setter Property="StrokeStartLineCap" Value="Round" />
+            <Setter Property="StrokeEndLineCap" Value="Round" />
+            <Setter Property="StrokeLineJoin" Value="Round" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+
+        <!-- The square behind a quick-control icon. Tag=True lights it up. -->
+        <Style x:Key="IconBoxStyle" TargetType="Border">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Background" Value="Transparent" />
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A whole tile that is one button, for the quick controls. -->
+        <Style x:Key="TileButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="TileSurface"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}"
+                                RenderTransformOrigin="0.5,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform x:Name="TileScale" />
+                            </Border.RenderTransform>
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TileSurface" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+                                <Setter TargetName="TileSurface" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleX" To="0.98" Duration="0:0:0.08" />
+                                            <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleY" To="0.98" Duration="0:0:0.08" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2" />
+                                            <DoubleAnimation Storyboard.TargetName="TileScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="TileSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Icon-only navigation in the narrow rail: a marker on the left edge and a
+             raised square behind the active page. Content is a glyph or a Path. -->
+        <Style x:Key="RailItemStyle" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="Transparent" Height="54">
+                            <Border x:Name="RailMarker"
+                                    Width="3"
+                                    Height="34"
+                                    CornerRadius="1.5"
+                                    HorizontalAlignment="Left"
+                                    Background="{DynamicResource AccentBrush}"
+                                    Opacity="0"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <ScaleTransform x:Name="RailMarkerScale" ScaleY="0.2" />
+                                </Border.RenderTransform>
+                            </Border>
+                            <Border x:Name="RailSurface"
+                                    Width="60"
+                                    Height="54"
+                                    Margin="3,0,0,0"
+                                    CornerRadius="10"
+                                    HorizontalAlignment="Center"
+                                    Background="Transparent">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  TextElement.FontFamily="Segoe MDL2 Assets"
+                                                  TextElement.FontSize="21"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}" />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RailSurface" Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="RailSurface" Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="RailSurface" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="RailMarker" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" />
+                                            <DoubleAnimation Storyboard.TargetName="RailMarkerScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.3">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <BackEase EasingMode="EaseOut" Amplitude="1.1" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="RailMarker" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12" />
+                                            <DoubleAnimation Storyboard.TargetName="RailMarkerScale" Storyboard.TargetProperty="ScaleY" To="0.2" Duration="0:0:0.12" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RailPathStyle" TargetType="Path">
+            <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+            <Setter Property="StrokeThickness" Value="1.7" />
+            <Setter Property="StrokeStartLineCap" Value="Round" />
+            <Setter Property="StrokeEndLineCap" Value="Round" />
+            <Setter Property="StrokeLineJoin" Value="Round" />
+        </Style>
+
+        <!-- The running state as a pill: a dot plus a word, and a click starts or stops. -->
+        <Style x:Key="StatusPillStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PillSurface"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="20"
+                                Padding="14,9">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillSurface" Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                                <Setter TargetName="PillSurface" Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="PillSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IconButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+        </Style>
+
+        <!-- Menus follow the theme instead of falling back to the Windows look. -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="HasDropShadow" Value="False" />
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="{DynamicResource SurfaceRaisedBrush}"
+                                BorderBrush="{DynamicResource BorderStrongBrush}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="5"
+                                MinWidth="210">
+                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="ItemSurface" Background="Transparent" CornerRadius="7" Padding="10,7">
+                            <ContentPresenter ContentSource="Header" TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Margin="6,5" Background="{DynamicResource BorderBrush}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Application.Resources>
 </Application>

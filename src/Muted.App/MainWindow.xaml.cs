@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
@@ -20,8 +19,7 @@ public partial class MainWindow : Window
     internal MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
-        var version = Assembly.GetEntryAssembly()?.GetName().Version;
-        FooterVersionText.Text = version is null ? "v?" : $"v{version.ToString(3)}";
+        FitToWorkArea();
         _viewModel = viewModel;
         DataContext = viewModel;
         SourceInitialized += (_, _) => ApplyWindowAppearance();
@@ -61,6 +59,24 @@ public partial class MainWindow : Window
             : WindowState.Maximized;
 
     private void CloseButton_OnClick(object sender, RoutedEventArgs eventArgs) => Close();
+
+    private void CloseAdvanced_OnClick(object sender, RoutedEventArgs eventArgs) =>
+        AdvancedToggle.IsChecked = false;
+
+    /// <summary>
+    /// The layout is drawn for a roomy window; on a small screen it starts smaller,
+    /// and without the Advanced panel when even that does not leave room for it.
+    /// </summary>
+    private void FitToWorkArea()
+    {
+        var area = SystemParameters.WorkArea;
+        Width = Math.Max(MinWidth, Math.Min(Width, area.Width - 40));
+        Height = Math.Max(MinHeight, Math.Min(Height, area.Height - 40));
+        if (Width < 1240)
+        {
+            AdvancedToggle.IsChecked = false;
+        }
+    }
 
     internal void ShowDiagnostics()
     {
