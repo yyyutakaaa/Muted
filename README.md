@@ -12,7 +12,9 @@ physical microphone
   → input gain and optional high-pass
   → RNNoise (480 samples per call, 20 ms delay)
   → optional voice gate
-  → optional automatic level, output gain, limiter
+  → optional warm radio voice (EQ, de-esser, compressor, saturation)
+  → optional automatic level, output gain
+  → optional shout guard (analysed 20 ms ahead), limiter
   → drift correction
   → playback side of a virtual audio cable
   → recording side of that cable in Discord / your call app / game
@@ -109,7 +111,36 @@ The hook is only installed once you actually assign a key.
 
 ## Voice tools
 
-The Audio page includes Natural, Gaming, Podcast and Meeting presets. Meeting enables
+**Tune to my voice** is a 24-second guided calibration: four seconds of silence,
+fifteen of normal reading, then one loud phrase. Muted records the raw microphone and
+RNNoise's speech probability in memory, then measures the room noise, your speech
+level and peaks, your pitch, how sharp your s sounds are and how much your level
+varies. From that it sets the microphone boost (speech at -22 dBFS, normal peaks
+below -3 dBFS), the voice gate, the high-pass, the shout limit (between your normal
+peaks and your shout) and the warm-voice amounts. The result plays straight away;
+**Keep** or **Undo**. Nothing leaves the computer.
+
+**Keep tuning while I talk** follows your speech level and the room while you talk,
+and every eight seconds at most nudges the microphone boost (up to 1.5 dB per step,
+never more than 6 dB from where it started) and the voice gate (up to 0.05 per
+step, within 0.2). It ignores moments when the shout guard is blocking, and never
+changes the shout guard or the warm voice. Applying a profile or calibrating sets a
+new starting point.
+
+**Warm radio voice** gives a full, close-up, smooth sound. Five sliders shape it:
+warmth (a low shelf around 150 Hz), proximity (a bump around 220 Hz and a slight dip
+around 3.5 kHz), smoothness (a softened top plus a de-esser for sharp s sounds),
+compression (keeps quiet words present) and saturation (a subtle, oversampled tanh
+warmth). It runs on the cleaned voice, after RNNoise and the gate, and adds 0.3 ms.
+
+**Shout guard** cuts the output when you get too loud, so friends are spared an
+earful. Set the loudness limit a few dB above your loudest normal speech, using the
+input level shown next to it. It silences by default, or turns a shout down 20 dB.
+Because RNNoise already delays the output by 20 ms, the guard analyses the input
+that far ahead and is fully closed before the first loud sample; it then holds for
+400 ms and fades back in over 150 ms. Presets never switch it off.
+
+The Audio page includes Natural, Gaming, Podcast, Meeting and Warm Radio presets. Meeting enables
 levelling and echo cancellation when a listening device is available; check that the
 echo reference matches your speakers. Presets briefly restart running audio and can
 be customized using the existing profile controls. Echo settings are now part of

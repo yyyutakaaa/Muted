@@ -7,6 +7,7 @@ using Muted.App.Infrastructure;
 using Muted.App.Services;
 using Muted.Audio.Windows.Devices;
 using Muted.Core.Audio;
+using Muted.Core.Dsp;
 using Muted.Core.Settings;
 
 namespace Muted.App.ViewModels;
@@ -35,6 +36,7 @@ internal sealed partial class MainViewModel
     public AsyncRelayCommand GamingPresetCommand { get; private set; } = null!;
     public AsyncRelayCommand PodcastPresetCommand { get; private set; } = null!;
     public AsyncRelayCommand MeetingPresetCommand { get; private set; } = null!;
+    public AsyncRelayCommand WarmRadioPresetCommand { get; private set; } = null!;
     public RelayCommand ExportProfilesCommand { get; private set; } = null!;
     public RelayCommand ExportSelectedProfileCommand { get; private set; } = null!;
     public RelayCommand ImportProfilesCommand { get; private set; } = null!;
@@ -79,6 +81,7 @@ internal sealed partial class MainViewModel
         GamingPresetCommand = new(() => UsePresetAsync("Gaming"), () => !IsBusy && !ClipBusy);
         PodcastPresetCommand = new(() => UsePresetAsync("Podcast"), () => !IsBusy && !ClipBusy);
         MeetingPresetCommand = new(() => UsePresetAsync("Meeting"), () => !IsBusy && !ClipBusy);
+        WarmRadioPresetCommand = new(() => UsePresetAsync("Warm Radio"), () => !IsBusy && !ClipBusy);
         ExportProfilesCommand = new(() => ExportProfiles(false));
         ExportSelectedProfileCommand = new(() => ExportProfiles(true));
         ImportProfilesCommand = new(ImportProfiles);
@@ -89,6 +92,7 @@ internal sealed partial class MainViewModel
         RewindClipCommand = new(RewindClip, () => _lastClip is not null && !IsRecording);
         SaveClipCommand = new(SaveClip, () => _lastClip is not null && _diagnosisClip && !ClipBusy);
         DeleteClipCommand = new(DeleteClip, () => _lastClip is not null && !ClipBusy);
+        InitializeTuning();
         _featureTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(200) };
         _featureTimer.Tick += FeatureTick;
     }
@@ -108,7 +112,8 @@ internal sealed partial class MainViewModel
         if (IsBusy || ClipBusy) return;
         try
         {
-            var id = "preset-" + name.ToLowerInvariant();
+            var id = "preset-" + name.ToLowerInvariant().Replace(' ', '-');
+            var warmRadio = name == "Warm Radio";
             var existing = Profiles.FirstOrDefault(p => p.Id == id);
             if (existing is null && Profiles.Count >= AppSettings.MaximumProfiles)
                 throw new InvalidOperationException("Delete a profile before adding another preset (maximum 20).");
@@ -122,10 +127,23 @@ internal sealed partial class MainViewModel
                 VoiceThreshold = name == "Gaming" ? .68f : .42f,
                 VoiceHoldMilliseconds = name == "Gaming" ? 160 : 400,
                 HighPassEnabled = true,
-                AutoGainEnabled = name is "Podcast" or "Meeting",
-                AutoGainTargetDb = name == "Podcast" ? -16 : -18,
+                // The warm sound lives in the low end, so only the rumble below it goes.
+                HighPassFrequency = warmRadio ? 60f : 80f,
+                AutoGainEnabled = name is "Podcast" or "Meeting" or "Warm Radio",
+                AutoGainTargetDb = name is "Podcast" or "Warm Radio" ? -16 : -18,
                 EchoCancellationEnabled = name == "Meeting" && reference is not null,
-                EchoReferenceDeviceId = reference?.Id
+                EchoReferenceDeviceId = reference?.Id,
+                VoiceCharacterEnabled = warmRadio,
+                Warmth = warmRadio ? .75f : .6f,
+                Proximity = warmRadio ? .7f : .5f,
+                Smoothness = warmRadio ? .7f : .6f,
+                Compression = warmRadio ? .6f : .5f,
+                Saturation = warmRadio ? .35f : .3f,
+
+                // A preset changes how you sound, never whether your friends' ears are protected.
+                ShoutGuardEnabled = ShoutGuardEnabled,
+                ShoutThresholdDb = (float)ShoutThresholdDb,
+                ShoutGuardMode = ShoutGuardDucks ? ShoutGuardMode.Duck : ShoutGuardMode.Silence
             };
             if (existing is not null) Profiles[Profiles.IndexOf(existing)] = profile;
             else Profiles.Add(profile);
@@ -325,6 +343,7 @@ internal sealed partial class MainViewModel
             if (IsRecording) StopRecording();
             PausePlayback();
         }
+        TuningEngineChanged();
         UpdateSessionText();
         RefreshFeatureCommands();
     }
@@ -336,11 +355,14 @@ internal sealed partial class MainViewModel
         SaveClipCommand?.RaiseCanExecuteChanged(); DeleteClipCommand?.RaiseCanExecuteChanged();
         NaturalPresetCommand?.RaiseCanExecuteChanged(); GamingPresetCommand?.RaiseCanExecuteChanged();
         PodcastPresetCommand?.RaiseCanExecuteChanged(); MeetingPresetCommand?.RaiseCanExecuteChanged();
+        WarmRadioPresetCommand?.RaiseCanExecuteChanged();
+        RefreshTuningCommands();
     }
 
     private void FeatureTick(object? sender, EventArgs args)
     {
         var metrics = _engine.Metrics;
+        TuningTick(metrics);
         if (IsRecording)
         {
             var elapsed = Stopwatch.GetElapsedTime(_recordingStarted).TotalSeconds;

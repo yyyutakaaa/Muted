@@ -13,12 +13,13 @@
             <StackPanel>
                 <TextBlock FontSize="16" FontWeight="SemiBold" Text="Voice presets" />
                 <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,6,0,12" TextWrapping="Wrap"
-                           Text="Natural keeps pauses open. Gaming uses a tighter gate. Podcast levels your voice. Meeting adds echo cancellation. Applying a preset briefly restarts running audio." />
+                           Text="Natural keeps pauses open. Gaming uses a tighter gate. Podcast levels your voice. Meeting adds echo cancellation. Warm Radio gives a full, close-up, smooth voice. Applying a preset briefly restarts running audio." />
                 <WrapPanel>
                     <Button Content="Natural" Command="{Binding NaturalPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
                     <Button Content="Gaming" Command="{Binding GamingPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
                     <Button Content="Podcast" Command="{Binding PodcastPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
                     <Button Content="Meeting mode" Command="{Binding MeetingPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Warm Radio" Command="{Binding WarmRadioPresetCommand}" Margin="0,0,8,8" Padding="12,8" />
                 </WrapPanel>
                 <TextBlock Margin="0,8" TextWrapping="Wrap" Style="{StaticResource CaptionStyle}" Text="Share saved profiles. Applying an imported profile keeps your local microphone and cable selection." />
                 <DockPanel Margin="0,0,0,12">

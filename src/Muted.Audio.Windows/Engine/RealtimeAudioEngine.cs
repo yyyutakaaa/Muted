@@ -57,6 +57,14 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private float _limiterReductionDb;
     private float _autoGainDb;
     private float _echoReductionDb;
+    private float _compressorReductionDb;
+    private int _shoutGuardEngaged;
+    private long _shoutGuardTriggers;
+    private float _trackedSpeechDb = -100f;
+    private float _trackedNoiseDb = -100f;
+    private float _trackedQuietProbability;
+    private long _trackedSpeechFrames;
+    private CalibrationRecorder? _calibration;
     private int _faultHandling;
     private long _generation;
     private int _disposed;
@@ -70,6 +78,18 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             throw new InvalidOperationException("A recording is already active.");
     }
     public float[] EndClip() => Interlocked.Exchange(ref _clip, null)?.Finish() ?? [];
+
+    /// <summary>Starts copying the raw microphone and speech probability for a voice calibration.</summary>
+    public void BeginCalibration(CalibrationRecorder recorder)
+    {
+        ArgumentNullException.ThrowIfNull(recorder);
+        if (Interlocked.CompareExchange(ref _calibration, recorder, null) is not null)
+        {
+            throw new InvalidOperationException("A calibration is already running.");
+        }
+    }
+
+    public CalibrationRecording? EndCalibration() => Interlocked.Exchange(ref _calibration, null)?.Finish();
 
     public event EventHandler<AudioEngineState>? StateChanged;
 
@@ -106,7 +126,14 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 Volatile.Read(ref _autoGainDb),
                 Volatile.Read(ref _echoReductionDb),
                 Volatile.Read(ref _monitorProvider) is not null,
-                Volatile.Read(ref _referenceBuffer) is not null);
+                Volatile.Read(ref _referenceBuffer) is not null,
+                Volatile.Read(ref _compressorReductionDb),
+                Volatile.Read(ref _shoutGuardEngaged) != 0,
+                Volatile.Read(ref _shoutGuardTriggers),
+                Volatile.Read(ref _trackedSpeechDb),
+                Volatile.Read(ref _trackedNoiseDb),
+                Volatile.Read(ref _trackedQuietProbability),
+                Volatile.Read(ref _trackedSpeechFrames));
         }
     }
 
@@ -583,6 +610,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         var highPass = new HighPassFilter(SampleRate);
         var limiter = new SoftLimiter(SampleRate);
         var autoGain = new AutoGainControl(SampleRate / (float)FrameSize);
+        var character = new VoiceCharacter(SampleRate);
+        var tracker = new VoiceTracker(SampleRate / (float)FrameSize);
+        var rawFrame = new float[FrameSize];
+
+        // RNNoise and the matching dry delay put the output exactly this far behind the
+        // input, so analysing the input gives the shout guard look-ahead for free.
+        var shoutGuard = new ShoutGuard(SampleRate, RnnoiseProcessor.AlgorithmicDelaySamples);
         var smoothedLoad = 0f;
         var smoothedReduction = 0f;
 
@@ -641,6 +675,10 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 }
 
                 echoCanceller.Process(input, referenceFrame, echoEnabled, echo?.Strength ?? 0f);
+
+                // Calibration and auto-tuning look at the microphone itself, before the boost
+                // they are about to choose.
+                input.AsSpan().CopyTo(rawFrame);
                 AudioMath.ApplyGainAndClamp(input, suppression.InputGain);
                 var inputPeak = AudioMath.Peak(input);
                 var inputRms = AudioMath.Rms(input);
@@ -655,8 +693,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     highPass.Reset();
                 }
 
+                var shout = suppression.ShoutGuard ?? ShoutGuardOptions.Disabled;
+                shoutGuard.Analyze(input, shout.ThresholdDb, shout.Enabled);
+
                 dryDelay.Process(input, delayedDry);
                 var voiceProbability = rnnoise.Process(input, wet);
+                Volatile.Read(ref _calibration)?.Write(rawFrame, voiceProbability);
+                tracker.Process(rawFrame, voiceProbability, shoutGuard.IsEngaged);
 
                 AudioMath.Mix(
                     delayedDry,
@@ -669,12 +712,22 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     suppression.VoiceThreshold,
                     suppression.VoiceHoldMilliseconds,
                     suppression.Enabled && suppression.VoiceGateEnabled);
+                var voice = suppression.Character ?? VoiceCharacterOptions.Disabled;
+                character.Process(
+                    mixed,
+                    voice.Warmth,
+                    voice.Proximity,
+                    voice.Smoothness,
+                    voice.Compression,
+                    voice.Saturation,
+                    voice.Enabled);
                 autoGain.Process(
                     mixed,
                     voiceProbability,
                     suppression.AutoGainTargetDb,
                     suppression.AutoGainEnabled);
                 AudioMath.ApplyGainAndClamp(mixed, suppression.OutputGain);
+                shoutGuard.Apply(mixed, shout.Mode, shout.Enabled);
                 limiter.Process(mixed, suppression.LimiterEnabled);
                 if (suppression.IsMuted)
                 {
@@ -732,6 +785,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 Volatile.Write(ref _limiterReductionDb, limiter.GainReductionDb);
                 Volatile.Write(ref _autoGainDb, autoGain.CurrentGainDb);
                 Volatile.Write(ref _echoReductionDb, echoCanceller.ErleDb);
+                Volatile.Write(ref _compressorReductionDb, character.CompressorReductionDb);
+                Volatile.Write(ref _shoutGuardEngaged, shoutGuard.IsEngaged ? 1 : 0);
+                Volatile.Write(ref _shoutGuardTriggers, shoutGuard.TriggerCount);
+                Volatile.Write(ref _trackedSpeechDb, tracker.SpeechLevelDb);
+                Volatile.Write(ref _trackedNoiseDb, tracker.NoiseFloorDb);
+                Volatile.Write(ref _trackedQuietProbability, tracker.QuietProbabilityP95);
+                Volatile.Write(ref _trackedSpeechFrames, tracker.SpeechFrames);
                 _session.Add(voiceProbability, suppression.IsMuted, smoothedReduction, limiter.GainReductionDb, inputPeak);
                 Scope.Push(outputPeak);
             }
@@ -1071,6 +1131,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         Volatile.Write(ref _limiterReductionDb, 0f);
         Volatile.Write(ref _autoGainDb, 0f);
         Volatile.Write(ref _echoReductionDb, 0f);
+        Volatile.Write(ref _compressorReductionDb, 0f);
+        Volatile.Write(ref _shoutGuardEngaged, 0);
+        Volatile.Write(ref _shoutGuardTriggers, 0L);
+        Volatile.Write(ref _trackedSpeechDb, -100f);
+        Volatile.Write(ref _trackedNoiseDb, -100f);
+        Volatile.Write(ref _trackedQuietProbability, 0f);
+        Volatile.Write(ref _trackedSpeechFrames, 0L);
 
         return errors switch
         {

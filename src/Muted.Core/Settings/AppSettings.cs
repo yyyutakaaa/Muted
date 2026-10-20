@@ -1,4 +1,5 @@
 using Muted.Core.Audio;
+using Muted.Core.Dsp;
 
 namespace Muted.Core.Settings;
 
@@ -39,6 +40,18 @@ public sealed record AppSettings
     public bool EchoCancellationEnabled { get; init; }
     public string? EchoReferenceDeviceId { get; init; }
     public float EchoStrength { get; init; } = 0.5f;
+    public bool VoiceCharacterEnabled { get; init; }
+    public float Warmth { get; init; } = 0.6f;
+    public float Proximity { get; init; } = 0.5f;
+    public float Smoothness { get; init; } = 0.6f;
+    public float Compression { get; init; } = 0.5f;
+    public float Saturation { get; init; } = 0.3f;
+    public bool ShoutGuardEnabled { get; init; }
+    public float ShoutThresholdDb { get; init; } = -6f;
+    public ShoutGuardMode ShoutGuardMode { get; init; } = ShoutGuardMode.Silence;
+
+    /// <summary>Lets Muted keep the boost and the gate right while you talk.</summary>
+    public bool AutoTuneEnabled { get; init; }
     public bool MonitorEnabled { get; init; }
     public string? MonitorDeviceId { get; init; }
     public float MonitorVolume { get; init; } = 0.6f;
@@ -108,7 +121,16 @@ public sealed record AppSettings
                 AutoGainTargetDb = AutoGainTargetDb,
                 EchoCancellationEnabled = EchoCancellationEnabled,
                 EchoReferenceDeviceId = EchoReferenceDeviceId,
-                EchoStrength = EchoStrength
+                EchoStrength = EchoStrength,
+                VoiceCharacterEnabled = VoiceCharacterEnabled,
+                Warmth = Warmth,
+                Proximity = Proximity,
+                Smoothness = Smoothness,
+                Compression = Compression,
+                Saturation = Saturation,
+                ShoutGuardEnabled = ShoutGuardEnabled,
+                ShoutThresholdDb = ShoutThresholdDb,
+                ShoutGuardMode = ShoutGuardMode
             }).Normalize();
         }
 
@@ -134,6 +156,15 @@ public sealed record AppSettings
             HighPassFrequency = Math.Clamp(HighPassFrequency, 40f, 200f),
             AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f),
             EchoStrength = Math.Clamp(EchoStrength, 0f, 1f),
+            Warmth = Amount(Warmth),
+            Proximity = Amount(Proximity),
+            Smoothness = Amount(Smoothness),
+            Compression = Amount(Compression),
+            Saturation = Amount(Saturation),
+            ShoutThresholdDb = float.IsFinite(ShoutThresholdDb)
+                ? Math.Clamp(ShoutThresholdDb, ShoutGuard.MinimumThresholdDb, ShoutGuard.MaximumThresholdDb)
+                : -6f,
+            ShoutGuardMode = Enum.IsDefined(ShoutGuardMode) ? ShoutGuardMode : ShoutGuardMode.Silence,
             MonitorVolume = Math.Clamp(MonitorVolume, 0f, 1f),
             TargetLatencyMilliseconds = Math.Clamp(TargetLatencyMilliseconds, 20, 100),
             Theme = Enum.IsDefined(Theme) ? Theme : AppTheme.System,
@@ -143,4 +174,6 @@ public sealed record AppSettings
             Profiles = profiles
         };
     }
+
+    private static float Amount(float value) => float.IsFinite(value) ? Math.Clamp(value, 0f, 1f) : 0f;
 }
