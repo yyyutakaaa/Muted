@@ -16,7 +16,14 @@ public readonly record struct AudioMetrics(
     float AutoGainDb = 0f,
     float EchoReductionDb = 0f,
     bool MonitorActive = false,
-    bool EchoActive = false)
+    bool EchoActive = false,
+    float CompressorReductionDb = 0f,
+    bool ShoutGuardEngaged = false,
+    long ShoutGuardTriggers = 0,
+    float TrackedSpeechDb = -100f,
+    float TrackedNoiseDb = -100f,
+    float TrackedQuietProbability = 0f,
+    long TrackedSpeechFrames = 0)
 {
     public static AudioMetrics Empty => new();
 }

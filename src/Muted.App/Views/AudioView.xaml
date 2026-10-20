@@ -101,6 +101,257 @@
             </StackPanel>
         </Border>
 
+        <!-- ===================== Tune to my voice ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="70">
+            <StackPanel>
+                <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Tune to my voice" />
+                <TextBlock Margin="0,3,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           TextWrapping="Wrap"
+                           Text="{Binding CalibrationIntro}" />
+
+                <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
+                    <Button Style="{StaticResource AccentButtonStyle}"
+                            Padding="14,8"
+                            Content="Start calibration"
+                            Command="{Binding StartCalibrationCommand}"
+                            Visibility="{Binding IsCalibrating, Converter={StaticResource InverseBoolToVisibility}}" />
+                    <Button Style="{StaticResource TextButtonStyle}"
+                            Padding="14,8"
+                            Content="Cancel"
+                            Command="{Binding CancelCalibrationCommand}"
+                            Visibility="{Binding IsCalibrating, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <StackPanel Margin="0,14,0,0" Visibility="{Binding IsCalibrating, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SettingRowLabelStyle}"
+                               FontSize="15"
+                               TextWrapping="Wrap"
+                               Text="{Binding CalibrationPrompt}" />
+                    <ProgressBar Margin="0,12,0,0"
+                                 Height="6"
+                                 Style="{StaticResource MeterStyle}"
+                                 Minimum="0" Maximum="1"
+                                 Value="{Binding CalibrationProgress, Mode=OneWay}"
+                                 AutomationProperties.Name="Calibration progress" />
+                </StackPanel>
+
+                <StackPanel Margin="0,14,0,0" Visibility="{Binding HasCalibrationResult, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               LineHeight="20"
+                               Text="{Binding CalibrationResultText}" />
+                    <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                        <Button Style="{StaticResource AccentButtonStyle}"
+                                Padding="14,8"
+                                Margin="0,0,8,0"
+                                Content="Keep"
+                                Command="{Binding KeepCalibrationCommand}" />
+                        <Button Style="{StaticResource TextButtonStyle}"
+                                Padding="14,8"
+                                Content="Undo"
+                                Command="{Binding UndoCalibrationCommand}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <Rectangle Height="1" Margin="0,16" Fill="{DynamicResource BorderBrush}" />
+
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Keep tuning while I talk" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="Slowly adjusts the microphone boost and the voice gate when you move or the room changes, in small steps and never far from where you started. Leaves the shout guard and the warm voice alone." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding AutoTuneEnabled}"
+                              AutomationProperties.Name="Keep tuning while I talk" />
+                </Grid>
+                <TextBlock Margin="0,8,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           Visibility="{Binding AutoTuneEnabled, Converter={StaticResource BoolToVisibility}}"
+                           Text="{Binding AutoTuneStatusText}" />
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Voice character ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="80">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Warm radio voice" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="A full, close-up and smooth sound, as if you are talking straight into their ear." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding VoiceCharacterEnabled}"
+                              AutomationProperties.Name="Warm radio voice" />
+                </Grid>
+                <StackPanel Visibility="{Binding VoiceCharacterEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Warmth" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Deeper, fuller low end." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding WarmthText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            Value="{Binding Warmth}"
+                            AutomationProperties.Name="Voice warmth" />
+                    <Grid Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Proximity" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Sounds like you are right up against the microphone." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding ProximityText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            Value="{Binding Proximity}"
+                            AutomationProperties.Name="Voice proximity" />
+                    <Grid Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Smoothness" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Softens the top and tames sharp s sounds." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding SmoothnessText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            Value="{Binding Smoothness}"
+                            AutomationProperties.Name="Voice smoothness" />
+                    <Grid Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Compression" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Keeps quiet words clear and present." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding CompressionText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            Value="{Binding Compression}"
+                            AutomationProperties.Name="Voice compression" />
+                    <Grid Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Saturation" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="A subtle, velvety warmth. A little goes a long way." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding SaturationText}" />
+                    </Grid>
+                    <Slider Margin="0,10,0,0"
+                            Minimum="0" Maximum="1"
+                            SmallChange="0.05" LargeChange="0.1"
+                            Value="{Binding Saturation}"
+                            AutomationProperties.Name="Voice saturation" />
+                    <TextBlock Margin="0,12,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               Visibility="{Binding AdvancedMode, Converter={StaticResource BoolToVisibility}}">
+                        <Run Text="Compressor reduction:" />
+                        <Run Text="{Binding CompressionStatusText, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Shout guard ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,16" Padding="22" infrastructure:Reveal.Delay="100">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource SettingRowLabelStyle}" FontSize="14" Text="Shout guard" />
+                        <TextBlock Margin="0,3,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="Cuts your microphone the moment you get too loud, so nobody gets an earful. It looks ahead, so even the start of a shout is caught." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding ShoutGuardEnabled}"
+                              AutomationProperties.Name="Shout guard" />
+                </Grid>
+                <StackPanel Visibility="{Binding ShoutGuardEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Loudness limit" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Talk normally and watch the input level: set this a few dB above your loudest normal speech." />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource ValueLabelStyle}" VerticalAlignment="Top" Text="{Binding ShoutThresholdText}" />
+                    </Grid>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Stricter" />
+                        <Slider Grid.Column="1"
+                                Margin="12,0"
+                                VerticalAlignment="Center"
+                                Minimum="-30" Maximum="0"
+                                SmallChange="1" LargeChange="3"
+                                Value="{Binding ShoutThresholdDb}"
+                                AutomationProperties.Name="Shout guard loudness limit" />
+                        <TextBlock Grid.Column="2" Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Allows louder" />
+                    </Grid>
+                    <TextBlock Margin="0,8,0,0" Style="{StaticResource CaptionStyle}">
+                        <Run Text="Input level now:" />
+                        <Run Text="{Binding InputLevelDb, Mode=OneWay}" />
+                    </TextBlock>
+
+                    <Rectangle Height="1" Margin="0,16" Fill="{DynamicResource BorderBrush}" />
+
+                    <Grid>
+                        <StackPanel Margin="0,0,60,0">
+                            <TextBlock Style="{StaticResource SettingRowLabelStyle}" Text="Turn down instead of silence" />
+                            <TextBlock Margin="0,3,0,0"
+                                       Style="{StaticResource CaptionStyle}"
+                                       TextWrapping="Wrap"
+                                       Text="Off: a shout is not heard at all. On: it comes through 20 dB quieter." />
+                        </StackPanel>
+                        <CheckBox HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource ToggleStyle}"
+                                  IsChecked="{Binding ShoutGuardDucks}"
+                                  AutomationProperties.Name="Turn down instead of silence" />
+                    </Grid>
+                    <TextBlock Margin="0,12,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               Text="{Binding ShoutGuardStatusText}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <views:FeaturesView Margin="0,0,0,16" />
         <!-- Everything below is hidden until Advanced is switched on in Settings. -->
         <Border Style="{StaticResource InsetCardStyle}"

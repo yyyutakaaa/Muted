@@ -1058,6 +1058,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _autoGainTargetDb = _settings.AutoGainTargetDb;
         _echoEnabled = _settings.EchoCancellationEnabled;
         _echoStrength = _settings.EchoStrength;
+        LoadVoiceSettings(_settings);
         _monitorEnabled = _settings.MonitorEnabled;
         _monitorVolume = _settings.MonitorVolume;
         _targetLatencyMilliseconds = _settings.TargetLatencyMilliseconds;
@@ -1106,7 +1107,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             nameof(CanSelectInput), nameof(IsPushToTalkArmed)
         ];
 
-        foreach (var name in names)
+        foreach (var name in names.Concat(VoicePropertyNames))
         {
             OnPropertyChanged(name);
         }
@@ -1256,6 +1257,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             SelectedEchoReference = OutputDevices.FirstOrDefault(device => device.Id == profile.EchoReferenceDeviceId)
                 ?? SelectedEchoReference;
             EchoCancellationEnabled = profile.EchoCancellationEnabled;
+            ApplyVoiceProfile(profile);
             ApplySuppression();
             ActiveProfileId = profile.Id;
         }
@@ -1272,7 +1274,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         await TrySaveAsync();
     }
 
-    private AudioProfile BuildProfile(string id, string name) => new AudioProfile
+    private AudioProfile BuildProfile(string id, string name) => WithVoiceSettings(new AudioProfile
     {
         Id = id,
         Name = name,
@@ -1293,7 +1295,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         EchoCancellationEnabled = EchoCancellationEnabled,
         EchoReferenceDeviceId = SelectedEchoReference?.Id,
         EchoStrength = (float)EchoStrength
-    }.Normalize();
+    }).Normalize();
 
     private void SaveCurrentProfile()
     {
@@ -1898,7 +1900,9 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         HighPassFrequency: (float)HighPassFrequency,
         LimiterEnabled: LimiterEnabled,
         AutoGainEnabled: AutoGainEnabled,
-        AutoGainTargetDb: (float)AutoGainTargetDb);
+        AutoGainTargetDb: (float)AutoGainTargetDb,
+        Character: BuildVoiceCharacterOptions(),
+        ShoutGuard: BuildShoutGuardOptions());
 
     private MonitorOptions BuildMonitorOptions() =>
         new(MonitorEnabled, SelectedMonitor?.Id, (float)MonitorVolume);
@@ -1920,7 +1924,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    private AppSettings BuildSettings(bool? wasRunning = null) => new()
+    private AppSettings BuildSettings(bool? wasRunning = null) => WithVoiceSettings(new AppSettings
     {
         InputDeviceId = SelectedInput?.Id,
         OutputDeviceId = SelectedOutput?.Id,
@@ -1963,7 +1967,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         ActiveProfileId = ActiveProfileId,
         Hotkeys = GetHotkeyBindings(),
         Profiles = Profiles.ToArray()
-    };
+    });
 
     private void QueueSave()
     {
@@ -2093,6 +2097,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             ? $"{metrics.EchoReductionDb:0.0} dB"
             : "not running";
         HealthText = $"{metrics.BufferedMilliseconds:0} ms buffer · {metrics.ProcessingLoad * 100:0}% load";
+        UpdateVoiceReadouts(metrics, IsRunning);
 
         var dropped = metrics.DroppedInputSamples + metrics.DroppedOutputSamples;
         DropoutText = dropped == 0 && metrics.OutputUnderrunSamples == 0
