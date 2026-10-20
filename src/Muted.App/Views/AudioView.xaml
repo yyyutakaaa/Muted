@@ -101,7 +101,6 @@
             </StackPanel>
         </Border>
 
-        <views:FeaturesView Margin="0,0,0,16" />
         <!-- Everything below is hidden until Advanced is switched on in Settings. -->
         <Border Style="{StaticResource InsetCardStyle}"
                 Margin="0,16,0,24"

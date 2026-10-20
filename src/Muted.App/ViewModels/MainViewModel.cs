@@ -16,6 +16,7 @@ internal enum AppPage
 {
     Dashboard,
     Audio,
+    Presets,
     Shortcuts,
     Settings,
     Diagnostics,
@@ -186,6 +187,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         };
         _recoveryTimer.Tick += OnRecoveryTick;
         InitializeFeatures();
+        InitializeLayout();
     }
 
     public event EventHandler? ShowWindowRequested;
@@ -2068,6 +2070,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             EchoReductionText = "0.0 dB";
             HealthText = "Idle";
             DropoutText = "No dropouts";
+            UpdateLayoutMetrics(0, 0, running: false);
         }
     }
 
@@ -2093,6 +2096,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             ? $"{metrics.EchoReductionDb:0.0} dB"
             : "not running";
         HealthText = $"{metrics.BufferedMilliseconds:0} ms buffer · {metrics.ProcessingLoad * 100:0}% load";
+        UpdateLayoutMetrics(metrics.BufferedMilliseconds, metrics.ProcessingLoad, running: true);
 
         var dropped = metrics.DroppedInputSamples + metrics.DroppedOutputSamples;
         DropoutText = dropped == 0 && metrics.OutputUnderrunSamples == 0

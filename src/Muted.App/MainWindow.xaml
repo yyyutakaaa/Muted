@@ -5,8 +5,8 @@
         xmlns:views="clr-namespace:Muted.App.Views"
         Title="Muted"
         Icon="pack://siteoforigin:,,,/icon.ico"
-        Width="1180" Height="820"
-        MinWidth="960" MinHeight="660"
+        Width="1440" Height="900"
+        MinWidth="1000" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         ResizeMode="CanResize"
@@ -24,10 +24,10 @@
 
     <Window.Resources>
         <Style x:Key="ChromeButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}">
-            <Setter Property="Width" Value="40" />
+            <Setter Property="Width" Value="42" />
             <Setter Property="Height" Value="34" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -35,70 +35,18 @@
             <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
         </Style>
 
-        <!-- Switch that reflects IsRunning and fires ToggleCommand; visual state
-             follows the view model so a failed start never leaves a stale "on". -->
-        <Style x:Key="RunSwitchStyle" TargetType="Button">
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Grid Width="46" Height="26">
-                            <Border Background="{DynamicResource ToggleTrackBrush}" CornerRadius="13" />
-                            <Border x:Name="TrackOn"
-                                    Background="{DynamicResource AccentBrush}"
-                                    CornerRadius="13"
-                                    Opacity="0" />
-                            <Ellipse x:Name="Thumb"
-                                     Width="20" Height="20" Margin="3"
-                                     HorizontalAlignment="Left"
-                                     Fill="{DynamicResource ToggleThumbBrush}">
-                                <Ellipse.RenderTransform>
-                                    <TranslateTransform x:Name="ThumbShift" X="0" />
-                                </Ellipse.RenderTransform>
-                            </Ellipse>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                <DataTrigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ThumbShift"
-                                                             Storyboard.TargetProperty="X"
-                                                             To="20" Duration="0:0:0.16">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut" />
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="TrackOn"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="1" Duration="0:0:0.16" />
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.EnterActions>
-                                <DataTrigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="ThumbShift"
-                                                             Storyboard.TargetProperty="X"
-                                                             To="0" Duration="0:0:0.16">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut" />
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="TrackOn"
-                                                             Storyboard.TargetProperty="Opacity"
-                                                             To="0" Duration="0:0:0.16" />
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </DataTrigger.ExitActions>
-                            </DataTrigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+        <Style x:Key="StatusSeparatorStyle" TargetType="Rectangle">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Margin" Value="14,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource BorderStrongBrush}" />
+        </Style>
+
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         </Style>
     </Window.Resources>
 
@@ -132,11 +80,12 @@
             </EventTrigger>
         </Grid.Triggers>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="252" />
+            <ColumnDefinition Width="108" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <!-- ======================= Sidebar ======================= -->
+        <!-- ======================= Rail ======================= -->
         <Grid Grid.Column="0" Background="{DynamicResource SidebarBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -144,180 +93,204 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="22,26,22,24">
-                <!-- LogoBrush, not AccentBrush: the mark stays the brand colour. -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Rectangle Width="4" Height="12" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="22" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="30" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="18" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                    <Rectangle Width="4" Height="10" RadiusX="2" RadiusY="2" Fill="{StaticResource LogoBrush}" Margin="3,0,0,0" VerticalAlignment="Center" />
-                </StackPanel>
-                <TextBlock Margin="14,0,0,0"
-                           VerticalAlignment="Center"
-                           FontFamily="Segoe UI Variable Display, Segoe UI"
-                           FontSize="21"
-                           FontWeight="SemiBold"
-                           Text="Muted" />
-            </StackPanel>
+            <!-- The word mark; LogoBrush, not AccentBrush, so the dot stays the brand colour. -->
+            <TextBlock Grid.Row="0"
+                       Margin="22,40,0,40"
+                       FontFamily="Segoe UI Variable Display, Segoe UI"
+                       FontSize="26"
+                       FontWeight="Normal"
+                       AutomationProperties.Name="Muted">
+                <Run Text="muted" /><Run Text="." Foreground="{StaticResource LogoBrush}" FontWeight="Bold" />
+            </TextBlock>
 
-            <StackPanel Grid.Row="1" Margin="14,0">
-                <RadioButton Style="{StaticResource NavItemStyle}"
+            <StackPanel Grid.Row="1" Margin="10,0,10,0">
+                <RadioButton Style="{StaticResource RailItemStyle}"
                              GroupName="Nav"
-                             Tag="&#xE80F;"
-                             Content="Dashboard"
+                             Content="&#xE80F;"
+                             ToolTip="Dashboard"
+                             AutomationProperties.Name="Dashboard"
                              IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Dashboard}" />
-                <RadioButton Style="{StaticResource NavItemStyle}"
+                <RadioButton Style="{StaticResource RailItemStyle}"
                              GroupName="Nav"
-                             Tag="&#xE9E9;"
-                             Content="Audio"
+                             Content="&#xE720;"
+                             ToolTip="Audio"
+                             AutomationProperties.Name="Audio"
                              IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Audio}" />
-                <RadioButton Style="{StaticResource NavItemStyle}"
+                <RadioButton Style="{StaticResource RailItemStyle}"
                              GroupName="Nav"
-                             Tag="&#xE765;"
-                             Content="Shortcuts"
-                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Shortcuts}" />
-                <RadioButton Style="{StaticResource NavItemStyle}"
+                             ToolTip="Shortcuts"
+                             AutomationProperties.Name="Shortcuts"
+                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Shortcuts}">
+                    <!-- Three sliders. -->
+                    <Path Style="{StaticResource RailPathStyle}"
+                          Data="M1,4 H21 M1,11 H21 M1,18 H21 M14,1.5 V6.5 M7,8.5 V13.5 M12,15.5 V20.5" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource RailItemStyle}"
                              GroupName="Nav"
-                             Tag="&#xE713;"
-                             Content="Settings"
-                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Settings}" />
-                <RadioButton Style="{StaticResource NavItemStyle}"
+                             ToolTip="Presets and recording"
+                             AutomationProperties.Name="Presets and recording"
+                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Presets}">
+                    <!-- Stacked layers. -->
+                    <Path Style="{StaticResource RailPathStyle}"
+                          Data="M11,1 L21,6 L11,11 L1,6 Z M1,11 L11,16 L21,11 M1,16 L11,21 L21,16" />
+                </RadioButton>
+                <RadioButton Style="{StaticResource RailItemStyle}"
                              GroupName="Nav"
-                             Tag="&#xE9D9;"
-                             Content="Setup check"
-                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Diagnostics}" />
-                <RadioButton Style="{StaticResource NavItemStyle}"
-                             GroupName="Nav"
-                             Tag="&#xE946;"
-                             Content="About"
-                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=About}" />
+                             ToolTip="Setup check"
+                             AutomationProperties.Name="Setup check"
+                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Diagnostics}">
+                    <!-- Bar chart. -->
+                    <Path Style="{StaticResource RailPathStyle}"
+                          Data="M2,21 V10 M8,21 V3 M14,21 V8 M20,21 V13" />
+                </RadioButton>
             </StackPanel>
 
-            <StackPanel Grid.Row="2" Margin="14,0,14,16">
-                <Border Padding="14,12"
-                        CornerRadius="12"
-                        Background="{DynamicResource SurfaceBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1">
-                    <StackPanel>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal">
-                                    <Control Style="{StaticResource StatusDotStyle}" VerticalAlignment="Center" />
-                                    <TextBlock Margin="7,0,0,0" FontSize="13" FontWeight="SemiBold">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="Muted is stopped" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                        <Setter Property="Text" Value="Muted is running" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
-                                <TextBlock Margin="14,3,0,0" FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="Your mic is unfiltered" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
-                                                    <Setter Property="Text" Value="Your mic is filtered" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </StackPanel>
-                            <Button Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource RunSwitchStyle}"
-                                    Command="{Binding ToggleCommand}"
-                                    ToolTip="Start or stop RNNoise"
-                                    AutomationProperties.Name="Start or stop RNNoise" />
-                        </Grid>
-
-                        <Button Margin="0,12,0,0"
-                                Style="{StaticResource TextButtonStyle}"
-                                Padding="10,8"
-                                HorizontalContentAlignment="Stretch"
-                                Command="{Binding ToggleMuteCommand}"
-                                AutomationProperties.Name="Mute or unmute the microphone">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0"
-                                           FontFamily="Segoe MDL2 Assets"
-                                           FontSize="13"
-                                           VerticalAlignment="Center">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="&#xE720;" />
-                                            <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsEffectivelyMuted}" Value="True">
-                                                    <Setter Property="Text" Value="&#xE74F;" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Grid.Column="1"
-                                           Margin="10,0,0,0"
-                                           FontSize="12"
-                                           VerticalAlignment="Center"
-                                           Text="{Binding MuteStatusText}" />
-                            </Grid>
-                        </Button>
-                    </StackPanel>
-                </Border>
+            <StackPanel Grid.Row="2" Margin="10,0,10,26">
+                <RadioButton Style="{StaticResource RailItemStyle}"
+                             GroupName="Nav"
+                             Content="&#xE946;"
+                             ToolTip="About"
+                             AutomationProperties.Name="About"
+                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=About}" />
+                <RadioButton Style="{StaticResource RailItemStyle}"
+                             GroupName="Nav"
+                             Margin="0"
+                             Content="&#xE713;"
+                             ToolTip="Settings"
+                             AutomationProperties.Name="Settings"
+                             IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Settings}" />
             </StackPanel>
         </Grid>
 
         <!-- ======================= Main column ======================= -->
-        <Grid Grid.Column="1">
+        <Grid Grid.Column="1" Margin="34,0,34,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        Margin="0,10,12,0">
-                <Button Style="{StaticResource ChromeButtonStyle}"
-                        Content="&#xE744;"
-                        Command="{Binding ToggleCompactCommand}"
-                        ToolTip="Switch to the compact panel"
-                        AutomationProperties.Name="Switch to the compact panel" />
-                <Button Style="{StaticResource ChromeButtonStyle}"
-                        Content="&#xE921;"
-                        Click="MinimizeButton_OnClick"
-                        ToolTip="Minimize"
-                        AutomationProperties.Name="Minimize window" />
-                <Button Style="{StaticResource ChromeButtonStyle}"
-                        Content="&#xE922;"
-                        Click="MaximizeButton_OnClick"
-                        ToolTip="Maximize or restore"
-                        AutomationProperties.Name="Maximize or restore window" />
-                <Button Style="{StaticResource ChromeButtonStyle}"
-                        Content="&#xE8BB;"
-                        Click="CloseButton_OnClick"
-                        ToolTip="Close"
-                        AutomationProperties.Name="Close window" />
-            </StackPanel>
+            <!-- Top bar: microphone, running state, Advanced. -->
+            <Grid Grid.Row="0" Margin="0,38,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="34,0,34,0">
+                <Grid Grid.Column="0" Width="284">
+                    <ComboBox MinHeight="48"
+                              Padding="48,7,16,7"
+                              FontSize="14"
+                              ItemsSource="{Binding InputDevices}"
+                              SelectedItem="{Binding SelectedInput}"
+                              DisplayMemberPath="DisplayName"
+                              IsEnabled="{Binding CanSelectInput}"
+                              ToolTip="Microphone. Stop processing to switch."
+                              AutomationProperties.Name="Microphone input" />
+                    <TextBlock Margin="18,0,0,0"
+                               HorizontalAlignment="Left"
+                               VerticalAlignment="Center"
+                               IsHitTestVisible="False"
+                               FontFamily="Segoe MDL2 Assets"
+                               FontSize="17"
+                               Foreground="{DynamicResource TextBrush}"
+                               Text="&#xE720;" />
+                </Grid>
+
+                <Button Grid.Column="2"
+                        Margin="0,0,24,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource StatusPillStyle}"
+                        Command="{Binding ToggleCommand}"
+                        ToolTip="Start or stop processing"
+                        AutomationProperties.Name="Start or stop processing">
+                    <StackPanel Orientation="Horizontal">
+                        <Control Width="12" Height="12" Style="{StaticResource StatusDotStyle}" VerticalAlignment="Center" />
+                        <TextBlock Margin="12,0,0,0" FontSize="14" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{Binding StatusText}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StatusText}" Value="Stopped">
+                                            <Setter Property="Text" Value="Start processing" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                            <Setter Property="Text" Value="Processing" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+
+                <ToggleButton x:Name="AdvancedToggle"
+                              Grid.Column="3"
+                              IsChecked="True"
+                              Cursor="Hand"
+                              ToolTip="Show or hide the advanced settings"
+                              AutomationProperties.Name="Advanced settings">
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="AdvancedSurface"
+                                    MinHeight="48"
+                                    Padding="18,0,16,0"
+                                    CornerRadius="10"
+                                    Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="M1,3 H17 M1,9 H17 M1,15 H17 M12,0.5 V5.5 M5,6.5 V11.5 M10,12.5 V17.5"
+                                          Stroke="{DynamicResource TextBrush}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          VerticalAlignment="Center" />
+                                    <TextBlock Margin="14,0,18,0"
+                                               FontSize="14"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               Text="Advanced" />
+                                    <Path x:Name="AdvancedChevron"
+                                          Data="M0,0 L4.5,4.5 L0,9"
+                                          Stroke="{DynamicResource TextBrush}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          VerticalAlignment="Center"
+                                          RenderTransformOrigin="0.5,0.5">
+                                        <Path.RenderTransform>
+                                            <RotateTransform x:Name="ChevronTurn" Angle="0" />
+                                        </Path.RenderTransform>
+                                    </Path>
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="AdvancedSurface" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+                                    <Setter TargetName="AdvancedSurface" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="AdvancedSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                </Trigger>
+                                <!-- Points back towards the content while the panel is open. -->
+                                <Trigger Property="IsChecked" Value="False">
+                                    <Setter TargetName="AdvancedChevron" Property="RenderTransform">
+                                        <Setter.Value>
+                                            <RotateTransform Angle="180" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+            </Grid>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,-14,0" Padding="0,0,14,0">
                 <Grid>
                     <views:DashboardView Visibility="{Binding SelectedPage,
                                               Converter={StaticResource EnumToVisibility},
@@ -326,6 +299,14 @@
                     <views:AudioView Visibility="{Binding SelectedPage,
                                               Converter={StaticResource EnumToVisibility},
                                               ConverterParameter=Audio}" />
+
+                    <StackPanel Visibility="{Binding SelectedPage,
+                                              Converter={StaticResource EnumToVisibility},
+                                              ConverterParameter=Presets}">
+                        <TextBlock Margin="0,14,0,4" Style="{StaticResource PageTitleStyle}" Text="Presets &amp; recording" />
+                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Voice presets, shared profiles, and a quick test recording." />
+                        <views:FeaturesView Margin="0,4,0,24" />
+                    </StackPanel>
 
                     <views:ShortcutsView Visibility="{Binding SelectedPage,
                                               Converter={StaticResource EnumToVisibility},
@@ -345,43 +326,105 @@
                 </Grid>
             </ScrollViewer>
 
-            <!-- Footer -->
-            <Grid Grid.Row="2" Margin="34,10,34,16">
-                <StackPanel Orientation="Horizontal">
-                    <Path VerticalAlignment="Center"
-                          Fill="{DynamicResource TextMutedBrush}"
-                          Data="M7,0 L14,2.6 V7 C14,11.4 11.2,13.8 7,15.4 C2.8,13.8 0,11.4 0,7 V2.6 Z M6.2,9.9 L3.9,7.6 L4.9,6.6 L6.2,7.9 L9.1,5 L10.1,6 Z" />
-                    <TextBlock Margin="10,0,0,0"
-                               VerticalAlignment="Center"
-                               Style="{StaticResource CaptionStyle}"
-                               FontSize="13"
-                               Text="Local processing only" />
-                    <TextBlock Margin="10,0"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextMutedBrush}"
-                               Text="•" />
-                    <TextBlock VerticalAlignment="Center"
-                               Style="{StaticResource CaptionStyle}"
-                               FontSize="13"
-                               Text="Your audio never leaves your PC" />
-                </StackPanel>
+            <!-- Status bar -->
+            <Grid Grid.Row="2" Margin="0,8,0,0">
+                <Rectangle Height="1" VerticalAlignment="Top" Fill="{DynamicResource BorderBrush}" />
+                <Grid Margin="0,22,0,26">
+                    <StackPanel Orientation="Horizontal" ToolTip="{Binding HealthText}">
+                        <Control Width="12" Height="12" Style="{StaticResource StatusDotStyle}" VerticalAlignment="Center" />
+                        <TextBlock Margin="12,0,0,0" FontSize="13" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{Binding StatusText}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                            <Setter Property="Text" Value="Engine healthy" />
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsRecovering}" Value="True">
+                                            <Setter Property="Text" Value="Reconnecting…" />
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Rectangle Style="{StaticResource StatusSeparatorStyle}" />
+                        <!-- The engine always runs at 48 kHz mono; RNNoise only works that way. -->
+                        <TextBlock Style="{StaticResource StatusTextStyle}" Text="48 kHz  ·  Mono  ·  RNNoise" />
+                    </StackPanel>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <TextBlock VerticalAlignment="Center"
-                               Style="{StaticResource CaptionStyle}"
-                               FontSize="13"
-                               Text="RNNoise" />
-                    <Border Margin="10,0,0,0"
-                            Padding="10,4"
-                            CornerRadius="8"
-                            Background="{DynamicResource SuccessSurfaceBrush}">
-                        <TextBlock x:Name="FooterVersionText"
-                                   FontSize="12"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SuccessBrush}" />
-                    </Border>
-                </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Style="{StaticResource StatusTextStyle}"
+                                   ToolTip="How much of each audio frame the processing thread needs"
+                                   Text="{Binding ProcessingLoadText}" />
+                        <Rectangle Style="{StaticResource StatusSeparatorStyle}" />
+                        <TextBlock Style="{StaticResource StatusTextStyle}"
+                                   ToolTip="Audio currently waiting in the output buffer"
+                                   Text="{Binding BufferText}" />
+                        <Button Margin="18,0,0,0"
+                                Style="{StaticResource IconButtonStyle}"
+                                Content="&#xE70E;"
+                                Command="{Binding ToggleCompactCommand}"
+                                ToolTip="Switch to the compact panel"
+                                AutomationProperties.Name="Switch to the compact panel" />
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Grid>
+
+        <!-- ======================= Advanced panel ======================= -->
+        <Border Grid.Column="2"
+                Width="312"
+                Background="{DynamicResource SidebarBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1,0,0,0"
+                Visibility="{Binding IsChecked, ElementName=AdvancedToggle, Converter={StaticResource BoolToVisibility}}">
+            <Grid Margin="0,54,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="24,8,16,18">
+                    <TextBlock FontSize="18" VerticalAlignment="Center" Text="Advanced settings" />
+                    <Button HorizontalAlignment="Right"
+                            Style="{StaticResource IconButtonStyle}"
+                            FontSize="14"
+                            Foreground="{DynamicResource TextBrush}"
+                            Content="&#xE8BB;"
+                            Click="CloseAdvanced_OnClick"
+                            ToolTip="Close"
+                            AutomationProperties.Name="Close advanced settings" />
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <views:AdvancedPanel Margin="24,0,22,24" />
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Window buttons sit above everything, at the top right. -->
+        <StackPanel Grid.Column="0"
+                    Grid.ColumnSpan="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Margin="0,10,10,0">
+            <Button Style="{StaticResource ChromeButtonStyle}"
+                    Content="&#xE921;"
+                    Click="MinimizeButton_OnClick"
+                    ToolTip="Minimize"
+                    AutomationProperties.Name="Minimize window" />
+            <Button Style="{StaticResource ChromeButtonStyle}"
+                    Content="&#xE922;"
+                    Click="MaximizeButton_OnClick"
+                    ToolTip="Maximize or restore"
+                    AutomationProperties.Name="Maximize or restore window" />
+            <Button Style="{StaticResource ChromeButtonStyle}"
+                    Content="&#xE8BB;"
+                    Click="CloseButton_OnClick"
+                    ToolTip="Close"
+                    AutomationProperties.Name="Close window" />
+        </StackPanel>
     </Grid>
 </Window>
