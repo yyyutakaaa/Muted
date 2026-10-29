@@ -187,6 +187,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         };
         _recoveryTimer.Tick += OnRecoveryTick;
         InitializeFeatures();
+        InitializeGrowth();
         InitializeLayout();
     }
 
@@ -1011,6 +1012,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             _settings.MonitorDeviceId,
             _settings.EchoReferenceDeviceId);
         _initialized = true;
+        StartGrowth();
 
         if (_settings.WasRunningOnExit)
         {
@@ -1084,6 +1086,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             Hotkeys.Add(new HotkeyBindingViewModel(binding, OnHotkeyBindingChanged));
         }
 
+        LoadGrowthSettings(_settings);
         RaiseSettingsPropertiesChanged();
     }
 
@@ -1660,6 +1663,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
                 ErrorMessage = null;
             }
 
+            SelectListeningDevices(null, null);
             OnPropertyChanged(nameof(HasDevices));
             OnPropertyChanged(nameof(HasVirtualCable));
             OnPropertyChanged(nameof(NeedsVirtualCableSetup));
@@ -1926,7 +1930,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    private AppSettings BuildSettings(bool? wasRunning = null) => WithVoiceSettings(new AppSettings
+    private AppSettings BuildSettings(bool? wasRunning = null) => WithGrowthSettings(WithVoiceSettings(new AppSettings
     {
         InputDeviceId = SelectedInput?.Id,
         OutputDeviceId = SelectedOutput?.Id,
@@ -1969,7 +1973,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         ActiveProfileId = ActiveProfileId,
         Hotkeys = GetHotkeyBindings(),
         Profiles = Profiles.ToArray()
-    });
+    }));
 
     private void QueueSave()
     {
@@ -2156,6 +2160,15 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _engine.MonitorFaulted -= OnMonitorFaulted;
         _engine.EchoFaulted -= OnEchoFaulted;
         var wasRunning = IsRunning;
+        try
+        {
+            await DisposeGrowthAsync();
+        }
+        catch (Exception exception)
+        {
+            _log.Write(exception, "Stop listening");
+        }
+
         try
         {
             await SaveAsync(wasRunning);

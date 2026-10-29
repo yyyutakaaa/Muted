@@ -57,6 +57,8 @@
                     <Button Content="Rewind 10s" Command="{Binding RewindClipCommand}" Margin="0,0,8,8" Padding="12,8" />
                     <Button Content="Replay" Command="{Binding ReplayClipCommand}" Margin="0,0,8,8" Padding="12,8" />
                     <Button Content="Save diagnosis WAV…" Command="{Binding SaveClipCommand}" Margin="0,0,8,8" Padding="12,8" />
+                    <Button Content="Save before/after WAV…" Command="{Binding SaveComparisonCommand}" Margin="0,0,8,8" Padding="12,8"
+                            ToolTip="One file: the same take without Muted, a short pause, then with Muted. Handy to show what it removes." />
                     <Button Content="Delete temporary clip" Command="{Binding DeleteClipCommand}" Margin="0,0,8,8" Padding="12,8" />
                 </WrapPanel>
                 <TextBlock Text="{Binding FeatureStatus}" TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite" />
@@ -71,8 +73,86 @@
                 <CheckBox Content="Warn about audio processing load and dropouts" IsChecked="{Binding HealthWarningsEnabled}" Margin="0,0,0,12" />
                 <TextBlock Text="{Binding HealthWarning}" TextWrapping="Wrap" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite" />
                 <TextBlock Text="{Binding SessionText}" TextWrapping="Wrap" />
+                <DockPanel Margin="0,10,0,0">
+                    <Button DockPanel.Dock="Right" Content="Reset totals" Command="{Binding ResetLifetimeCommand}" Margin="12,0,0,0" Padding="10,6"
+                            VerticalAlignment="Top" />
+                    <TextBlock Text="{Binding LifetimeText}" TextWrapping="Wrap" />
+                </DockPanel>
                 <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,8,0,0" TextWrapping="Wrap"
-                           Text="Statistics cover the current or last audio run and reset when audio restarts. Speaking time is an estimate; limiter events count separate attenuation periods. No session audio is stored automatically." />
+                           Text="Session statistics cover the current or last audio run and reset when audio restarts. The totals add up every run and are stored in the settings file as numbers only. Speaking time is an estimate; limiter events count separate attenuation periods. No session audio is stored automatically." />
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,0">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="Clean what you hear" />
+                        <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                   Text="Removes the noise in other people's audio too: their fans, keyboards and traffic. Set your call app's output to a second virtual cable (for example VB-CABLE A+B, or Voicemeeter), pick that cable's recording side below, and Muted plays the cleaned sound on your headphones. Runs separately from your microphone." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding ListeningEnabled}" AutomationProperties.Name="Clean what you hear" />
+                </Grid>
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,14,0,6" Text="Listen to (the recording side of the cable your call app plays into)" />
+                <ComboBox ItemsSource="{Binding InputDevices}" SelectedItem="{Binding ListeningInput}" DisplayMemberPath="DisplayName"
+                          AutomationProperties.Name="Device to clean" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,12,0,6" Text="Play on (headphones recommended)" />
+                <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding ListeningOutput}" DisplayMemberPath="DisplayName"
+                          AutomationProperties.Name="Device to play the cleaned sound on" />
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                    <Slider Minimum="0" Maximum="1" Value="{Binding ListeningStrength}" SmallChange="0.05" LargeChange="0.1"
+                            AutomationProperties.Name="How much of what you hear is cleaned" />
+                    <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding ListeningStrengthText}" />
+                </Grid>
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding ListeningStatus}" AutomationProperties.LiveSetting="Polite" />
+                <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,4,0,0" Text="{Binding ListeningReductionText}" />
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,24">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="Automatic profiles" />
+                        <TextBlock Style="{StaticResource CaptionStyle}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                   Text="Switch to a profile while a program runs, like Gaming for your game and Meeting for Teams. When it closes, the profile you had before comes back. The first match in the list wins." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding AutoProfileEnabled}" AutomationProperties.Name="Automatic profiles" />
+                </Grid>
+                <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding AutoProfileRules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,4,0,0" Style="{StaticResource InsetCardStyle}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Remove" Padding="10,4"
+                                            Command="{Binding DataContext.RemoveAutoProfileRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}" />
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Description}" />
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Grid.Column="0" IsEditable="True" ItemsSource="{Binding RunningPrograms}"
+                              Text="{Binding NewRuleProcessName, UpdateSourceTrigger=PropertyChanged}"
+                              DropDownOpened="RunningPrograms_OnDropDownOpened"
+                              ToolTip="Type the program's name, like valorant or ms-teams, or open the list to pick one that is running."
+                              AutomationProperties.Name="Program name" />
+                    <ComboBox Grid.Column="2" ItemsSource="{Binding Profiles}" SelectedItem="{Binding NewRuleProfile}" DisplayMemberPath="Name"
+                              AutomationProperties.Name="Profile to switch to" />
+                    <Button Grid.Column="3" Margin="8,0,0,0" Content="Add" Padding="14,8" Command="{Binding AddAutoProfileRuleCommand}" />
+                </Grid>
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Text="{Binding AutoProfileStatus}" AutomationProperties.LiveSetting="Polite" />
             </StackPanel>
         </Border>
     </StackPanel>

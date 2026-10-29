@@ -19,6 +19,13 @@
                         ToolTip="Copy the results as text, ready to paste into a bug report"
                         AutomationProperties.Name="Copy the diagnostic report" />
                 <Button Margin="10,0,0,0"
+                        Style="{StaticResource TextButtonStyle}"
+                        Padding="14,10"
+                        Command="{Binding ReportProblemCommand}"
+                        Content="Report a problem"
+                        ToolTip="Opens a GitHub bug report in your browser with these results filled in. Nothing is sent until you submit it."
+                        AutomationProperties.Name="Report a problem on GitHub" />
+                <Button Margin="10,0,0,0"
                         Style="{StaticResource AccentButtonStyle}"
                         Command="{Binding RunDiagnosticsCommand}"
                         Content="Run checks" />
