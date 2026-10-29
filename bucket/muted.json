@@ -1,5 +1,5 @@
 {
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Removes background noise from your microphone with RNNoise, locally, before Discord, Teams or your game hears it.",
   "homepage": "https://github.com/yyyutakaaa/Muted",
   "license": "MIT",
@@ -10,8 +10,8 @@
   ],
   "architecture": {
     "64bit": {
-      "url": "https://github.com/yyyutakaaa/Muted/releases/download/v0.7.0/Muted-win-x64.zip",
-      "hash": "4f676e879d545a5359ff8297ce5d9f569b1715c8d80ebf8e917771bac4d7c27b"
+      "url": "https://github.com/yyyutakaaa/Muted/releases/download/v0.8.0/Muted-win-x64.zip",
+      "hash": "d624b6e98bc7c5a217091bb5ec7556e0f44918acb67438407b0595586b0f0fc7"
     }
   },
   "bin": "Muted.exe",
