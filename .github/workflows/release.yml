@@ -19,6 +19,12 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      # Optional. Each step below that needs one of these skips itself when it is unset,
+      # so a fork or a fresh clone still releases exactly as before.
+      SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +73,43 @@ jobs:
         shell: pwsh
         run: .\scripts\build-installer.ps1 -Version $env:VERSION
 
+      # Code signing through SignPath (free for open source). Without it, SmartScreen
+      # warns everyone who downloads the installer. Set the SIGNPATH_ORGANIZATION_ID
+      # variable and the SIGNPATH_API_TOKEN secret to switch it on.
+      - name: Upload unsigned installer for signing
+        id: unsigned
+        if: env.SIGNPATH_ORGANIZATION_ID != '' && env.SIGNPATH_API_TOKEN != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: artifacts/Muted-Setup-${{ env.VERSION }}.exe
+          if-no-files-found: error
+
+      - name: Sign installer with SignPath
+        if: steps.unsigned.outcome == 'success'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'muted' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts/signed
+
+      - name: Use the signed installer and refresh its checksum
+        if: steps.unsigned.outcome == 'success'
+        shell: pwsh
+        run: |
+          $name = "Muted-Setup-$env:VERSION.exe"
+          $signed = Get-ChildItem -Path artifacts/signed -Recurse -Filter $name | Select-Object -First 1
+          if (-not $signed) {
+            throw "SignPath did not return $name."
+          }
+          Copy-Item -LiteralPath $signed.FullName -Destination "artifacts/$name" -Force
+          $checksum = (Get-FileHash -LiteralPath "artifacts/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("artifacts/$name.sha256", "$checksum  $name`n")
+
       # Only once the installer exists, so a failed build never leaves a tag
       # behind that blocks a retry with the same version.
       - name: Create tag
@@ -99,3 +142,49 @@ jobs:
             $arguments += '--prerelease'
           }
           gh @arguments
+
+      # winget only takes stable versions. wingetcreate opens the pull request on
+      # microsoft/winget-pkgs; it needs a classic token with public_repo scope in the
+      # WINGET_TOKEN secret, and the package must have been submitted once by hand
+      # (see packaging/winget/README.md).
+      - name: Submit the new version to winget
+        if: env.PRERELEASE == 'false' && env.WINGET_TOKEN != ''
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          $url = "https://github.com/${{ github.repository }}/releases/download/$env:TAG/Muted-Setup-$env:VERSION.exe"
+          .\wingetcreate.exe update yyyutakaaa.Muted --version $env:VERSION --urls $url --submit --token $env:WINGET_TOKEN
+          if ($LASTEXITCODE -ne 0) {
+            throw "wingetcreate failed with exit code $LASTEXITCODE."
+          }
+
+      # The repository doubles as a Scoop bucket. Point its manifest at the new zip.
+      - name: Update the Scoop manifest
+        if: env.PRERELEASE == 'false'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $defaultBranch = '${{ github.event.repository.default_branch }}'
+          git fetch origin $defaultBranch
+          git checkout -B scoop-update "origin/$defaultBranch"
+          $hash = (Get-FileHash -LiteralPath artifacts/Muted-win-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          $path = 'bucket/muted.json'
+          $manifest = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+          $manifest.version = $env:VERSION
+          $manifest.architecture.'64bit'.url = "https://github.com/${{ github.repository }}/releases/download/$env:TAG/Muted-win-x64.zip"
+          $manifest.architecture.'64bit'.hash = $hash
+          ($manifest | ConvertTo-Json -Depth 10) + "`n" | Set-Content -LiteralPath $path -NoNewline -Encoding utf8NoBOM
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add $path
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host 'Scoop manifest already up to date.'
+            exit 0
+          }
+          git commit -m "Update Scoop manifest to $env:VERSION"
+          git push origin "HEAD:$defaultBranch"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not push the Scoop manifest to $defaultBranch."
+          }
