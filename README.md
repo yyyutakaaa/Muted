@@ -376,6 +376,9 @@ offers it. Users who installed a version from before automatic updating was
 added need to install one updater-enabled release once by hand; releases after
 that are offered automatically.
 
+One-time setup for the maintainer (Discussions, the website, winget, code signing) is
+in [docs/MAINTAINING.md](docs/MAINTAINING.md).
+
 ## Rebuilding native RNNoise
 
 The verified runtime DLL already lives in the repo, so this is only needed if
