@@ -16,9 +16,18 @@ public enum UpdateChannel
     Beta
 }
 
+public enum OverlayPosition
+{
+    TopLeft,
+    TopCenter,
+    TopRight,
+    BottomLeft,
+    BottomRight
+}
+
 public sealed record AppSettings
 {
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
     public const int MaximumProfiles = 20;
 
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -88,6 +97,31 @@ public sealed record AppSettings
     public IReadOnlyList<HotkeyBinding> Hotkeys { get; init; } = HotkeyBinding.CreateDefaults();
     public IReadOnlyList<AudioProfile> Profiles { get; init; } = [];
 
+    /// <summary>
+    /// True once the first-start guide was finished or skipped. Settings from before
+    /// the guide existed count as set up when they already point at an output.
+    /// </summary>
+    public bool SetupCompleted { get; init; }
+
+    /// <summary>A small always-on-top dot that shows mute and speaking, also over full-screen games.</summary>
+    public bool OverlayEnabled { get; init; }
+    public OverlayPosition OverlayPosition { get; init; } = OverlayPosition.TopCenter;
+
+    /// <summary>Applies a profile while a listed program runs.</summary>
+    public bool AutoProfileEnabled { get; init; }
+    public IReadOnlyList<AutoProfileRule> AutoProfileRules { get; init; } = [];
+
+    public LifetimeStatistics Lifetime { get; init; } = new();
+
+    /// <summary>
+    /// Cleans what you hear: a second pipeline from a capture device (usually the
+    /// recording side of a second cable your call app plays into) to your headphones.
+    /// </summary>
+    public bool ListeningEnabled { get; init; }
+    public string? ListeningInputDeviceId { get; init; }
+    public string? ListeningOutputDeviceId { get; init; }
+    public float ListeningStrength { get; init; } = 1f;
+
     public AppSettings Normalize()
     {
         var profiles = (Profiles ?? [])
@@ -144,9 +178,23 @@ public sealed record AppSettings
         // the new colours actually get seen; turning it back on is a click away.
         var useSystemAccentColor = SchemaVersion >= 4 && UseSystemAccentColor;
 
+        var profileIds = profiles.Select(profile => profile.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var rules = (AutoProfileRules ?? [])
+            .Where(rule => rule is not null)
+            .Select(rule => rule.Normalize())
+            .Where(rule => rule.ProcessName.Length > 0 && profileIds.Contains(rule.ProfileId))
+            .DistinctBy(rule => rule.ProcessName, StringComparer.Ordinal)
+            .Take(AutoProfileRule.MaximumRules)
+            .ToArray();
+
         return this with
         {
             SchemaVersion = CurrentSchemaVersion,
+            SetupCompleted = SetupCompleted || (SchemaVersion < 6 && !string.IsNullOrWhiteSpace(OutputDeviceId)),
+            OverlayPosition = Enum.IsDefined(OverlayPosition) ? OverlayPosition : OverlayPosition.TopCenter,
+            AutoProfileRules = rules,
+            Lifetime = (Lifetime ?? new LifetimeStatistics()).Normalize(),
+            ListeningStrength = float.IsFinite(ListeningStrength) ? Math.Clamp(ListeningStrength, 0f, 1f) : 1f,
             UseSystemAccentColor = useSystemAccentColor,
             WetMix = Math.Clamp(WetMix, 0f, 1f),
             VoiceThreshold = Math.Clamp(VoiceThreshold, 0.05f, 0.99f),
