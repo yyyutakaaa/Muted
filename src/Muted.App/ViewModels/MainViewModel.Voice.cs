@@ -160,6 +160,7 @@ internal sealed partial class MainViewModel
         _shoutThresholdDb = settings.ShoutThresholdDb;
         _shoutGuardMode = settings.ShoutGuardMode;
         _autoTuneEnabled = settings.AutoTuneEnabled;
+        UpdateAutoTuneStatus();
     }
 
     private static readonly string[] VoicePropertyNames =

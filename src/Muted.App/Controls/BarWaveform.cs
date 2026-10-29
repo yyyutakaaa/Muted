@@ -202,9 +202,8 @@ public sealed class BarWaveform : FrameworkElement
             }
             else
             {
-                // A quiet resting silhouette, so a stopped Muted still reads as Muted.
-                target = 0.05 + (bell * (0.12 + (0.16 * Math.Abs(Math.Sin(index * 0.73))))) +
-                    (0.03 * Math.Abs(Math.Sin(index * 1.9)));
+                // A flat resting signal never suggests that stopped audio is flowing.
+                target = 0;
             }
 
             var next = _smoothed[index] + ((target - _smoothed[index]) * (active ? 0.5 : 0.2));

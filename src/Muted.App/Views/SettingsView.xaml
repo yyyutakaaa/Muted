@@ -8,24 +8,6 @@
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Settings" />
         </StackPanel>
 
-        <!-- ===================== Advanced ===================== -->
-        <Border Style="{StaticResource CardStyle}" Padding="22" infrastructure:Reveal.Delay="40">
-            <Grid>
-                <StackPanel Margin="0,0,60,0">
-                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="Advanced" />
-                    <TextBlock Margin="0,4,0,0"
-                               Style="{StaticResource CaptionStyle}"
-                               TextWrapping="Wrap"
-                               Text="Adds the rest of the processing chain to the Audio page, the dB scales and live numbers to the dashboard, and the pipeline readings to the setup check. Nothing changes about how Muted sounds; it only stops hiding the details." />
-                </StackPanel>
-                <CheckBox HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                          Style="{StaticResource ToggleStyle}"
-                          IsChecked="{Binding AdvancedMode}"
-                          AutomationProperties.Name="Advanced settings" />
-            </Grid>
-        </Border>
-
         <!-- ===================== Startup and window ===================== -->
         <Border Style="{StaticResource CardStyle}" Padding="22">
             <StackPanel>

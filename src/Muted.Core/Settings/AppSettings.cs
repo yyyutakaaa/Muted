@@ -60,7 +60,7 @@ public sealed record AppSettings
     public ShoutGuardMode ShoutGuardMode { get; init; } = ShoutGuardMode.Silence;
 
     /// <summary>Lets Muted keep the boost and the gate right while you talk.</summary>
-    public bool AutoTuneEnabled { get; init; }
+    public bool AutoTuneEnabled { get; init; } = true;
     public bool MonitorEnabled { get; init; }
     public string? MonitorDeviceId { get; init; }
     public float MonitorVolume { get; init; } = 0.6f;
@@ -72,8 +72,8 @@ public sealed record AppSettings
     public bool StartMuted { get; init; }
     public bool WasRunningOnExit { get; init; }
 
-    /// <summary>Follows Windows by default, and keeps following while it changes.</summary>
-    public AppTheme Theme { get; init; } = AppTheme.System;
+    /// <summary>Uses the Muted dark palette by default; existing theme preferences are preserved.</summary>
+    public AppTheme Theme { get; init; } = AppTheme.Dark;
 
     /// <summary>
     /// Trades Muted's violet for whatever highlight colour Windows is set to. Off by

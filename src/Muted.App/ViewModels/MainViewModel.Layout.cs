@@ -74,6 +74,7 @@ internal sealed partial class MainViewModel
     private void InitializeLayout()
     {
         PropertyChanged += OnLayoutSourceChanged;
+        PropertyChanged += RedesignSourceChanged;
     }
 
     private void OnLayoutSourceChanged(object? sender, PropertyChangedEventArgs eventArgs)

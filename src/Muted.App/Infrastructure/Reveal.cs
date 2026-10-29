@@ -17,9 +17,9 @@ namespace Muted.App.Infrastructure;
 /// </remarks>
 public static class Reveal
 {
-    private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(260));
-    private static readonly Duration LiftDuration = new(TimeSpan.FromMilliseconds(420));
-    private const double LiftDistance = 18;
+    private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(160));
+    private static readonly Duration LiftDuration = new(TimeSpan.FromMilliseconds(180));
+    private const double LiftDistance = 6;
 
     public static readonly DependencyProperty DelayProperty = DependencyProperty.RegisterAttached(
         "Delay",
@@ -63,6 +63,7 @@ public static class Reveal
 
     private static void Play(FrameworkElement element)
     {
+        if (!SystemParameters.ClientAreaAnimation) return;
         var delay = GetDelay(element);
         if (double.IsNaN(delay))
         {

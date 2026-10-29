@@ -785,7 +785,7 @@ internal sealed partial class MainViewModel
         ShowSetupGuideCommand = new RelayCommand(() =>
         {
             SetupCompleted = false;
-            SelectedPage = AppPage.Dashboard;
+            SelectedPage = AppPage.Settings;
             RaiseSetupChanged();
         });
         ReportProblemCommand = new RelayCommand(ReportProblem);

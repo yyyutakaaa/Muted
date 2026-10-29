@@ -10,6 +10,38 @@
         <infrastructure:EnumToBooleanConverter x:Key="EnumToBoolean" />
         <infrastructure:EnumToVisibilityConverter x:Key="EnumToVisibility" />
 
+        <Style TargetType="Expander">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <StackPanel>
+                            <ToggleButton IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                          HorizontalContentAlignment="Left" Foreground="{TemplateBinding Foreground}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="HeaderBorder" BorderThickness="1" BorderBrush="Transparent" CornerRadius="6" Padding="4,8" Background="Transparent">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock x:Name="Chevron" FontFamily="Segoe MDL2 Assets" Text="&#xE76C;" FontSize="10" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                                <ContentPresenter />
+                                            </StackPanel>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True"><Setter TargetName="Chevron" Property="Text" Value="&#xE70D;" /></Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="HeaderBorder" Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" /></Trigger>
+                                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="HeaderBorder" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <ContentPresenter ContentSource="Header" />
+                            </ToggleButton>
+                            <ContentPresenter Margin="0,8,0,0" Visibility="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Every colour lives here once, and ThemeService swaps these entries when the
              theme or the accent changes. Everything that paints with them uses
              DynamicResource, which is the only reference that follows a swap:
@@ -653,9 +685,12 @@
         <Style x:Key="AccentButtonStyle" TargetType="Button" BasedOn="{StaticResource TextButtonStyle}">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{DynamicResource BackgroundBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Padding" Value="18,10" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="HotkeyBoxStyle" TargetType="controls:HotkeyBox" BasedOn="{StaticResource TextButtonStyle}">

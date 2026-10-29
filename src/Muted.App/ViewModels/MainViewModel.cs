@@ -20,7 +20,8 @@ internal enum AppPage
     Shortcuts,
     Settings,
     Diagnostics,
-    About
+    About,
+    Advanced
 }
 
 internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
