@@ -6,6 +6,7 @@ using Muted.App.ViewModels;
 using Muted.Audio.Windows.Devices;
 using Muted.Audio.Windows.Engine;
 using Muted.Core.Audio;
+using Muted.Core.Support;
 
 namespace Muted.App;
 
@@ -19,6 +20,7 @@ public partial class App : System.Windows.Application
     private MainViewModel? _viewModel;
     private MainWindow? _window;
     private CompactWindow? _compactWindow;
+    private OverlayWindow? _overlayWindow;
     private FileLog? _log;
     private UpdateCoordinator? _updateCoordinator;
     private int _exitRequested;
@@ -30,9 +32,19 @@ public partial class App : System.Windows.Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         _log = new FileLog();
-        _singleInstance = new SingleInstanceService();
+
+        // "Muted.exe --toggle-mute" from a Stream Deck button or a script: hand it to the
+        // copy that is already running, quietly, and leave.
+        var request = CommandLine.Parse(eventArgs.Args);
+        var onlyCommand = request is { Command: not RemoteCommand.Show };
+        _singleInstance = new SingleInstanceService(activateExisting: !onlyCommand);
         if (!_singleInstance.IsPrimary)
         {
+            if (onlyCommand && !SingleInstanceService.TrySend(request!.Value))
+            {
+                _log.Write(new InvalidOperationException("The running copy did not answer."), "Send command");
+            }
+
             Shutdown();
             return;
         }
@@ -119,6 +131,14 @@ public partial class App : System.Windows.Application
             }
 
             _singleInstance.ActivationRequested += (_, _) => Dispatcher.BeginInvoke(ShowMainWindow);
+            _singleInstance.CommandReceived += (_, command) => Dispatcher.BeginInvoke(() => RunCommand(command));
+            UpdateOverlay();
+
+            // A command can also start Muted, like a profile button pressed before launch.
+            if (onlyCommand)
+            {
+                RunCommand(request!.Value);
+            }
 
             _ = CheckForUpdateAsync();
         }
@@ -131,6 +151,45 @@ public partial class App : System.Windows.Application
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
             RequestExit();
+        }
+    }
+
+    private async void RunCommand(RemoteRequest request)
+    {
+        try
+        {
+            if (_viewModel is not null)
+            {
+                await _viewModel.HandleRemoteAsync(request);
+            }
+        }
+        catch (Exception exception)
+        {
+            _log?.Write(exception, "Run command " + request.Serialize());
+        }
+    }
+
+    /// <summary>The in-game pill shows only while audio runs, so it never claims "Live" when it is not.</summary>
+    private void UpdateOverlay()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var show = _viewModel.OverlayEnabled && _viewModel.IsRunning;
+        if (show)
+        {
+            _overlayWindow ??= new OverlayWindow(_viewModel);
+            if (!_overlayWindow.IsVisible)
+            {
+                _overlayWindow.Show();
+                _overlayWindow.PlaceOnScreen();
+            }
+        }
+        else
+        {
+            _overlayWindow?.Hide();
         }
     }
 
@@ -226,7 +285,13 @@ public partial class App : System.Windows.Application
     {
         switch (eventArgs.PropertyName)
         {
+            case nameof(MainViewModel.OverlayEnabled):
+                UpdateOverlay();
+                break;
             case nameof(MainViewModel.EngineState):
+                UpdateTrayState();
+                UpdateOverlay();
+                break;
             case nameof(MainViewModel.TraySpeaking):
             case nameof(MainViewModel.IsMuted):
             case nameof(MainViewModel.IsEffectivelyMuted):
@@ -398,6 +463,8 @@ public partial class App : System.Windows.Application
 
             _compactWindow?.Close();
             _compactWindow = null;
+            _overlayWindow?.Close();
+            _overlayWindow = null;
             _tray?.Dispose();
             _tray = null;
             _deviceCatalog?.Dispose();
