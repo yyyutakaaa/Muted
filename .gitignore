@@ -21,3 +21,4 @@ Desktop.ini
 # Local diagnostics
 *.log
 *.dmp
+docs/ui-redesign.md
