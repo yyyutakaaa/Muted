@@ -1,0 +1,38 @@
+name: Bug report
+description: Something does not work or sounds wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. The quickest way to fill this in is **Setup check → Report a problem** inside Muted: it opens this form with the setup check already pasted in.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Setup check
+      description: Run **Setup check** in Muted, press **Copy report** and paste it here. It contains device names, formats and levels, never audio.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Muted version
+      description: Shown under About.
+      placeholder: "0.6.0"
+  - type: input
+    id: call-app
+    attributes:
+      label: Call app or game
+      placeholder: Discord, Teams, Valorant, ...
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Optional. Settings → Open data folder → Muted.log. Remove anything you would rather not share.
+      render: text

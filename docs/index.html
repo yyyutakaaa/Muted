@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muted: free noise cancelling for your Windows microphone</title>
+  <meta name="description" content="Muted removes fan noise, hiss and keyboard clatter from your microphone with RNNoise, on your own PC, before Discord, Teams or your game hears it. Free, open source, no account.">
+  <meta property="og:title" content="Muted: free noise cancelling for your Windows microphone">
+  <meta property="og:description" content="Local RNNoise noise suppression for Discord, Teams and games. Free, open source, no account, no cloud.">
+  <meta property="og:image" content="https://yyyutakaaa.github.io/Muted/images/muted-dashboard.png">
+  <style>
+    :root {
+      --bg: #08070c;
+      --surface: #0f0e15;
+      --border: #221f2c;
+      --text: #f2f0f7;
+      --muted: #8f8a9e;
+      --accent: #a78bfa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.6 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    }
+    main { max-width: 1040px; margin: 0 auto; padding: 56px 16px 72px; }
+    .logo { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent); }
+    h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.1; letter-spacing: -1px; margin: 28px 0 16px; max-width: 760px; }
+    .lead { color: var(--muted); font-size: 19px; max-width: 640px; margin: 0 0 28px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 48px; }
+    .button {
+      display: inline-block; padding: 12px 20px; border-radius: 10px;
+      text-decoration: none; font-weight: 600; border: 1px solid var(--border); color: var(--text);
+    }
+    .button.primary { background: var(--accent); border-color: var(--accent); color: #120f1c; }
+    .shot { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--border); display: block; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 56px 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .card h2 { font-size: 17px; margin: 0 0 6px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    ol { color: var(--muted); padding-left: 20px; }
+    ol strong { color: var(--text); }
+    code { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; font-size: 15px; }
+    footer { color: var(--muted); font-size: 14px; margin-top: 56px; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <div class="logo">muted<span>.</span></div>
+  <h1>Your voice, without the fan, the hiss or the keyboard.</h1>
+  <p class="lead">Muted runs your microphone through RNNoise on your own PC, before Discord, Teams or your game hears it. It can clean what you hear from others too. Free and open source, with no account and no cloud.</p>
+  <div class="actions">
+    <a class="button primary" href="https://github.com/yyyutakaaa/Muted/releases/latest">Download for Windows</a>
+    <a class="button" href="https://github.com/yyyutakaaa/Muted">Source on GitHub</a>
+  </div>
+
+  <img class="shot" src="images/muted-dashboard.png" width="1600" height="1060"
+       alt="Muted's main window with a live waveform, input and output meters, and switches for noise reduction, echo cancellation, voice gate and auto level.">
+
+  <div class="grid">
+    <div class="card"><h2>Any PC</h2><p>No RTX card needed. RNNoise runs on the CPU and adds 20 ms.</p></div>
+    <div class="card"><h2>Speakers are fine</h2><p>Echo cancellation subtracts what your speakers play, so a headset is optional.</p></div>
+    <div class="card"><h2>Hear the difference</h2><p>Hold A/B, or save one file with your voice before and after.</p></div>
+    <div class="card"><h2>Made for games</h2><p>Push to talk, a mute indicator on top of your game, and profiles that switch per game.</p></div>
+  </div>
+
+  <h2>Set up in four steps</h2>
+  <ol>
+    <li><strong>Install a virtual cable</strong>, like the free <a href="https://vb-audio.com/Cable/">VB-CABLE</a>.</li>
+    <li><strong>Start Muted</strong>, pick your microphone and the cable.</li>
+    <li><strong>Press the power button.</strong></li>
+    <li><strong>In your call app</strong>, choose <code>CABLE Output</code> as the microphone.</li>
+  </ol>
+  <p class="lead">Or with Scoop: <code>scoop bucket add muted https://github.com/yyyutakaaa/Muted</code> then <code>scoop install muted/muted</code>.</p>
+
+  <footer>MIT licensed. RNNoise by Xiph.org. Muted is free and always will be; a <a href="https://www.buymeacoffee.com/yyyutakaaa">coffee</a> helps keep it maintained.</footer>
+</main>
+</body>
+</html>

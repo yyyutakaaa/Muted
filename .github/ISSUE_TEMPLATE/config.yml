@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup help and questions
+    url: https://github.com/yyyutakaaa/Muted/discussions
+    about: Stuck on the virtual cable or not sure which device to pick? Ask in Discussions.
+  - name: Virtual cable guide
+    url: https://github.com/yyyutakaaa/Muted/blob/master/docs/VIRTUAL-CABLE.md
+    about: Step-by-step setup with VB-CABLE, including the 48 kHz requirement.
