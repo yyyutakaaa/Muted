@@ -1,9 +1,48 @@
 # Muted
 
+[![Latest release](https://img.shields.io/github/v/release/yyyutakaaa/Muted)](https://github.com/yyyutakaaa/Muted/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/yyyutakaaa/Muted/total)](https://github.com/yyyutakaaa/Muted/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-violet)](LICENSE)
+
 Muted is a small Windows app that runs your microphone through
 [RNNoise](https://github.com/xiph/rnnoise), locally, before Discord, Teams, or
 your game ever hears the signal. Fan noise, mic hiss, and keyboard clatter get
-filtered out along the way.
+filtered out along the way. It can clean what you hear from others too.
+
+![Muted's main window: the live waveform, input and output meters, four switches for noise reduction, echo cancellation, voice gate and auto level, and the Advanced settings panel](docs/images/muted-dashboard.png)
+
+**[Download the installer](https://github.com/yyyutakaaa/Muted/releases/latest)** ·
+free, no account, no cloud, no telemetry.
+
+## Why Muted
+
+|                                   | Muted | NVIDIA Broadcast | Krisp        |
+|-----------------------------------|-------|------------------|--------------|
+| Works on any PC, no RTX card      | yes   | no, needs RTX    | yes          |
+| No account or sign-in             | yes   | yes              | no           |
+| Free without time limits          | yes   | yes              | paid plans   |
+| Open source                       | yes   | no               | no           |
+| Cleans your microphone            | yes   | yes              | yes          |
+| Cleans what you hear              | yes   | yes              | yes          |
+| Echo cancellation for speakers    | yes   | yes              | yes          |
+
+Muted needs a virtual audio cable, like the free VB-CABLE, because Windows only
+lets signed drivers add a new microphone. The setup guide inside the app walks
+you through it.
+
+## Install
+
+- **Installer**: grab `Muted-Setup-x.y.z.exe` from the
+  [latest release](https://github.com/yyyutakaaa/Muted/releases/latest). It
+  updates itself.
+- **Scoop**:
+
+  ```powershell
+  scoop bucket add muted https://github.com/yyyutakaaa/Muted
+  scoop install muted/muted
+  ```
+
+- **Portable**: unzip `Muted-win-x64.zip` anywhere and run `Muted.exe`.
 
 ```text
 physical microphone
@@ -21,6 +60,8 @@ physical microphone
 ```
 
 ## Getting started
+
+Muted opens with a four-step setup guide the first time; it walks through the same steps as below.
 
 Windows only lets an app publish a new, selectable microphone through a
 signed audio driver, and that's not something Muted ships. So it relies on a
@@ -107,6 +148,8 @@ The hook is only installed once you actually assign a key.
   result as text for a bug report;
 - stores settings in `%LOCALAPPDATA%\Muted\settings.json` and logs errors to
   `%LOCALAPPDATA%\Muted\Muted.log`, both reachable from Settings;
+- keeps running totals of how long it cleaned and how much noise it removed,
+  as numbers in the settings file;
 - has no account, no cloud, and no telemetry; records audio only when you explicitly start a test or diagnosis clip.
 
 ## Voice tools
@@ -175,6 +218,63 @@ profile changes/device recovery), and are not saved across application exits.
 
 Hard keyboard clicks during speech can still partly leak through. That's a
 limit of the model, not a bug.
+
+## Clean what you hear
+
+The same RNNoise model can clean other people's audio: their fans, keyboards
+and traffic. Muted can't sit between your call app and your headphones on its
+own, so this takes a second virtual cable (VB-CABLE A+B, or Voicemeeter):
+
+1. In Discord or Teams, set the **output** device to the second cable's
+   playback side, for example `CABLE-A Input`.
+2. In Muted, under **Presets & tools → Clean what you hear**, pick that cable's
+   recording side (`CABLE-A Output`) to listen to, and your headphones to play
+   on.
+3. Switch it on. The strength slider mixes in some of the original if you want
+   it less strict.
+
+This runs separately from your microphone, in mono, and adds about 20 ms.
+
+## Before and after
+
+Record a take under **Presets & tools → Microphone test**, then press **Save
+before/after WAV**. You get one file with the same moment twice: first
+without Muted, then with it. Good for checking your setup, and for showing
+friends what it does.
+
+## In-game indicator and automatic profiles
+
+**Settings → In-game indicator** puts a small *Live* or *Muted* pill on top of
+every window while audio runs, so you can see your mute state mid-game. Clicks
+go through it. Exclusive full-screen games draw over all windows, so use
+borderless or windowed mode to see it.
+
+**Presets & tools → Automatic profiles** switches to a profile while a program runs:
+Gaming while `valorant` runs, Meeting while `ms-teams` runs. When the program
+closes, the profile you had comes back.
+
+## Stream Deck, OBS and scripts
+
+Start `Muted.exe` with a command and it is passed to the copy that is already
+running, without opening a window. Point a Stream Deck *Open* action, an OBS
+hotkey script or AutoHotkey at it:
+
+```text
+Muted.exe --toggle-mute        Muted.exe --mute / --unmute
+Muted.exe --toggle             start or stop audio (also --start, --stop)
+Muted.exe --toggle-suppression Muted.exe --toggle-overlay
+Muted.exe --toggle-listening   Muted.exe --profile "Warm Radio"
+Muted.exe --show
+```
+
+Commands only reach a copy run by the same Windows user.
+
+## Problems and ideas
+
+**Setup check → Report a problem** opens a GitHub bug report in your browser
+with the setup check already filled in. Nothing is sent until you submit it.
+Ideas are welcome as a
+[feature request](https://github.com/yyyutakaaa/Muted/issues/new?template=feature_request.yml).
 
 ## Speakers instead of a headset
 
@@ -260,7 +360,16 @@ Or start **Actions → Release → Run workflow** and type the version there; th
 workflow then creates the tag itself, after the installer has been built.
 
 The release workflow builds and tests the app, creates the self-contained
-installer and checksum, and publishes all release assets. A tag may also carry
+installer and checksum, and publishes all release assets. Three optional
+steps switch themselves on when their settings exist:
+
+- **Code signing** through [SignPath](https://signpath.org/) (free for open
+  source): set the `SIGNPATH_ORGANIZATION_ID` variable and the
+  `SIGNPATH_API_TOKEN` secret. `SIGNPATH_PROJECT_SLUG` and
+  `SIGNPATH_POLICY_SLUG` default to `muted` and `release-signing`.
+- **winget**: set the `WINGET_TOKEN` secret after the first manual submission,
+  see [packaging/winget](packaging/winget/README.md).
+- **Scoop**: stable releases update `bucket/muted.json` on the default branch. A tag may also carry
 a prerelease suffix, like `v0.3.0-beta1`; the build keeps the three numeric
 parts and the release is marked as a prerelease, so only the beta channel
 offers it. Users who installed a version from before automatic updating was

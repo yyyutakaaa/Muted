@@ -1,0 +1,25 @@
+title: "My setup: "
+body:
+  - type: markdown
+    attributes:
+      value: Show how you use Muted. It helps other people choose a setup that works.
+  - type: input
+    id: microphone
+    attributes:
+      label: Microphone
+    validations:
+      required: true
+  - type: input
+    id: cable
+    attributes:
+      label: Virtual cable
+      placeholder: VB-CABLE, Voicemeeter, ...
+  - type: input
+    id: app
+    attributes:
+      label: Call app or game
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings and preset
+      description: Which switches, which preset, anything you changed under Advanced.

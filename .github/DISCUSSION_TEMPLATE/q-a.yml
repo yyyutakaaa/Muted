@@ -1,0 +1,16 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Stuck on the setup? Run **Setup check** in Muted, press **Copy report** and paste it below. It contains device names and levels, never audio.
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do, and what happens instead?
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Setup check
+      render: text

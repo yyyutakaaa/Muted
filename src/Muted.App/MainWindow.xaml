@@ -127,8 +127,8 @@
                 </RadioButton>
                 <RadioButton Style="{StaticResource RailItemStyle}"
                              GroupName="Nav"
-                             ToolTip="Presets and recording"
-                             AutomationProperties.Name="Presets and recording"
+                             ToolTip="Presets and tools"
+                             AutomationProperties.Name="Presets and tools"
                              IsChecked="{Binding SelectedPage, Converter={StaticResource EnumToBoolean}, ConverterParameter=Presets}">
                     <!-- Stacked layers. -->
                     <Path Style="{StaticResource RailPathStyle}"
@@ -303,8 +303,8 @@
                     <StackPanel Visibility="{Binding SelectedPage,
                                               Converter={StaticResource EnumToVisibility},
                                               ConverterParameter=Presets}">
-                        <TextBlock Margin="0,14,0,4" Style="{StaticResource PageTitleStyle}" Text="Presets &amp; recording" />
-                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Voice presets, shared profiles, and a quick test recording." />
+                        <TextBlock Margin="0,14,0,4" Style="{StaticResource PageTitleStyle}" Text="Presets &amp; tools" />
+                        <TextBlock Style="{StaticResource CaptionStyle}" Text="Voice presets, automatic profiles, a before/after recording, and cleaning what you hear." />
                         <views:FeaturesView Margin="0,4,0,24" />
                     </StackPanel>
 

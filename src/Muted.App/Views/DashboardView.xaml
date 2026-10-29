@@ -5,6 +5,22 @@
              xmlns:infrastructure="clr-namespace:Muted.App.Infrastructure"
              Foreground="{DynamicResource TextBrush}">
     <UserControl.Resources>
+        <!-- A guide step: hollow until done, filled once it is. Tag carries the "done" flag. -->
+        <Style x:Key="StepDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Margin" Value="0,3,0,0" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="Stroke" Value="{DynamicResource BorderStrongBrush}" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Stroke" Value="{DynamicResource AccentBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="MeterLabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="Margin" Value="0,0,0,10" />
@@ -20,41 +36,95 @@
     </UserControl.Resources>
 
     <StackPanel>
-        <!-- ===================== Onboarding ===================== -->
+        <!-- ===================== Setup guide ===================== -->
+        <!-- Shows on first start, and again whenever no cable is installed. -->
         <Border Margin="0,0,0,16"
-                Padding="20,16"
+                Padding="22,18"
                 CornerRadius="12"
                 infrastructure:Reveal.Delay="0"
-                Background="{DynamicResource WarningSurfaceBrush}"
-                BorderBrush="{DynamicResource WarningBrush}"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource AccentBrush}"
                 BorderThickness="1"
-                Visibility="{Binding NeedsVirtualCableSetup, Converter={StaticResource BoolToVisibility}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0"
-                           FontFamily="Segoe MDL2 Assets"
-                           FontSize="20"
-                           VerticalAlignment="Center"
-                           Foreground="{DynamicResource WarningBrush}"
-                           Text="&#xE7BA;" />
-                <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center">
-                    <TextBlock FontSize="14" FontWeight="SemiBold" Text="One step left: install a virtual audio cable" />
-                    <TextBlock Margin="0,4,0,0"
-                               Style="{StaticResource CaptionStyle}"
-                               TextWrapping="Wrap"
-                               Text="Windows only lets apps publish a new microphone through a signed driver, so Muted sends your filtered voice into a cable instead. Install VB-CABLE, restart if asked, then pick CABLE Input under Advanced." />
+                Visibility="{Binding ShowSetupGuide, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,240,0">
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="Set up Muted in four steps" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="Windows only lets apps add a new microphone through a signed driver, so Muted sends your cleaned voice through a virtual cable instead." />
+                    </StackPanel>
+                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Orientation="Horizontal">
+                        <Button Style="{StaticResource AccentButtonStyle}"
+                                Command="{Binding OpenCableDownloadCommand}"
+                                Content="Get VB-CABLE"
+                                Visibility="{Binding NeedsVirtualCableSetup, Converter={StaticResource BoolToVisibility}}"
+                                AutomationProperties.Name="Download VB-CABLE" />
+                        <Button Margin="8,0,0,0"
+                                Style="{StaticResource TextButtonStyle}"
+                                Command="{Binding RescanDevicesCommand}"
+                                Content="Scan again"
+                                ToolTip="Look for newly installed devices"
+                                AutomationProperties.Name="Scan for audio devices again" />
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Style="{StaticResource StepDotStyle}" Tag="{Binding HasVirtualCable}" />
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="1. Install a virtual cable" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="{Binding SetupCableText}" />
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Style="{StaticResource StepDotStyle}" Tag="{Binding IsRoutingReady}" />
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="2. Microphone in, cable out" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="{Binding SetupRoutingText}" />
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Style="{StaticResource StepDotStyle}" Tag="{Binding IsRunning}" />
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="3. Switch Muted on" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="Press the power button. Hold A/B under Quick controls to hear yourself with and without Muted." />
+                    </StackPanel>
+                </Grid>
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Ellipse Style="{StaticResource StepDotStyle}" Tag="{Binding SetupCompleted}" />
+                    <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                        <TextBlock FontSize="14" FontWeight="SemiBold" Text="4. Pick Muted in your call app" />
+                        <TextBlock Margin="0,3,0,0" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="{Binding SetupCallAppText}" />
+                    </StackPanel>
+                </Grid>
+                <StackPanel Margin="0,16,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource TextButtonStyle}"
+                            Command="{Binding ShowDiagnosticsCommand}"
+                            Content="Something wrong? Run the setup check" />
+                    <Button Margin="8,0,0,0"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Command="{Binding FinishSetupCommand}"
+                            Content="Done"
+                            ToolTip="Hide this guide. Settings can show it again."
+                            AutomationProperties.Name="Finish the setup guide" />
                 </StackPanel>
-                <Button Grid.Column="2"
-                        VerticalAlignment="Center"
-                        Style="{StaticResource AccentButtonStyle}"
-                        Command="{Binding OpenCableDownloadCommand}"
-                        Content="Get VB-CABLE"
-                        AutomationProperties.Name="Download VB-CABLE" />
-            </Grid>
+            </StackPanel>
         </Border>
 
         <!-- ===================== Waveform ===================== -->

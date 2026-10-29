@@ -133,6 +133,52 @@
             </StackPanel>
         </Border>
 
+        <!-- ===================== In-game indicator ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <StackPanel>
+                <Grid>
+                    <StackPanel Margin="0,0,60,0">
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="In-game indicator" />
+                        <TextBlock Margin="0,4,0,0"
+                                   Style="{StaticResource CaptionStyle}"
+                                   TextWrapping="Wrap"
+                                   Text="A small Live or Muted pill on top of every window while audio runs, so you can see your mute state in a game. Clicks go through it. Games in exclusive full-screen draw over it; borderless or windowed mode shows it." />
+                    </StackPanel>
+                    <CheckBox HorizontalAlignment="Right"
+                              VerticalAlignment="Center"
+                              Style="{StaticResource ToggleStyle}"
+                              IsChecked="{Binding OverlayEnabled}"
+                              AutomationProperties.Name="In-game indicator" />
+                </Grid>
+                <Grid Margin="0,14,0,0">
+                    <TextBlock Style="{StaticResource SettingRowLabelStyle}" VerticalAlignment="Center" Text="Position" />
+                    <ComboBox HorizontalAlignment="Right"
+                              MinWidth="160"
+                              ItemsSource="{Binding OverlayPositions}"
+                              SelectedItem="{Binding OverlayPosition}"
+                              AutomationProperties.Name="Indicator position" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Setup guide ===================== -->
+        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22">
+            <Grid>
+                <StackPanel Margin="0,0,200,0">
+                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="Setup guide" />
+                    <TextBlock Margin="0,4,0,0"
+                               Style="{StaticResource CaptionStyle}"
+                               TextWrapping="Wrap"
+                               Text="Walk through the virtual cable and call app steps again." />
+                </StackPanel>
+                <Button HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource TextButtonStyle}"
+                        Command="{Binding ShowSetupGuideCommand}"
+                        Content="Show the setup guide" />
+            </Grid>
+        </Border>
+
         <!-- ===================== Appearance ===================== -->
         <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0" Padding="22" infrastructure:Reveal.Delay="140">
             <StackPanel>

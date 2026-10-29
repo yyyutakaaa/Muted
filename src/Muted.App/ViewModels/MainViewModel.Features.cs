@@ -211,7 +211,7 @@ internal sealed partial class MainViewModel
         try
         {
             _recordingBuffer = new AudioClipBuffer(120);
-            _engine.BeginClip(_recordingBuffer);
+            _engine.BeginClip(_recordingBuffer, new AudioClipBuffer(120));
             _recordingStarted = Stopwatch.GetTimestamp();
             IsRecording = true;
             FeatureStatus = "Recording… Press Stop when you are finished (maximum 2 minutes).";
@@ -223,12 +223,13 @@ internal sealed partial class MainViewModel
     {
         if (!IsRecording) return;
         _lastClip = _engine.EndClip();
+        _lastRawClip = _engine.EndRawClip();
         _recordingBuffer = null;
         IsRecording = false;
         _diagnosisClip = _lastClip.Length > 0;
         ClipDuration = _lastClip.Length / 48_000d;
         ClipPosition = 0;
-        FeatureStatus = _lastClip.Length == 0 ? "No audio was captured." : "Recording ready. You can play, rewind, replay, save, or delete it.";
+        FeatureStatus = _lastClip.Length == 0 ? "No audio was captured." : "Recording ready. Play it, or save a before/after WAV to hear what Muted removed.";
         RefreshFeatureCommands();
     }
 
@@ -318,6 +319,8 @@ internal sealed partial class MainViewModel
         EndPlaybackMute();
         if (_lastClip is not null) Array.Clear(_lastClip);
         _lastClip = null;
+        if (_lastRawClip is not null) Array.Clear(_lastRawClip);
+        _lastRawClip = null;
         _diagnosisClip = false;
         ClipPosition = 0;
         ClipDuration = 0;
@@ -339,11 +342,13 @@ internal sealed partial class MainViewModel
         {
             _featureTimer.Stop();
             TraySpeaking = false;
+            OverlaySpeaking = false;
             HealthWarning = string.Empty;
             if (IsRecording) StopRecording();
             PausePlayback();
         }
         TuningEngineChanged();
+        GrowthEngineChanged();
         UpdateSessionText();
         RefreshFeatureCommands();
     }
@@ -353,6 +358,7 @@ internal sealed partial class MainViewModel
         StartRecordingCommand?.RaiseCanExecuteChanged(); StopRecordingCommand?.RaiseCanExecuteChanged();
         PlayPauseClipCommand?.RaiseCanExecuteChanged(); ReplayClipCommand?.RaiseCanExecuteChanged(); RewindClipCommand?.RaiseCanExecuteChanged();
         SaveClipCommand?.RaiseCanExecuteChanged(); DeleteClipCommand?.RaiseCanExecuteChanged();
+        SaveComparisonCommand?.RaiseCanExecuteChanged();
         NaturalPresetCommand?.RaiseCanExecuteChanged(); GamingPresetCommand?.RaiseCanExecuteChanged();
         PodcastPresetCommand?.RaiseCanExecuteChanged(); MeetingPresetCommand?.RaiseCanExecuteChanged();
         WarmRadioPresetCommand?.RaiseCanExecuteChanged();
@@ -363,6 +369,7 @@ internal sealed partial class MainViewModel
     {
         var metrics = _engine.Metrics;
         TuningTick(metrics);
+        GrowthTick();
         if (IsRecording)
         {
             var elapsed = Stopwatch.GetElapsedTime(_recordingStarted).TotalSeconds;
@@ -383,6 +390,7 @@ internal sealed partial class MainViewModel
         var feedback = _feedback.Update(_feedbackClock.Elapsed.TotalSeconds, metrics,
             IsMuted && !_previewMuted, IsEffectivelyMuted, MuteReminderEnabled, HealthWarningsEnabled);
         TraySpeaking = SpeakingTrayEnabled && feedback.Speaking;
+        OverlaySpeaking = feedback.Speaking;
         if (feedback.RemindMute)
         {
             NotificationRequested?.Invoke(this, "You are speaking while Muted's microphone is muted.");
@@ -427,6 +435,7 @@ internal sealed partial class MainViewModel
         _featureTimer.Tick -= FeatureTick;
         _featureLifetime.Cancel();
         _engine.EndClip();
+        _engine.EndRawClip();
         DeleteClip();
     }
 

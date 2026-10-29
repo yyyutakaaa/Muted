@@ -75,15 +75,29 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private long _generation;
     private int _disposed;
     private AudioClipBuffer? _clip;
+    private AudioClipBuffer? _rawClip;
     private SessionAccumulator _session = new();
     public SessionStatistics Session => Volatile.Read(ref _session).Snapshot();
-    public void BeginClip(AudioClipBuffer clip)
+
+    /// <summary>
+    /// Records the processed output. With <paramref name="rawClip"/>, also records the same
+    /// moments before noise suppression, time-aligned, for a before/after comparison.
+    /// </summary>
+    public void BeginClip(AudioClipBuffer clip, AudioClipBuffer? rawClip = null)
     {
         if (_state != AudioEngineState.Running) throw new InvalidOperationException("Start audio before recording.");
+        Volatile.Write(ref _rawClip, rawClip);
         if (Interlocked.CompareExchange(ref _clip, clip, null) is not null)
+        {
+            Volatile.Write(ref _rawClip, null);
             throw new InvalidOperationException("A recording is already active.");
+        }
     }
+
     public float[] EndClip() => Interlocked.Exchange(ref _clip, null)?.Finish() ?? [];
+
+    /// <summary>The unprocessed side of the last recording, or empty when none was asked for.</summary>
+    public float[] EndRawClip() => Interlocked.Exchange(ref _rawClip, null)?.Finish() ?? [];
 
     /// <summary>Starts copying the raw microphone and speech probability for a voice calibration.</summary>
     public void BeginCalibration(CalibrationRecorder recorder)
@@ -748,6 +762,9 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     mixed.AsSpan().Clear();
                 }
                 Volatile.Read(ref _clip)?.Write(mixed);
+
+                // The "before" side: same moment, same boost, no RNNoise. Mute still means silence.
+                Volatile.Read(ref _rawClip)?.Write(suppression.IsMuted ? mixed : delayedDry);
 
                 // How much RNNoise actually removed, measured before and after the model.
                 var dryRms = AudioMath.Rms(delayedDry);

@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Muted.sln
+
+      - name: Build
+        run: dotnet build Muted.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Muted.sln -c Release --no-build
+
+      # The Scoop bucket and the winget manifests are edited by hand and by the release
+      # workflow; a typo there would only show up when somebody tries to install.
+      - name: Check the package manifests
+        shell: pwsh
+        run: |
+          Get-Content -LiteralPath bucket/muted.json -Raw | ConvertFrom-Json | Out-Null
+          Get-ChildItem -Path packaging/winget -Recurse -Filter '*.yaml' | ForEach-Object {
+            $text = Get-Content -LiteralPath $_.FullName -Raw
+            if ($text -notmatch '(?m)^PackageIdentifier:\s*yyyutakaaa\.Muted\s*$') {
+              throw "$($_.Name) has no PackageIdentifier yyyutakaaa.Muted."
+            }
+          }
