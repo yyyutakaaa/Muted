@@ -2,10 +2,19 @@ using System.ComponentModel;
 
 namespace Muted.App.ViewModels;
 
-internal enum NoiseRemovalMode { Gentle, Balanced, Strong }
-
+/// <summary>Which page is open, and read-outs that are derived from other properties.</summary>
 internal sealed partial class MainViewModel
 {
+    private AppPage _selectedPage = AppPage.Dashboard;
+
+    public event EventHandler? ShowWindowRequested;
+
+    public AppPage SelectedPage
+    {
+        get => _selectedPage;
+        set => SetProperty(ref _selectedPage, value);
+    }
+
     public bool IsAdvancedPageOpen
     {
         get => SelectedPage == AppPage.Advanced;
@@ -28,48 +37,34 @@ internal sealed partial class MainViewModel
 
     public string ProcessingActionText => IsRunning ? "Stop processing" : "Start processing";
 
-    public string VoiceTestStateText => IsRecording ? "Recording…"
-        : IsClipPlaying ? "Playing · " + ClipTimeText
-        : ClipDuration > 0 ? "Recorded · " + ClipTimeText
-        : IsRunning ? "Ready to record" : "Start processing to record";
-
     public string ProcessingStatusText => IsRecovering ? "Reconnecting…"
         : IsRunning ? "Active"
         : IsBusy ? StatusText
         : HasError ? "Unavailable"
         : !HasDevices || !IsRoutingReady ? "Choose devices" : "Stopped";
 
-    // RNNoise has no model-strength knob: use distinct dry/wet blends.
-    // Preserve custom blends until the user explicitly picks a segment.
-    public NoiseRemovalMode NoiseRemoval
+    private void InitializeDerivedProperties()
     {
-        get => WetMix < 0.625 ? NoiseRemovalMode.Gentle
-            : WetMix < 0.925 ? NoiseRemovalMode.Balanced : NoiseRemovalMode.Strong;
-        set
+        PropertyChanged += OnHighPassOrHotkeyChanged;
+        PropertyChanged += OnPageStateSourceChanged;
+    }
+
+    private void OnHighPassOrHotkeyChanged(object? sender, PropertyChangedEventArgs eventArgs)
+    {
+        switch (eventArgs.PropertyName)
         {
-            SuppressionEnabled = true;
-            WetMix = value switch
-            {
-                NoiseRemovalMode.Gentle => 0.45,
-                NoiseRemovalMode.Balanced => 0.8,
-                _ => 1.0
-            };
+            case nameof(HighPassEnabled):
+            case nameof(HighPassFrequency):
+                OnPropertyChanged(nameof(HighPassChoice));
+                break;
+            case nameof(IsPushToTalkArmed):
+                OnPropertyChanged(nameof(MuteHotkeyText));
+                OnPropertyChanged(nameof(PushToTalkHotkeyText));
+                break;
         }
     }
 
-    public string NoiseRemovalDescription => !SuppressionEnabled
-        ? "Noise removal is off in Technical controls. Select a level to enable it."
-        : $"{WetMix:0%} filtered audio. Gentle keeps more room sound; Strong uses only the filtered signal.";
-
-    public double VoiceLevelDb
-    {
-        get => 20 * Math.Log10(OutputGain);
-        set => OutputGain = Math.Pow(10, value / 20);
-    }
-
-    public string VoiceLevelText => $"{VoiceLevelDb:+0;-0;0} dB";
-
-    private void RedesignSourceChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnPageStateSourceChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
         {
