@@ -1,4 +1,5 @@
 using Muted.App.Infrastructure;
+using Muted.Core.Audio;
 using Muted.Core.Settings;
 
 namespace Muted.App.ViewModels;
