@@ -113,13 +113,8 @@ A tag with a suffix, like `v0.9.0-beta1`, becomes a prerelease. The build keeps
 the three numbers, and only the beta update channel offers it. Scoop and winget
 skip prereleases.
 
-Three optional steps switch themselves on when their settings exist:
+Two optional steps switch themselves on when their settings exist:
 
-- **Code signing** through [SignPath](https://signpath.org/), free for open
-  source: set the `SIGNPATH_ORGANIZATION_ID` variable and the
-  `SIGNPATH_API_TOKEN` secret. `SIGNPATH_PROJECT_SLUG` and
-  `SIGNPATH_POLICY_SLUG` default to `muted` and `release-signing`. The artifact
-  configuration is in `packaging/signpath`.
 - **winget**: set the `WINGET_TOKEN` secret after the first manual submission;
   see [packaging/winget](packaging/winget/README.md).
 - **Scoop**: stable releases update `bucket/muted.json` on the default branch.
