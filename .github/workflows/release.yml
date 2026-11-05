@@ -158,6 +158,15 @@ jobs:
             }
           }
           $notes = ($section -join "`n").Trim()
+
+          # SignPath Foundation asks for the attribution on every release page it signs.
+          if ($env:SIGNPATH_ORGANIZATION_ID -and $env:SIGNPATH_API_TOKEN) {
+            $signing = 'Free code signing provided by [SignPath.io](https://about.signpath.io/), ' +
+              'certificate by [SignPath Foundation](https://signpath.org/). ' +
+              'See the [code signing policy](https://github.com/${{ github.repository }}#code-signing-policy).'
+            $notes = ($notes + "`n`n" + $signing).Trim()
+          }
+
           if ($notes) {
             [IO.File]::WriteAllText("$env:RUNNER_TEMP/release-notes.md", "$notes`n")
             $arguments += @('--notes-file', "$env:RUNNER_TEMP/release-notes.md")

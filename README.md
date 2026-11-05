@@ -110,6 +110,34 @@ The installer and the portable zip include everything else.
 - [Changelog](CHANGELOG.md): what changed in each version.
 - [Nederlandstalige uitleg](docs/nl/UITLEG.md): wat Muted doet, in het Nederlands.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/),
+certificate by [SignPath Foundation](https://signpath.org/).
+
+Only the installer built by this repository's
+[release workflow](.github/workflows/release.yml) from tagged source is signed,
+and every signing request is approved by hand.
+
+Team roles:
+
+- Committers and reviewers: [Mehdi Oulad Khlie (@yyyutakaaa)](https://github.com/yyyutakaaa)
+- Approvers: [Mehdi Oulad Khlie (@yyyutakaaa)](https://github.com/yyyutakaaa)
+
+## Privacy
+
+Muted processes your audio on your own PC. It has no account and no telemetry,
+and it never uploads audio. Recordings stay in memory until you save one
+yourself.
+
+The only network request Muted makes on its own is the update check: when it
+starts, it asks the public GitHub API whether a newer release exists. That
+request carries no personal data, only what every web request does, such as
+your IP address. Downloading an update happens only after you approve it.
+GitHub's [privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)
+applies to that request. **Report a problem** opens a pre-filled bug report in
+your browser; nothing is sent until you submit it yourself.
+
 ## Contributing
 
 Bug reports, ideas and pull requests are welcome. In Muted, **Settings → Check
