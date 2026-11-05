@@ -7,6 +7,15 @@ namespace Muted.App.ViewModels;
 /// <summary>Voice character (the warm radio sound) and the shout guard.</summary>
 internal sealed partial class MainViewModel
 {
+    private static readonly string[] VoicePropertyNames =
+    [
+        nameof(VoiceCharacterEnabled), nameof(Warmth), nameof(WarmthText), nameof(Proximity),
+        nameof(ProximityText), nameof(Smoothness), nameof(SmoothnessText), nameof(Compression),
+        nameof(CompressionText), nameof(Saturation), nameof(SaturationText),
+        nameof(ShoutGuardEnabled), nameof(ShoutThresholdDb), nameof(ShoutThresholdText),
+        nameof(ShoutGuardDucks), nameof(AutoTuneEnabled)
+    ];
+
     private bool _voiceCharacterEnabled;
     private double _warmth = 0.6;
     private double _proximity = 0.5;
@@ -162,15 +171,6 @@ internal sealed partial class MainViewModel
         _autoTuneEnabled = settings.AutoTuneEnabled;
         UpdateAutoTuneStatus();
     }
-
-    private static readonly string[] VoicePropertyNames =
-    [
-        nameof(VoiceCharacterEnabled), nameof(Warmth), nameof(WarmthText), nameof(Proximity),
-        nameof(ProximityText), nameof(Smoothness), nameof(SmoothnessText), nameof(Compression),
-        nameof(CompressionText), nameof(Saturation), nameof(SaturationText),
-        nameof(ShoutGuardEnabled), nameof(ShoutThresholdDb), nameof(ShoutThresholdText),
-        nameof(ShoutGuardDucks), nameof(AutoTuneEnabled)
-    ];
 
     private void ApplyVoiceProfile(AudioProfile profile)
     {
