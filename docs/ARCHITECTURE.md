@@ -1,165 +1,165 @@
-# Architectuur
+# Architecture
 
-## Waarom een virtuele kabel
+## Why a virtual cable
 
-Een desktop-app kan bestaande capture- en render-endpoints met WASAPI openen,
-maar kan niet zelfstandig een nieuw microfoonendpoint publiceren. Discord en
-games enumereren capture-endpoints die door audiodrivers worden aangeboden.
-Een eigen “Muted Microphone” vraagt dus om een Windows WaveRT/AVStream-driver,
-administratorinstallatie en Microsoft driver signing.
+A desktop app can open existing capture and render endpoints through WASAPI,
+but it can't publish a new microphone endpoint on its own. Discord and games
+enumerate capture endpoints that audio drivers expose. A real "Muted
+Microphone" would need a Windows WaveRT/AVStream driver, an administrator
+install and Microsoft driver signing.
 
-Daarom gebruikt de huidige werkende versie:
+So the current version works like this:
 
 ```text
-microfoon capture endpoint
+microphone capture endpoint
   → Muted user-mode DSP
-  → virtual-cable render endpoint
-  → gekoppeld virtual-cable capture endpoint
-  → communicatie-app
+  → virtual cable render endpoint
+  → paired virtual cable capture endpoint
+  → call app
 ```
 
-Dit werkt met een bestaande, gesigneerde kabel en houdt RNNoise volledig in
-user mode.
+That works with an existing, signed cable and keeps RNNoise entirely in user
+mode.
 
-## Realtime pad
+## Realtime path
 
-- WASAPI shared/event mode vraagt Windows om 48 kHz IEEE-float mono. Shared
-  mode verzorgt endpointconversie wanneer de fysieke microfoon een ander
-  hardwareformaat heeft.
-- De capturecallback schrijft alleen naar een vaste SPSC-floatringbuffer.
-- Een `AboveNormal` processingthread verwerkt exact 480 samples per call.
-- Samples worden van `[-1, 1]` naar de door RNNoise gebruikte 16-bit
-  amplitudeschaal geconverteerd en daarna teruggeschaald.
-- Het dry-pad wordt 960 samples vertraagd voordat dry/wet-menging plaatsvindt.
-  De vastgepinde RNNoise-build combineert een overlappend analysevenster met
-  een expliciet vertraagd spectrum; een impulsmeting bevestigt deze 20 ms.
-- Bij starten wordt de aangevraagde WASAPI-buffer plus 20 ms reserve gevuld.
-  Daarna houdt de outputprovider een lage software-FIFO van 20 ms aan. Na een
-  renderstall verwijdert de consumer oude backlog boven de high-watermark,
-  zodat latency niet minutenlang blijft oplopen. Underruns worden met stilte
-  gevuld en drop/underruncounters blijven meetbaar.
-- Omdat fysieke capture en virtuele render verschillende klokken kunnen
-  hebben, maakt de driftcorrector een frame incidenteel 479 of 481 samples
-  lang via lineaire interpolatie.
+- WASAPI in shared, event-driven mode asks Windows for 48 kHz IEEE float mono.
+  Shared mode converts the endpoint format when the physical microphone runs
+  at another hardware format.
+- The capture callback only writes into a fixed single-producer,
+  single-consumer float ring buffer.
+- An `AboveNormal` processing thread handles exactly 480 samples per call.
+- Samples are scaled from `[-1, 1]` to the 16-bit amplitude range RNNoise
+  expects, and back.
+- The dry path is delayed by 960 samples before the dry/wet mix. The pinned
+  RNNoise build combines an overlapping analysis window with an explicitly
+  delayed spectrum; an impulse measurement confirms the 20 ms.
+- On start, the requested WASAPI buffer plus 20 ms of headroom is filled. After
+  that the output provider keeps a small 20 ms software FIFO. After a render
+  stall the consumer drops old backlog above the high-water mark, so latency
+  doesn't keep growing for minutes. Underruns are filled with silence, and
+  drop and underrun counters stay measurable.
+- The physical capture device and the virtual render device can run on
+  different clocks, so the drift corrector occasionally makes a frame 479 or
+  481 samples long through linear interpolation.
 
-## Verwerkingsketen
+## Processing chain
 
-Per frame van 480 samples, in deze volgorde:
+Per frame of 480 samples, in this order:
 
 ```text
-echo-onderdrukking (optioneel) → inputgain → high-pass (optioneel)
-  → [schreeuwanalyse] → dry-vertraging ∥ RNNoise → dry/wet-menging → voice gate
-  → stemkarakter (optioneel) → automatisch niveau (optioneel) → outputgain
-  → schreeuwbeveiliging (optioneel) → limiter → mute → driftcorrectie → kabel
+echo cancellation (optional) → input gain → high-pass (optional)
+  → [shout analysis] → dry delay ∥ RNNoise → dry/wet mix → voice gate
+  → voice character (optional) → automatic level (optional) → output gain
+  → shout guard (optional) → limiter → mute → drift correction → cable
 ```
 
-- Het stemkarakter (`VoiceCharacter`) is low-shelf, proximity-bel en -dip,
-  high-shelf met split-band de-esser, een RMS-compressor met zachte knie en
-  make-up die stilte niet optilt, en 2x overgesamplede asymmetrische tanh-saturatie.
-  Aan staat het 15 samples (0,31 ms) later; uit is het bit-exact.
-- De schreeuwbeveiliging (`ShoutGuard`) analyseert het inputframe vóór RNNoise en
-  past de gain toe op het verwerkte frame. Omdat dat precies de 960 samples van
-  RNNoise en de dry-vertraging later is, krijgt de beveiliging die look-ahead
-  gratis: de gain is volledig dicht vóór het eerste te luide sample, houdt 400 ms
-  vast en opent in 150 ms.
-- Kalibratie en automatisch afstellen kijken naar de microfoon vóór de inputgain.
-  Tijdens een kalibratie kopieert de audiothread elk ruw frame plus de
-  spraakkans van RNNoise naar een vooraf gealloceerde `CalibrationRecorder`;
-  `VoiceAnalyzer` meet en adviseert daarna buiten de realtimeketen. `VoiceTracker`
-  draait altijd mee, zonder allocaties, en houdt traag spraakniveau, ruisvloer en
-  het 95e percentiel van de spraakkans in stille momenten bij. `AutoTuner` leest
-  die op de UI-timer en stelt in kleine, begrensde stappen boost en gate bij.
+- The voice character (`VoiceCharacter`) is a low shelf, a proximity bell and
+  dip, a high shelf with a split-band de-esser, an RMS compressor with a soft
+  knee and make-up gain that doesn't lift silence, and 2x oversampled
+  asymmetric tanh saturation. Switched on it adds 15 samples (0.31 ms); switched
+  off it is bit-exact.
+- The shout guard (`ShoutGuard`) analyses the input frame before RNNoise and
+  applies its gain to the processed frame. Because that is exactly the 960
+  samples of RNNoise and the dry delay later, the guard gets that look-ahead for
+  free: the gain is fully closed before the first sample that is too loud,
+  holds for 400 ms and opens in 150 ms.
+- Calibration and automatic tuning look at the microphone before the input
+  gain. During a calibration the audio thread copies every raw frame plus
+  RNNoise's speech probability into a preallocated `CalibrationRecorder`;
+  `VoiceAnalyzer` measures and advises afterwards, outside the realtime chain.
+  `VoiceTracker` always runs, without allocations, and tracks the slow speech
+  level, the noise floor and the 95th percentile of the speech probability in
+  quiet moments. `AutoTuner` reads those on the UI timer and adjusts boost and
+  gate in small, bounded steps.
+- The high-pass is a second-order Butterworth before the delay, so dry and wet
+  get the same filtering. Denormals are flushed per frame.
+- Automatic level measures RMS and only adjusts while RNNoise reports speech;
+  the gain ramps to its new value within the frame, without zipper noise.
+- The limiter first finds the peak of the whole frame and the gain it needs, so
+  the 0.97 ceiling is never exceeded. A per-sample safety covers the 1.5 ms
+  attack.
+- The reduction figure compares the RMS before and after RNNoise; that is what
+  the UI shows as "noise removed".
+- An optional second render path sends the same frame to a monitor output. That
+  path has its own clock and trims its own backlog; if it fails, the cable keeps
+  running and the engine only reports `MonitorFaulted`.
 
-- De high-pass is een tweede-orde Butterworth vóór de vertraging, zodat dry en
-  wet dezelfde filtering krijgen. Denormals worden per frame weggeschreven.
-- Het automatische niveau meet RMS en past alleen aan wanneer RNNoise spraak
-  meldt; de gain loopt binnen het frame op naar de nieuwe waarde, zonder zipper.
-- De limiter bepaalt eerst de piek van het hele frame en daarmee de benodigde
-  gain, dus het plafond van 0,97 wordt nooit overschreden. Een per-sample
-  veiligheid dekt de aanlooptijd van 1,5 ms af.
-- De reductiemeting vergelijkt de RMS voor en na RNNoise; dat is wat de UI als
-  "noise removed" toont.
-- Een optioneel tweede renderpad stuurt hetzelfde frame naar een monitoruitgang.
-  Dat pad heeft zijn eigen klok en trimt zijn eigen backlog; valt het weg, dan
-  blijft de kabel gewoon doorlopen en meldt de engine alleen `MonitorFaulted`.
+No managed objects are allocated in the capture callback or per DSP frame. The
+UI only reads atomic measurements at 30 Hz and pauses that timer when no window
+is visible. The waveform in the UI reads a separate ring buffer with one peak
+value per frame.
 
-Er worden in de capturecallback en per DSP-frame geen managed objecten
-gealloceerd. De UI leest alleen atomaire metingen op 30 Hz en pauzeert die timer
-wanneer geen venster zichtbaar is. De golfvorm in de UI leest een aparte
-ringbuffer met één piekwaarde per frame.
+A separate 5 Hz timer drives the tray speaking state and optional
+notifications, also while the window is hidden. Session counters are built up
+per audio frame, so window or timer delays don't affect the measured speaking
+time. A session is one engine run.
 
-Een losse timer op 5 Hz verzorgt tray-spraakstatus en optionele meldingen, ook wanneer
-het venster verborgen is. Sessietellers worden per audioframe opgebouwd; venster- of
-timervertraging beïnvloedt de gemeten spreektijd niet. Een sessie is één engine-run.
+Tests and diagnosis clips that you start yourself copy post-mute samples into a
+preallocated buffer of at most 30 seconds. The audio thread never writes files.
+Sealing the buffer prevents writes after it ends; WAV conversion and saving
+happen outside the realtime chain. Playback uses a separate WASAPI render path
+to a listening device and mutes the microphone output for the duration. Without
+an export, a clip only lives in memory.
 
-Expliciet gestarte tests/diagnoseclips kopiëren post-mute samples naar een vooraf
-gealloceerde buffer van maximaal 30 seconden. De audiothread schrijft nooit bestanden.
-Sealen voorkomt writes na beëindiging; WAV-conversie en opslaan gebeuren buiten de
-realtimeketen. Afspelen gebruikt een apart WASAPI-renderpad naar een luisterapparaat
-en dempt tijdelijk de microfoonuitgang. Zonder export blijft de clip alleen in geheugen.
+## Echo cancellation
 
-## Echo-onderdrukking
+The reference is a WASAPI loopback of the render endpoint the user listens to.
+Loopback taps the render mix before it leaves the device, so the reference is by
+definition ahead of its own echo, and a causal filter is enough.
 
-De referentie is een WASAPI-loopback van het renderendpoint dat de gebruiker
-hoort. Loopback tapt de rendermix af voordat die het apparaat verlaat, dus de
-referentie loopt per definitie voor op zijn eigen echo; een causaal filter is
-daarmee voldoende.
+- The filter is a partitioned frequency-domain adaptive filter: twenty
+  partitions of 480 taps, 200 ms of tail in total, using overlap-save over a
+  1024-point FFT. That costs six transforms per frame instead of twenty,
+  because only one partition per frame is trimmed back in the time domain.
+- The step size is normalised per bin on the summed reference power across the
+  whole delay line (MDF normalisation).
+- Double-talk detection: once the filter is worth anything, the rule is simply
+  that the microphone contains more than the filter can explain. Before there
+  is a model, it falls back to Geigel. Confidence in the model is tracked
+  separately with a slowly decaying peak, because the reported ERLE collapses
+  the moment you speak, and a detector that believed it would train on your own
+  voice at exactly the wrong time.
+- What the linear filter can't model, mostly loudspeaker distortion, is
+  suppressed across the band based on the ratio between the residual error and
+  the estimated echo. During double talk your own voice dominates that ratio,
+  so nothing happens there.
+- Loopback delivers nothing while nothing plays. The reference buffer then runs
+  dry, the filter gets silence, and without excitation it doesn't adapt. When it
+  falls more than eighty milliseconds behind, the buffer is trimmed, because a
+  reference that lags describes audio older than the echo that needs to go.
 
-- Het filter is een gepartitioneerd frequentiedomein-adaptief filter: twintig
-  partities van 480 taps, samen 200 ms staart, met overlap-save over een FFT
-  van 1024 punten. Per frame kost dat zes transformaties in plaats van twintig,
-  omdat per frame maar één partitie in het tijddomein wordt teruggesnoeid.
-- De stapgrootte is per bin genormaliseerd op de opgetelde referentievermogens
-  over de hele delaylijn (MDF-normalisatie).
-- Dubbelspraakdetectie: zodra het filter iets waard is, geldt simpelweg dat de
-  microfoon meer bevat dan het filter kan verklaren. Daarvoor is er nog geen
-  model, dus valt het terug op Geigel. Het vertrouwen in het model wordt apart
-  bijgehouden met een traag dalende piek, want de gerapporteerde ERLE stort in
-  op het moment dat je zelf praat, en een detector die dat gelooft gaat juist
-  dan op je eigen stem trainen.
-- Wat het lineaire filter niet modelleert, vooral vervorming van de luidspreker,
-  wordt breedbandig weggeduwd op basis van de verhouding tussen restfout en
-  geschatte echo. Tijdens dubbelspraak domineert je eigen stem die verhouding,
-  dus daar gebeurt niets.
-- Loopback levert niets zolang er niets speelt. De referentiebuffer loopt dan
-  leeg, het filter krijgt stilte, en zonder excitatie adapteert het niet. Bij
-  meer dan tachtig milliseconden achterstand wordt de buffer teruggesnoeid,
-  want een referentie die achterloopt beschrijft audio die ouder is dan de echo
-  die weg moet.
+.NET has no FFT, so there is one in `Muted.Core.Dsp.Fft`: radix-2, in place,
+with precomputed twiddles and no allocation per call.
 
-Er is geen FFT in .NET, dus die staat in `Muted.Core.Dsp.Fft`: radix-2,
-in-place, met voorberekende twiddles en zonder allocatie per aanroep.
+## Global shortcuts
 
-## Globale sneltoetsen
+`RegisterHotKey` only sees key-down, while push to talk also needs key-up. So
+Muted uses a `WH_KEYBOARD_LL` hook on the UI thread, installed only once a key
+is assigned. The hook passes every key on to the rest of Windows, so a game or
+call keeps seeing it.
 
-`RegisterHotKey` ziet alleen keydown, terwijl push-to-talk ook keyup nodig
-heeft. Daarom gebruikt Muted een `WH_KEYBOARD_LL`-hook op de UI-thread, die
-alleen wordt geïnstalleerd zodra er een toets is toegewezen. De hook geeft
-iedere toets door aan de rest van Windows, zodat een spel of gesprek de toets
-gewoon blijft zien.
+## A path without an external cable
 
-## Productiepad zonder externe kabel
+A standalone distribution could later add a minimal, capture-only virtual
+microphone based on Microsoft's SysVAD/WaveRT sample. The driver should only
+provide the endpoint, the clock and ring-buffer transport. Capture, RNNoise,
+settings and model updates stay in the existing user-mode process.
 
-Een zelfstandige distributie kan later een minimale, capture-only virtuele
-microfoon toevoegen op basis van Microsofts SysVAD/WaveRT-voorbeeld. De driver
-hoort alleen endpoint, klok en ringbuffertransport te leveren. Capture,
-RNNoise, instellingen en modelupdates blijven in het bestaande user-mode
-proces.
+Such a driver is only ready for end users after, among other things:
 
-Zo'n driver is pas geschikt voor eindgebruikers na onder andere:
+- a slimmed-down, secured private driver interface;
+- clocking, underrun and recovery tests;
+- an installer with uninstall and upgrade paths;
+- HLK/WHCP validation and Microsoft signing;
+- crash, sleep/resume and hotplug tests on several Windows versions.
 
-- afgeslankte en beveiligde private driverinterface;
-- clocking-, underrun- en hersteltests;
-- installer en uninstall/upgradepad;
-- HLK/WHCP-validatie en Microsoft-signing;
-- crash-, sleep/resume- en hotplugtests op meerdere Windowsversies.
+A generic capture APO is no replacement: modern APO distribution is tied to the
+underlying audio driver and hardware, and it doesn't create a new endpoint
+either. WASAPI process loopback intercepts render audio, not a physical
+microphone.
 
-Een generieke capture-APO is geen vervanging: moderne APO-distributie is aan
-de onderliggende audiodriver/hardware-associatie gekoppeld en maakt bovendien
-geen nieuw endpoint. WASAPI process loopback onderschept renderaudio, geen
-fysieke microfoon.
-
-Officiële referenties:
+Official references:
 
 - [Microsoft SysVAD sample](https://learn.microsoft.com/en-us/samples/microsoft/windows-driver-samples/sysvad-virtual-audio-device-driver-sample/)
 - [Audio Processing Object architecture](https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/audio-processing-object-architecture)

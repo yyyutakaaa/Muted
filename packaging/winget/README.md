@@ -7,7 +7,7 @@ first version goes in by hand:
 
 ```powershell
 winget install Microsoft.WingetCreate
-wingetcreate submit --token <github-token> .\packaging\winget\manifests\y\yyyutakaaa\Muted\0.6.0
+wingetcreate submit --token <github-token> .\packaging\winget\manifests\y\yyyutakaaa\Muted\0.8.0
 ```
 
 The token needs the `public_repo` scope. Once that pull request is merged, every stable
@@ -17,6 +17,11 @@ secret and the release workflow runs `wingetcreate update` for each new version.
 Before submitting, check the manifests locally:
 
 ```powershell
-winget validate .\packaging\winget\manifests\y\yyyutakaaa\Muted\0.6.0
-winget install --manifest .\packaging\winget\manifests\y\yyyutakaaa\Muted\0.6.0
+winget validate .\packaging\winget\manifests\y\yyyutakaaa\Muted\0.8.0
+winget install --manifest .\packaging\winget\manifests\y\yyyutakaaa\Muted\0.8.0
 ```
+
+The folder carries the version of the latest stable release. If a newer release is out
+before the first submission happens, rename the folder and update `PackageVersion`,
+`InstallerUrl`, `InstallerSha256` and `ReleaseNotesUrl`; the checksum is in the
+`.sha256` file next to the installer on the release page.

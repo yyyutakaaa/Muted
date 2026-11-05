@@ -141,7 +141,44 @@ jobs:
           if ($env:PRERELEASE -eq 'true') {
             $arguments += '--prerelease'
           }
+
+          # Put this version's CHANGELOG.md section above the generated notes. A tag
+          # without a section, like a quick beta, still releases with generated notes.
+          $heading = '## [' + $env:TAG.Substring(1) + ']'
+          $section = @()
+          $inSection = $false
+          if (Test-Path -LiteralPath CHANGELOG.md) {
+            foreach ($line in Get-Content -LiteralPath CHANGELOG.md -Encoding utf8) {
+              if ($line.StartsWith('## [') -or $line -match '^\[[^\]]+\]: ') {
+                if ($inSection) { break }
+                $inSection = $line.StartsWith($heading)
+                continue
+              }
+              if ($inSection) { $section += $line }
+            }
+          }
+          $notes = ($section -join "`n").Trim()
+
+          # SignPath Foundation asks for the attribution on every release page it signs.
+          if ($env:SIGNPATH_ORGANIZATION_ID -and $env:SIGNPATH_API_TOKEN) {
+            $signing = 'Free code signing provided by [SignPath.io](https://about.signpath.io/), ' +
+              'certificate by [SignPath Foundation](https://signpath.org/). ' +
+              'See the [code signing policy](https://github.com/${{ github.repository }}#code-signing-policy).'
+            $notes = ($notes + "`n`n" + $signing).Trim()
+          }
+
+          if ($notes) {
+            [IO.File]::WriteAllText("$env:RUNNER_TEMP/release-notes.md", "$notes`n")
+            $arguments += @('--notes-file', "$env:RUNNER_TEMP/release-notes.md")
+          }
+          else {
+            Write-Host "CHANGELOG.md has no section for $env:TAG; using generated notes only."
+          }
+
           gh @arguments
+          if ($LASTEXITCODE -ne 0) {
+            throw "gh release create failed with exit code $LASTEXITCODE."
+          }
 
       # winget only takes stable versions. wingetcreate opens the pull request on
       # microsoft/winget-pkgs; it needs a classic token with public_repo scope in the

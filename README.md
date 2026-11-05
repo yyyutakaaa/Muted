@@ -2,6 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/yyyutakaaa/Muted)](https://github.com/yyyutakaaa/Muted/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/yyyutakaaa/Muted/total)](https://github.com/yyyutakaaa/Muted/releases)
+[![CI](https://github.com/yyyutakaaa/Muted/actions/workflows/ci.yml/badge.svg)](https://github.com/yyyutakaaa/Muted/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-violet)](LICENSE)
 
 Muted is a small Windows app that runs your microphone through
@@ -44,21 +45,6 @@ you through it.
 
 - **Portable**: unzip `Muted-win-x64.zip` anywhere and run `Muted.exe`.
 
-```text
-physical microphone
-  → WASAPI shared mode (48 kHz mono)
-  → optional echo cancellation, against a loopback of your speakers
-  → input gain and optional high-pass
-  → RNNoise (480 samples per call, 20 ms delay)
-  → optional voice gate
-  → optional warm radio voice (EQ, de-esser, compressor, saturation)
-  → optional automatic level, output gain
-  → optional shout guard (analysed 20 ms ahead), limiter
-  → drift correction
-  → playback side of a virtual audio cable
-  → recording side of that cable in Discord / your call app / game
-```
-
 ## Getting started
 
 Muted opens with a four-step setup guide the first time; it walks through the same steps as below.
@@ -71,7 +57,7 @@ virtual cable you've already installed, like [VB-CABLE](https://vb-audio.com/Cab
    asks for it.
 2. Start Muted.
 3. Pick your real microphone under **Microphone**.
-4. Pick the cable's playback side under **Virtual cable output**, usually
+4. Pick the cable's playback side under **Cable output**, usually
    `CABLE Input` or `CABLE In 16ch` for VB-CABLE.
 5. Hit the power button.
 6. In Discord, Teams, Zoom, or your game, select the cable's recording side as
@@ -86,323 +72,87 @@ Turn off your call app's built-in noise suppression if you hear pumping or
 distortion. Two suppressors stacked on top of each other don't always beat
 one.
 
-## Simple by default
+## Features
 
-The Audio page shows four switches: noise suppression, echo cancellation, the
-voice gate and a microphone boost. That is what a microphone needs.
+- **Noise suppression** with the official, pinned Xiph RNNoise model, at 48 kHz
+  with 20 ms of delay.
+- **Echo cancellation**, so you can use speakers instead of a headset.
+- **Voice gate, automatic level, high-pass and a limiter**, plus a shout guard
+  that catches a shout before its first loud sample.
+- **Tune to my voice**: a 24-second calibration that sets boost, gate and limits
+  for you, and can keep adjusting while you talk.
+- **Voice presets and profiles**, which can switch on their own while a game or
+  call app runs.
+- **Push to talk, push to mute** and other global shortcuts that work in
+  full-screen games, plus commands for Stream Deck, OBS and scripts.
+- **Clean what you hear**: the same model on other people's audio.
+- **Recordings and before/after clips**, kept in memory until you save them.
+- **An in-game indicator**, tray controls, a setup check and automatic updates.
 
-Everything else, the dry/wet mix, the high-pass, the limiter, automatic
-levelling, gate hold time, output gain, buffer size, monitoring, the echo
-reference device and every live number, sits behind **Advanced** in Settings.
-Switching it on changes nothing about how Muted sounds; it only stops hiding
-the details.
-
-## Shortcuts
-
-Assign a push-to-talk key under **Shortcuts** and Muted stays muted until you
-hold it. Push to mute is the opposite. There are also shortcuts for mute,
-RNNoise, starting and stopping, and bringing the window back.
-
-Shortcuts use a low-level keyboard hook, because Windows only reports key
-presses to `RegisterHotKey` and push to talk needs the release too. Muted never
-swallows a key: whatever you press still reaches the game or call you are in.
-The hook is only installed once you actually assign a key.
-
-## What it does
-
-- runs the official, pinned Xiph RNNoise full-model build;
-- captures audio at 48 kHz mono over WASAPI and renders event-driven;
-- exposes a live dry/wet mix with a correctly delayed dry path;
-- can optionally use RNNoise's own VAD to gate silence more aggressively, with
-  an adjustable hold time;
-- cancels the echo of your own speakers, so a headset is no longer required:
-  a 200 ms adaptive filter learns the path from your speakers to your
-  microphone and subtracts it, and stops learning while you talk over the
-  other side;
-- adds input and output gain, a high-pass for desk rumble, slow automatic
-  levelling, and a limiter that catches peaks instead of clipping them;
-- can send the processed voice to a second output so you hear what the other
-  side hears;
-- has global shortcuts for push to talk, push to mute, mute, RNNoise and
-  start/stop, which keep working inside full-screen games;
-- corrects clock drift sample by sample during long sessions;
-- reconnects on its own when a device disappears mid-call, and can follow the
-  Windows default microphone;
-- draws the real microphone signal as a live waveform, with dBFS meters that
-  have peak hold and a clip indicator, plus a readout of how much noise
-  RNNoise actually removed;
-- refreshes devices automatically on hotplug, and can minimize to the tray
-  with autostart;
-- has a compact always-on-top panel for the meter and a mute button;
-- follows the Windows light/dark theme while Windows is switching, in a violet
-  palette that both themes share, and optionally takes the Windows accent
-  colour instead;
-- keeps the interface to four switches unless you ask for the rest under
-  Advanced, which then also brings back the dB scales and live readings;
-- saves reusable audio profiles, including the whole processing chain, and
-  switches them from the app or tray;
-- offers tray controls for mute, RNNoise, monitoring, profiles, the compact
-  panel, and setup diagnostics;
-- checks virtual-cable routing, Windows sample formats, RNNoise availability,
-  microphone signal, processing headroom and output stability, and copies the
-  result as text for a bug report;
-- stores settings in `%LOCALAPPDATA%\Muted\settings.json` and logs errors to
-  `%LOCALAPPDATA%\Muted\Muted.log`, both reachable from Settings;
-- keeps running totals of how long it cleaned and how much noise it removed,
-  as numbers in the settings file;
-- has no account, no cloud, and no telemetry; records audio only when you explicitly start a test or diagnosis clip.
-
-## Voice tools
-
-**Tune to my voice** is a 24-second guided calibration: four seconds of silence,
-fifteen of normal reading, then one loud phrase. Muted records the raw microphone and
-RNNoise's speech probability in memory, then measures the room noise, your speech
-level and peaks, your pitch, how sharp your s sounds are and how much your level
-varies. From that it sets the microphone boost (speech at -22 dBFS, normal peaks
-below -3 dBFS), the voice gate, the high-pass, the shout limit (between your normal
-peaks and your shout) and the warm-voice amounts. The result plays straight away;
-**Keep** or **Undo**. Nothing leaves the computer.
-
-**Keep tuning while I talk** follows your speech level and the room while you talk,
-and every eight seconds at most nudges the microphone boost (up to 1.5 dB per step,
-never more than 6 dB from where it started) and the voice gate (up to 0.05 per
-step, within 0.2). It ignores moments when the shout guard is blocking, and never
-changes the shout guard or the warm voice. Applying a profile or calibrating sets a
-new starting point.
-
-**Warm radio voice** gives a full, close-up, smooth sound. Five sliders shape it:
-warmth (a low shelf around 150 Hz), proximity (a bump around 220 Hz and a slight dip
-around 3.5 kHz), smoothness (a softened top plus a de-esser for sharp s sounds),
-compression (keeps quiet words present) and saturation (a subtle, oversampled tanh
-warmth). It runs on the cleaned voice, after RNNoise and the gate, and adds 0.3 ms.
-
-**Shout guard** cuts the output when you get too loud, so friends are spared an
-earful. Set the loudness limit a few dB above your loudest normal speech, using the
-input level shown next to it. It silences by default, or turns a shout down 20 dB.
-Because RNNoise already delays the output by 20 ms, the guard analyses the input
-that far ahead and is fully closed before the first loud sample; it then holds for
-400 ms and fades back in over 150 ms. Presets never switch it off.
-
-The Audio page includes Natural, Gaming, Podcast, Meeting and Warm Radio presets. Meeting enables
-levelling and echo cancellation when a listening device is available; check that the
-echo reference matches your speakers. Presets briefly restart running audio and can
-be customized using the existing profile controls. Echo settings are now part of
-profiles. Older settings retain their previous global echo settings during migration.
-
-Import and export selected or all saved profiles as JSON. Device identifiers are
-excluded, imported profiles receive new identifiers, and duplicate names receive a
-suffix. Imports are validated before adding any profiles; the limit remains 20.
-
-With audio running, **Start recording** captures processed, post-mute audio until you
-press **Stop recording**, with a two-minute memory limit. The result can be played,
-paused, scrubbed on the timeline, rewound by 10 seconds, replayed from the start,
-deleted, and exported as WAV.
-Select headphones or speakers as the playback output; virtual
-cable playback is rejected. The microphone output is temporarily muted during replay
-to prevent feedback. Cancel stops the operation. Temporary clips stay in memory and
-are discarded when replaced, deleted, or the app closes. Only an explicit **Save
-diagnosis WAV** action writes audio to disk; exported files remain until you delete them.
-
-The tray shows speaking, muted, stopped and error states. Optional mute reminders
-appear after sustained speech during manual mute, at most once per minute; idle
-push-to-talk does not trigger reminders. Optional open/close sounds play through the
-selected listening output (headphones recommended).
-
-Audio health warnings detect sustained processing load, buffer buildup and recurring
-dropouts, with a one-minute notification cooldown. Processing load measures the audio
-frame time budget, not total system CPU; buffer time is not end-to-end latency.
-Session statistics continue while minimized and show processed duration, estimated
-unmuted speaking time, separate limiter attenuation periods, average noise reduction
-and peak input. They cover the current or last audio run, reset on restart (including
-profile changes/device recovery), and are not saved across application exits.
-
-Hard keyboard clicks during speech can still partly leak through. That's a
-limit of the model, not a bug.
-
-## Clean what you hear
-
-The same RNNoise model can clean other people's audio: their fans, keyboards
-and traffic. Muted can't sit between your call app and your headphones on its
-own, so this takes a second virtual cable (VB-CABLE A+B, or Voicemeeter):
-
-1. In Discord or Teams, set the **output** device to the second cable's
-   playback side, for example `CABLE-A Input`.
-2. In Muted, under **Presets & tools → Clean what you hear**, pick that cable's
-   recording side (`CABLE-A Output`) to listen to, and your headphones to play
-   on.
-3. Switch it on. The strength slider mixes in some of the original if you want
-   it less strict.
-
-This runs separately from your microphone, in mono, and adds about 20 ms.
-
-## Before and after
-
-Record a take under **Presets & tools → Microphone test**, then press **Save
-before/after WAV**. You get one file with the same moment twice: first
-without Muted, then with it. Good for checking your setup, and for showing
-friends what it does.
-
-## In-game indicator and automatic profiles
-
-**Settings → In-game indicator** puts a small *Live* or *Muted* pill on top of
-every window while audio runs, so you can see your mute state mid-game. Clicks
-go through it. Exclusive full-screen games draw over all windows, so use
-borderless or windowed mode to see it.
-
-**Presets & tools → Automatic profiles** switches to a profile while a program runs:
-Gaming while `valorant` runs, Meeting while `ms-teams` runs. When the program
-closes, the profile you had comes back.
-
-## Stream Deck, OBS and scripts
-
-Start `Muted.exe` with a command and it is passed to the copy that is already
-running, without opening a window. Point a Stream Deck *Open* action, an OBS
-hotkey script or AutoHotkey at it:
-
-```text
-Muted.exe --toggle-mute        Muted.exe --mute / --unmute
-Muted.exe --toggle             start or stop audio (also --start, --stop)
-Muted.exe --toggle-suppression Muted.exe --toggle-overlay
-Muted.exe --toggle-listening   Muted.exe --profile "Warm Radio"
-Muted.exe --show
-```
-
-Commands only reach a copy run by the same Windows user.
-
-## Problems and ideas
-
-**Setup check → Report a problem** opens a GitHub bug report in your browser
-with the setup check already filled in. Nothing is sent until you submit it.
-Ideas are welcome as a
-[feature request](https://github.com/yyyutakaaa/Muted/issues/new?template=feature_request.yml).
-
-## Speakers instead of a headset
-
-RNNoise removes noise; it has no idea what your speakers are playing, so on
-its own it cannot stop the other side from hearing themselves. Echo
-cancellation can, and it lives under **Audio**.
-
-Switch it on and pick the output you actually listen to. Muted takes a
-loopback of that device and learns, in about a second of sound, how it
-travels through the room into your microphone, then subtracts it. The tail
-covers 200 ms, which is enough for the render buffer, the speakers and the
-trip through the air. Adaptation stops while you talk over the far end,
-because a filter that adapts to your own voice would subtract that too.
-
-The reference device has to run at 48 kHz; the setup check says so if it
-doesn't. Move your speakers or change their volume and it relearns. What is
-left after the filter, mostly speaker distortion, is ducked by the residual
-strength slider; turn that down if you both sound choppy when talking at
-once.
+The full tour, with where to find each setting, is in
+[docs/FEATURES.md](docs/FEATURES.md).
 
 ## Requirements
 
-- Windows 10/11 x64;
-- .NET 9 Desktop Runtime for the smallest build;
-- a virtual audio cable, so other apps can pick Muted's output as a
-  microphone;
-- Visual Studio 2022 C++ Build Tools, only needed if you rebuild the native
-  RNNoise DLL yourself.
+- Windows 10 or 11, x64.
+- A virtual audio cable, such as the free
+  [VB-CABLE](https://vb-audio.com/Cable/).
 
-## Building and testing
+The installer and the portable zip include everything else.
 
-```powershell
-dotnet restore .\Muted.sln
-dotnet build .\Muted.sln -c Release --no-restore
-dotnet test .\Muted.sln -c Release --no-build
-```
+## Documentation
 
-Run a development build:
+- [Features](docs/FEATURES.md): everything Muted does and where to find it.
+- [Virtual cable guide](docs/VIRTUAL-CABLE.md): setup, the 48 kHz requirement
+  and troubleshooting.
+- [Architecture](docs/ARCHITECTURE.md): how the audio path works, and what a
+  real driver would take.
+- [Changelog](CHANGELOG.md): what changed in each version.
+- [Nederlandstalige uitleg](docs/nl/UITLEG.md): wat Muted doet, in het Nederlands.
 
-```powershell
-dotnet run --project .\src\Muted.App\Muted.App.csproj -c Debug
-```
+## Code signing policy
 
-Create a small, framework-dependent distribution folder:
+Free code signing provided by [SignPath.io](https://about.signpath.io/),
+certificate by [SignPath Foundation](https://signpath.org/).
 
-```powershell
-.\scripts\publish.ps1
-```
+Only the installer built by this repository's
+[release workflow](.github/workflows/release.yml) from tagged source is signed,
+and every signing request is approved by hand.
 
-Or bundle the .NET runtime for a larger, standalone one:
+Team roles:
 
-```powershell
-.\scripts\publish.ps1 -SelfContained
-```
+- Committers and reviewers: [Mehdi Oulad Khlie (@yyyutakaaa)](https://github.com/yyyutakaaa)
+- Approvers: [Mehdi Oulad Khlie (@yyyutakaaa)](https://github.com/yyyutakaaa)
 
-Both land under `artifacts\Muted-win-x64`, plus an
-`artifacts\Muted-win-x64.zip`. The app is x64-only because the bundled
-RNNoise DLL is too.
+## Privacy
 
-A local build isn't code-signed. For public distribution, both the EXE and
-any installer should be signed with a trusted code-signing certificate, or
-SmartScreen will warn users off.
+Muted processes your audio on your own PC. It has no account and no telemetry,
+and it never uploads audio. Recordings stay in memory until you save one
+yourself.
 
-## Automatic updates and releases
+The only network request Muted makes on its own is the update check: when it
+starts, it asks the public GitHub API whether a newer release exists. That
+request carries no personal data, only what every web request does, such as
+your IP address. Downloading an update happens only after you approve it.
+GitHub's [privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)
+applies to that request. **Report a problem** opens a pre-filled bug report in
+your browser; nothing is sent until you submit it yourself.
 
-Installed copies check the latest published GitHub release in the background
-when Muted starts. If a newer version exists, Muted asks before it downloads
-anything: install now, remind me later, or skip this version. A skipped
-version stays quiet in the background but still shows up when you press
-**Check for updates** yourself. After approval it downloads the installer and
-its SHA-256 checksum, verifies it, installs silently, and restarts on the new
-version. The **Beta** channel in Settings also offers prereleases. Portable ZIP
-copies do not install updates.
+## Contributing
 
-To publish version `0.4.1`, push a matching tag:
+Bug reports, ideas and pull requests are welcome. In Muted, **Settings → Check
+setup → Report a problem** opens a bug report with your setup filled in. For questions, use
+[Discussions](https://github.com/yyyutakaaa/Muted/discussions).
+
+To build it yourself:
 
 ```powershell
-git tag v0.4.1
-git push origin v0.4.1
+dotnet build .\Muted.sln -c Release
+dotnet test .\Muted.sln -c Release
 ```
 
-Or start **Actions → Release → Run workflow** and type the version there; the
-workflow then creates the tag itself, after the installer has been built.
-
-The release workflow builds and tests the app, creates the self-contained
-installer and checksum, and publishes all release assets. Three optional
-steps switch themselves on when their settings exist:
-
-- **Code signing** through [SignPath](https://signpath.org/) (free for open
-  source): set the `SIGNPATH_ORGANIZATION_ID` variable and the
-  `SIGNPATH_API_TOKEN` secret. `SIGNPATH_PROJECT_SLUG` and
-  `SIGNPATH_POLICY_SLUG` default to `muted` and `release-signing`.
-- **winget**: set the `WINGET_TOKEN` secret after the first manual submission,
-  see [packaging/winget](packaging/winget/README.md).
-- **Scoop**: stable releases update `bucket/muted.json` on the default branch. A tag may also carry
-a prerelease suffix, like `v0.3.0-beta1`; the build keeps the three numeric
-parts and the release is marked as a prerelease, so only the beta channel
-offers it. Users who installed a version from before automatic updating was
-added need to install one updater-enabled release once by hand; releases after
-that are offered automatically.
-
-## Rebuilding native RNNoise
-
-The verified runtime DLL already lives in the repo, so this is only needed if
-you want to confirm the build is reproducible yourself. The script fetches
-the exact pinned Xiph source and model, checks SHA-256 hashes, compiles
-baseline/SSE4.1/AVX2 variants, and runs a native smoke test:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\native\rnnoise\build.ps1
-```
-
-Pins, exports, and build details are in
-[native/rnnoise/README.md](native/rnnoise/README.md).
-
-## Project layout
-
-```text
-src/Muted.Core           allocation-free DSP primitives, FFT, AEC and settings
-src/Muted.Audio.Windows  WASAPI engine, device catalog, and RNNoise wrapper
-src/Muted.App            WPF shell, views, controls, tray, and services
-native/rnnoise           reproducible official native build
-tests                    unit and native smoke tests
-```
-
-Why the virtual-cable route is the first version, and what a path to a real
-driver would look like, is covered in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the details, and
+[SECURITY.md](SECURITY.md) to report a security problem privately.
 
 ## Support
 
