@@ -7,7 +7,8 @@
 #ifndef MyAppVersion
   #define MyAppVersion "0.1.0"
 #endif
-#define MyAppPublisher "Muted"
+#define MyAppPublisher "Mehdi Oulad Khlie"
+#define MyAppURL "https://github.com/yyyutakaaa/Muted"
 #define MyAppExeName "Muted.exe"
 #define MyPublishDir "..\artifacts\Muted-win-x64"
 
@@ -16,6 +17,9 @@ AppId={{B3B7E6C1-6E6A-4C6B-9C1E-7B6E7E9A0F3D}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+AppSupportURL={#MyAppURL}/issues
+AppUpdatesURL={#MyAppURL}/releases
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes

@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
 PackageIdentifier: yyyutakaaa.Muted
-PackageVersion: 0.6.0
+PackageVersion: 0.8.0
 PackageLocale: en-US
-Publisher: yyyutakaaa
+Publisher: Mehdi Oulad Khlie
 PublisherUrl: https://github.com/yyyutakaaa
 PublisherSupportUrl: https://github.com/yyyutakaaa/Muted/issues
 PackageName: Muted
@@ -22,6 +22,6 @@ Tags:
   - rnnoise
   - discord
   - voice
-ReleaseNotesUrl: https://github.com/yyyutakaaa/Muted/releases/tag/v0.6.0
+ReleaseNotesUrl: https://github.com/yyyutakaaa/Muted/releases/tag/v0.8.0
 ManifestType: defaultLocale
 ManifestVersion: 1.6.0
