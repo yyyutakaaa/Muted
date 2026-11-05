@@ -22,7 +22,7 @@ je echte microfoon
 ```
 
 In je call-app kies je dus niet je echte microfoon, maar de opnamekant van de
-kabel (meestal `CABLE Output`). Zie [VIRTUAL-CABLE.md](VIRTUAL-CABLE.md) voor de
+kabel (meestal `CABLE Output`). Zie [VIRTUELE-KABEL.md](VIRTUELE-KABEL.md) voor de
 installatie.
 
 Muted weigert te starten naar gewone speakers of een headset. Zo komt je eigen
@@ -134,6 +134,6 @@ niet aanpast.
 
 ## Meer lezen
 
-- [README.md](../README.md): bouwen, testen en releases
-- [ARCHITECTURE.md](ARCHITECTURE.md): technische opbouw van de audioketen
-- [VIRTUAL-CABLE.md](VIRTUAL-CABLE.md): kabel instellen en problemen oplossen
+- [README.md](../../README.md): bouwen, testen en releases (Engels)
+- [ARCHITECTUUR.md](ARCHITECTUUR.md): technische opbouw van de audioketen
+- [VIRTUELE-KABEL.md](VIRTUELE-KABEL.md): kabel instellen en problemen oplossen

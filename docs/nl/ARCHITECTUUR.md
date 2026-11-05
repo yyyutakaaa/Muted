@@ -1,5 +1,7 @@
 # Architectuur
 
+> Nederlandse versie. De Engelse [ARCHITECTURE.md](../ARCHITECTURE.md) is leidend.
+
 ## Waarom een virtuele kabel
 
 Een desktop-app kan bestaande capture- en render-endpoints met WASAPI openen,
