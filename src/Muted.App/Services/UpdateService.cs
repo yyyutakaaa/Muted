@@ -194,8 +194,10 @@ internal sealed class UpdateService
         {
             var expectedHash = await DownloadChecksumAsync(update.ChecksumUrl, cancellationToken)
                 .ConfigureAwait(false);
-            var updateDirectory = Path.Combine(AppPaths.DataDirectory, "Updates");
+            var updateDirectory = UpdateDirectory;
             Directory.CreateDirectory(updateDirectory);
+            DeleteInstallers(fileName =>
+                string.Equals(fileName, update.InstallerName, StringComparison.OrdinalIgnoreCase));
             var installerPath = Path.Combine(updateDirectory, update.InstallerName);
             var temporaryPath = installerPath + ".download";
 
@@ -248,6 +250,77 @@ internal sealed class UpdateService
             _log.Write(exception, "Install update");
             return false;
         }
+    }
+
+    private static string UpdateDirectory => Path.Combine(AppPaths.DataDirectory, "Updates");
+
+    /// <summary>
+    /// Removes installers left behind by earlier updates. Only the installer of the
+    /// version that is running now is kept. Runs at startup, so copies that updated
+    /// before this cleanup existed lose their old installers too.
+    /// </summary>
+    public void CleanUpOldInstallers()
+    {
+        var currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0);
+        DeleteInstallers(fileName =>
+            TryParseInstallerVersion(fileName, out var version) &&
+            version.Major == currentVersion.Major &&
+            version.Minor == currentVersion.Minor &&
+            version.Build == currentVersion.Build);
+    }
+
+    private void DeleteInstallers(Func<string, bool> keep)
+    {
+        string[] files;
+        try
+        {
+            if (!Directory.Exists(UpdateDirectory))
+            {
+                return;
+            }
+
+            files = Directory.GetFiles(UpdateDirectory, "Muted-Setup-*");
+        }
+        catch (Exception exception)
+        {
+            _log.Write(exception, "List old update installers");
+            return;
+        }
+
+        foreach (var file in files)
+        {
+            var fileName = Path.GetFileName(file);
+            var isInstaller = fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+            var isLeftoverDownload = fileName.EndsWith(".exe.download", StringComparison.OrdinalIgnoreCase);
+            if ((!isInstaller && !isLeftoverDownload) || (isInstaller && keep(fileName)))
+            {
+                continue;
+            }
+
+            try
+            {
+                File.Delete(file);
+                _log.WriteMessage($"Deleted old update file {fileName}.");
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Still in use (for example a running installer); try again next start.
+                _log.WriteMessage($"Could not delete old update file {fileName}: {exception.Message}");
+            }
+        }
+    }
+
+    internal static bool TryParseInstallerVersion(string fileName, out Version version)
+    {
+        const string prefix = "Muted-Setup-";
+        version = new Version(0, 0);
+        if (!fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+            !fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return TryParseVersion(fileName[prefix.Length..^".exe".Length], out version);
     }
 
     internal static bool TryParseVersion(string? tagName, out Version version)

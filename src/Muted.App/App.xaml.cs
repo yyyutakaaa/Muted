@@ -66,7 +66,9 @@ public partial class App : System.Windows.Application
             _theme.Changed += OnThemeChanged;
             _theme.Apply(settings.Theme, settings.UseSystemAccentColor);
 
-            _updateCoordinator = new UpdateCoordinator(new UpdateService(_log));
+            var updateService = new UpdateService(_log);
+            _ = Task.Run(updateService.CleanUpOldInstallers);
+            _updateCoordinator = new UpdateCoordinator(updateService);
             _updateCoordinator.InstallStarted += (_, _) => Dispatcher.BeginInvoke(RequestExit);
             _deviceCatalog = new WasapiDeviceCatalog();
             var engine = new RealtimeAudioEngine();
