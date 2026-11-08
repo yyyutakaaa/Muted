@@ -11,6 +11,84 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-08
+
+### Added
+
+- **Studio Voice**: AI noise removal that also removes room echo, switchable on
+  the home screen and under Advanced > Sound. Pick one of three models:
+  **Classic** (DeepFilterNet3, the lightest), **Balanced** (DPDFNet 2) or
+  **Maximum** (DPDFNet 8). The two DPDFNet models use dual-path recurrent blocks,
+  which also remove noise that sits in the same frequency band as your voice.
+  - Studio Voice takes over noise removal completely: nothing of the noisy
+    original is mixed back in, and Gentle, Balanced and Strong step aside while
+    it is on. It only removes noise; it never changes your gate, level,
+    high-pass or limiter.
+  - A model loads in the background. Until it is ready, or if it cannot run, the
+    standard noise removal keeps working. Choosing another model loads it next
+    to the one that is cleaning, lets it settle for 0.3 seconds and crossfades
+    over 0.1 seconds, so the microphone never drops out.
+  - All three models deliver the same 50 ms of delay, run on one processor
+    thread and need about 2.5 ms (Classic, Balanced) or 6 ms (Maximum) of
+    processing for every 10 ms of audio. The chosen model is remembered.
+  - The voice gate opens only when both Studio Voice and the standard model hear
+    a voice, so key and mouse clicks no longer open it.
+  - If the model ever stops removing room noise, Muted restarts it by itself,
+    the same state that used to need an off-and-on.
+- Every slider under Advanced > Fine-tune has a small "i" next to its name.
+  Hover it, or tab to it, and a card explains in plain words what the slider
+  does, when it works best and what to expect. It also works while the slider
+  itself is greyed out, and screen readers read the same three answers.
+
+### Changed
+
+- "Tune to my voice" no longer raises the microphone boost. A digital boost lifts
+  the noise that is left over after the noise removal by the same amount, and
+  before the noise removal loud peaks clip against the ceiling, so a quiet
+  microphone used to end up at +10 dB and sound worse. The calibration now only
+  turns a signal down when it is too hot. Quiet speech gets up to +6 dB of voice
+  level after the noise removal (not when Automatic level is on), and when that
+  is not enough it says how many dB to raise in the Windows sound settings.
+  "Keep tuning while I talk" follows the same rule: it can turn the microphone
+  down but never up.
+- Automatic level follows your average speech level over a few seconds instead
+  of reacting to every syllable, so soft word endings no longer push it up. Its
+  largest boost is 12 dB instead of 15.5 dB.
+- Every profile has its own name. The preset buttons (Natural, Gaming, Podcast,
+  Meeting, Warm Radio) used to add a second "Meeting" or "Gaming" next to the
+  default profile of the same name; now they update the profile that already
+  carries the name. Saving a profile under a name that is taken adds " (2)".
+  Settings from before are tidied up when Muted starts: of two profiles with the
+  same name the one you are using stays, otherwise the preset one, and the
+  active profile and program rules follow to the one that stayed.
+- The update prompt is now a Muted window instead of a Windows message box.
+  It shows the installed and new version, links to the release notes and
+  shows download progress while the update installs.
+- A calmer, easier-to-read look. The dark theme is less black, secondary
+  text has more contrast, cards lose their outlines and the Advanced page
+  drops its divider lines. The home screen title uses a heavier weight and
+  Settings has less explanatory text.
+- Buttons no longer keep a purple outline after a click; the focus ring only
+  shows while you move through the app with the keyboard.
+- Smoother motion: hover effects fade, buttons give under the cursor,
+  sections slide open with a turning arrow, the home screen builds up in
+  steps and the power button pulses while Muted is on.
+- Checkboxes match the rest of Muted instead of the Windows default.
+- The window keeps one size (780 x 880) instead of growing when you open
+  Advanced and shrinking again on the home screen. Content keeps the same
+  width too: room for the scrollbar is always reserved, so pages no longer
+  get narrower when they are long enough to scroll.
+- Advanced has a menu: Sound, Devices and Voice test, plus Fine-tune,
+  Processing, Profiles & tools and Shortcuts under More. Only the chosen
+  section is shown, the menu stays in place while it scrolls, and Muted
+  remembers the last section you opened.
+
+### Fixed
+
+- The menu behind the three dots next to the preset picker showed empty boxes
+  instead of text: it inherited the icon font of the button. Menus now always
+  use the normal font.
+
 ## [0.8.1] - 2026-11-08
 
 ### Changed
