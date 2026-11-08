@@ -11,23 +11,24 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-08
+
 ### Changed
 
 - The installer now lists the publisher and links to the project, issues and
   releases in Windows' installed apps.
 - Local builds report the current version instead of 0.5.0.
 - The winget manifests point at 0.8.0.
+- The README is shorter; the full feature tour moved to `docs/FEATURES.md`,
+  with menu paths for the Home, Advanced and Settings pages.
+- The architecture and virtual cable guides are in English; the Dutch versions
+  moved to `docs/nl`.
 
 ### Fixed
 
 - Installers from earlier updates no longer pile up in the `Updates` folder.
   Muted keeps only the installer of the version it runs and removes the rest
   at startup and before it downloads a new update.
-
-- The README is shorter; the full feature tour moved to `docs/FEATURES.md`,
-  with menu paths for the Home, Advanced and Settings pages.
-- The architecture and virtual cable guides are in English; the Dutch versions
-  moved to `docs/nl`.
 
 ### Added
 
@@ -195,7 +196,8 @@ First public preview.
 - Device refresh on hotplug, tray mode and autostart.
 - An installer.
 
-[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/yyyutakaaa/Muted/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/yyyutakaaa/Muted/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/yyyutakaaa/Muted/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/yyyutakaaa/Muted/compare/v0.5.1...v0.6.0
