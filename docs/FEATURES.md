@@ -45,6 +45,26 @@ presses to `RegisterHotKey` and push to talk needs the release too. Muted never
 swallows a key: whatever you press still reaches the game or call you are in.
 The hook is only installed once you actually assign a key.
 
+## Studio Voice
+
+Studio Voice is AI noise removal that also removes room echo. Switch it on from
+the home screen, or under Advanced, Sound.
+
+You pick one of three models:
+
+- **Classic** uses DeepFilterNet3. It is the lightest.
+- **Balanced** uses DPDFNet 2.
+- **Maximum** uses DPDFNet 8. It uses the most processor and keeps the most
+  detail.
+
+While Studio Voice is on, it does all the noise removal. Nothing of the noisy
+original is mixed back in, so Gentle, Balanced and Strong step aside. It never
+changes your gate, level, high-pass or limiter.
+
+A model loads in the background. Until it is ready, or if it can't run, the
+standard noise removal keeps working. Switching models crossfades, so your
+microphone never drops out. All three models add 50 ms of delay.
+
 ## Voice tools
 
 **Tune to my voice** is a 24-second guided calibration: four seconds of silence,

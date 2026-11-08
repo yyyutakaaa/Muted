@@ -8,7 +8,8 @@
 Muted is a small Windows app that runs your microphone through
 [RNNoise](https://github.com/xiph/rnnoise), locally, before Discord, Teams, or
 your game ever hears the signal. Fan noise, mic hiss, and keyboard clatter get
-filtered out along the way. It can clean what you hear from others too.
+filtered out along the way. Studio Voice goes further and takes out room
+echo as well. It can clean what you hear from others too.
 
 <p align="center">
   <img src="docs/images/home.webp" alt="Muted's home screen: the power button, the microphone picker, the Studio Voice switch and a Test your voice button" width="360">
@@ -87,6 +88,9 @@ one.
 
 ## Features
 
+- **Studio Voice**: AI noise removal that also removes room echo. Switch it on
+  from the home screen, and pick Classic, Balanced or Maximum under Advanced,
+  Sound. If a model can't load, the standard noise suppression keeps working.
 - **Noise suppression** with the official, pinned Xiph RNNoise model, at 48 kHz
   with 20 ms of delay.
 - **Echo cancellation**, so you can use speakers instead of a headset.
