@@ -306,7 +306,9 @@ public sealed class ShoutGuardTests
             }
         }
 
-        Run(500);
+        // Warm up with a run as long as the measured one, so every branch (the guard turning
+        // off after 650 frames, both modes) has been compiled before anything is counted.
+        Run(2_000);
         var before = GC.GetAllocatedBytesForCurrentThread();
         Run(2_000);
         var after = GC.GetAllocatedBytesForCurrentThread();

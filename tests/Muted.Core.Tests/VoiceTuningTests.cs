@@ -222,13 +222,20 @@ public sealed class VoiceTuningTests
     {
         var tracker = new VoiceTracker();
         var frame = Tone(Frame, 150f, -30f);
-        tracker.Process(frame, 0.9f, false);
 
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var index = 0; index < 1_000; index++)
+        // Warm up with the same loop that is measured, so both the speech and the quiet
+        // branch are compiled before anything is counted.
+        void Run()
         {
-            tracker.Process(frame, index % 2 == 0 ? 0.9f : 0.05f, false);
+            for (var index = 0; index < 1_000; index++)
+            {
+                tracker.Process(frame, index % 2 == 0 ? 0.9f : 0.05f, false);
+            }
         }
+
+        Run();
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        Run();
 
         Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
     }

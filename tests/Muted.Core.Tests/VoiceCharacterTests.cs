@@ -246,18 +246,24 @@ public sealed class VoiceCharacterTests
     {
         var character = new VoiceCharacter(SampleRate);
         var frame = Noise(FrameSize, 0.3f, seed: 4);
-        for (var i = 0; i < 20; i++)
+
+        // The measured loop switches every amount and turns the character off and on again.
+        // Warm up with exactly that loop, so the first run through a path is not counted:
+        // the runtime compiles code on the calling thread, and a single cold path can show
+        // up as a few kilobytes on a busy build machine.
+        void Run(int rounds)
         {
-            character.Process(frame, 0.7f, 0.6f, 0.5f, 0.4f, 0.3f, enabled: true);
+            for (var i = 0; i < rounds; i++)
+            {
+                var amount = (i % 10) / 10f;
+                character.Process(frame, amount, 1 - amount, amount, 1 - amount, amount, enabled: i % 50 != 49);
+            }
         }
+
+        Run(2_000);
 
         var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 500; i++)
-        {
-            var amount = (i % 10) / 10f;
-            character.Process(frame, amount, 1 - amount, amount, 1 - amount, amount, enabled: i % 50 != 49);
-        }
-
+        Run(500);
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         Assert.Equal(0, allocated);
     }
