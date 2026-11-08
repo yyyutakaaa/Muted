@@ -11,6 +11,13 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+### Removed
+
+- The SignPath code signing policy and the optional signing step in the
+  release workflow, because the SignPath Foundation application was not
+  approved. Installers are not code signed, so Windows SmartScreen may warn
+  when you run one.
+
 ## [0.8.1] - 2026-11-08
 
 ### Changed
@@ -34,12 +41,9 @@ workflow puts that section at the top of the GitHub release notes.
 
 - `CHANGELOG.md`, `CONTRIBUTING.md` and `SECURITY.md`.
 - Release notes are taken from this changelog.
-- A privacy section in the README, linked from the website.
-
-### Removed
-
-- The optional SignPath code signing step in the release workflow. Installers
-  are not code signed, so Windows SmartScreen may warn when you run one.
+- A code signing policy and a privacy section in the README, linked from the
+  website, for the SignPath Foundation application. Signed releases carry the
+  SignPath attribution in their notes.
 
 ## [0.8.0] - 2026-10-29
 
