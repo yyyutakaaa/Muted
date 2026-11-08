@@ -1,0 +1,266 @@
+<UserControl x:Class="Muted.App.Views.ProcessingView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Muted.App.Controls"
+             Foreground="{DynamicResource TextBrush}">
+    <!-- Every step of the sound chain, once, in the order the sound goes through them.
+         Each card folds shut; its header keeps its switch, so a closed card still says
+         whether it is on. -->
+    <StackPanel>
+        <!-- ===================== Noise removal ===================== -->
+        <Expander x:Name="NoiseCard" Style="{StaticResource CardExpanderStyle}" IsExpanded="True">
+            <Expander.Header>
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleStyle}" VerticalAlignment="Center" IsChecked="{Binding SuppressionEnabled}" AutomationProperties.Name="Noise suppression" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Noise removal" />
+                    </StackPanel>
+                </DockPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap"
+                           Text="RNNoise keeps your voice and drops the fan, the hiss and the keyboard. With Studio Voice on, Studio Voice does this instead." />
+                <Button Margin="0,12,0,0" HorizontalAlignment="Left" Style="{StaticResource TextButtonStyle}" Padding="12,7"
+                        Content="How much is removed: set it under Sound" Click="OpenSound_OnClick" />
+            </StackPanel>
+        </Expander>
+
+        <!-- ===================== Echo cancellation ===================== -->
+        <Expander x:Name="EchoCard" Style="{StaticResource CardExpanderStyle}" IsExpanded="True">
+            <Expander.Header>
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleStyle}" VerticalAlignment="Center" IsChecked="{Binding EchoCancellationEnabled}" AutomationProperties.Name="Echo cancellation" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Echo cancellation" />
+                    </StackPanel>
+                </DockPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap"
+                           Text="Subtracts what your speakers play, so the other side stops hearing themselves. This is what lets you drop the headset." />
+                <StackPanel Visibility="{Binding EchoCancellationEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Speakers to listen to"
+                                         Description="The output you actually hear, not the cable. It has to run at 48 kHz."
+                                         Stacked="True">
+                        <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedEchoReference}" DisplayMemberPath="DisplayName" AutomationProperties.Name="Echo reference device" />
+                    </controls:SettingRow>
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Residual strength"
+                                         Stacked="True"
+                                         ValueText="{Binding EchoStrengthText}"
+                                         TipWhat="How hard Muted ducks what is left after the echo is subtracted, mostly speaker distortion."
+                                         TipBest="Leave it in the middle. Turn it down if you sound choppy when you both talk at once."
+                                         TipExpect="Higher removes more of the leftover echo but can cut into your own voice during double talk.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding EchoStrength}" AutomationProperties.Name="Residual echo strength" />
+                    </controls:SettingRow>
+                    <Border Margin="0,16,0,0" Style="{StaticResource InsetCardStyle}">
+                        <Grid>
+                            <TextBlock Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Text="Echo removed right now" />
+                            <TextBlock Style="{StaticResource ValueLabelStyle}" Foreground="{DynamicResource SuccessBrush}" Text="{Binding EchoReductionText}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+        <!-- ===================== Voice gate ===================== -->
+        <Expander x:Name="GateCard" Style="{StaticResource CardExpanderStyle}">
+            <Expander.Header>
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleStyle}" VerticalAlignment="Center" IsChecked="{Binding VoiceGateEnabled}" AutomationProperties.Name="Voice gate" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Voice gate" />
+                    </StackPanel>
+                </DockPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="Goes completely silent whenever you are not talking." />
+                <StackPanel Visibility="{Binding VoiceGateEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Threshold"
+                                         Stacked="True"
+                                         ValueText="{Binding VoiceSensitivityText}"
+                                         TipWhat="How sure Muted must be that you are speaking before the voice gate opens."
+                                         TipBest="Raise it if the gate opens for typing or background noise. Lower it if the start of your words gets cut off."
+                                         TipExpect="Higher is stricter. Tune to my voice suggests a value.">
+                        <Slider Minimum="0.05" Maximum="0.99" SmallChange="0.02" LargeChange="0.1" Value="{Binding VoiceSensitivity}" AutomationProperties.Name="Gate threshold" />
+                    </controls:SettingRow>
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Hold time"
+                                         Stacked="True"
+                                         ValueText="{Binding VoiceHoldText}"
+                                         TipWhat="How long the gate stays open after you stop talking."
+                                         TipBest="Around 250 ms suits most voices. Go shorter in a fast game and longer in calls."
+                                         TipExpect="Too short chops off the ends of words. Too long lets room noise through after you stop.">
+                        <Slider Minimum="0" Maximum="1000" SmallChange="10" LargeChange="50" TickFrequency="50" IsSnapToTickEnabled="True" Value="{Binding VoiceHoldMilliseconds}" AutomationProperties.Name="Gate hold time" />
+                    </controls:SettingRow>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+        <!-- ===================== Levels ===================== -->
+        <Expander x:Name="LevelsCard" Style="{StaticResource CardExpanderStyle}">
+            <Expander.Header>
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Levels" />
+                    <TextBlock Style="{StaticResource CardHeaderSummaryStyle}" Text="{Binding LevelsCardSummary}" />
+                </StackPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap"
+                           Text="How loud your microphone goes in. How loud your voice comes out is Voice level, under Sound." />
+                <Rectangle Style="{StaticResource RowDividerStyle}" />
+                <controls:SettingRow Title="Microphone boost"
+                                     Stacked="True"
+                                     ValueText="{Binding InputGainText}"
+                                     TipWhat="Makes your microphone louder or softer before anything else, including the noise removal."
+                                     TipBest="Leave it at 0 dB. Turn it down only if your voice clips or sounds crunchy."
+                                     TipExpect="Turning it up also lifts the room noise, and loud peaks can clip before the noise removal hears them. For a quiet voice, raise Voice level under Sound instead.">
+                    <Slider Minimum="0.25" Maximum="4" SmallChange="0.05" LargeChange="0.25" Value="{Binding InputGain}" AutomationProperties.Name="Microphone boost" />
+                </controls:SettingRow>
+                <Rectangle Style="{StaticResource RowDividerStyle}" />
+                <controls:SettingRow Title="High-pass filter"
+                                     Description="Removes desk thumps and rumble below the speech band, which the noise removal leaves alone.">
+                    <CheckBox Style="{StaticResource ToggleStyle}" IsChecked="{Binding HighPassEnabled}" AutomationProperties.Name="High-pass filter" />
+                </controls:SettingRow>
+                <controls:SettingRow Margin="0,12,0,0"
+                                     Title="Cut-off"
+                                     Stacked="True"
+                                     ValueText="{Binding HighPassText}"
+                                     Visibility="{Binding HighPassEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Slider Minimum="40" Maximum="200" SmallChange="5" LargeChange="20" Value="{Binding HighPassFrequency}" AutomationProperties.Name="High-pass cutoff" />
+                </controls:SettingRow>
+                <Rectangle Style="{StaticResource RowDividerStyle}" />
+                <controls:SettingRow Title="Automatic level"
+                                     Description="Slowly evens out how loud you come across. It only adapts while you are actually speaking.">
+                    <CheckBox Style="{StaticResource ToggleStyle}" IsChecked="{Binding AutoGainEnabled}" AutomationProperties.Name="Automatic level" />
+                </controls:SettingRow>
+                <controls:SettingRow Margin="0,12,0,0"
+                                     Title="Target"
+                                     Stacked="True"
+                                     ValueText="{Binding AutoGainTargetText}"
+                                     Visibility="{Binding AutoGainEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Slider Minimum="-30" Maximum="-6" SmallChange="1" LargeChange="3" Value="{Binding AutoGainTargetDb}" AutomationProperties.Name="Automatic level target" />
+                </controls:SettingRow>
+                <Rectangle Style="{StaticResource RowDividerStyle}" />
+                <controls:SettingRow Title="Limiter"
+                                     Description="Catches peaks smoothly instead of clipping them square. Leave this on whenever you add gain.">
+                    <CheckBox Style="{StaticResource ToggleStyle}" IsChecked="{Binding LimiterEnabled}" AutomationProperties.Name="Limiter" />
+                </controls:SettingRow>
+            </StackPanel>
+        </Expander>
+
+        <!-- ===================== Shout guard ===================== -->
+        <Expander x:Name="ShoutCard" Style="{StaticResource CardExpanderStyle}">
+            <Expander.Header>
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleStyle}" VerticalAlignment="Center" IsChecked="{Binding ShoutGuardEnabled}" AutomationProperties.Name="Shout guard" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Shout guard" />
+                    </StackPanel>
+                </DockPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap"
+                           Text="Cuts your microphone the moment you get too loud, so nobody gets an earful. It looks ahead, so even the start of a shout is caught." />
+                <StackPanel Visibility="{Binding ShoutGuardEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Loudness limit"
+                                         Stacked="True"
+                                         ValueText="{Binding ShoutThresholdText}"
+                                         TipWhat="The level above which the shout guard steps in."
+                                         TipBest="Set it a few dB above your loudest normal speech."
+                                         TipExpect="Too low and it cuts you off while you talk normally. Too high and shouts get through. Tune to my voice suggests a value.">
+                        <StackPanel>
+                            <Slider Minimum="-30" Maximum="0" SmallChange="1" LargeChange="3" Value="{Binding ShoutThresholdDb}" AutomationProperties.Name="Shout guard loudness limit" />
+                            <TextBlock Margin="0,6,0,0" Style="{StaticResource CaptionStyle}">
+                                <Run Text="Input level now:" />
+                                <Run Text="{Binding InputLevelDb, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </controls:SettingRow>
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Turn down instead of silence"
+                                         Description="Off: a shout is not heard at all. On: it comes through 20 dB quieter.">
+                        <CheckBox Style="{StaticResource ToggleStyle}" IsChecked="{Binding ShoutGuardDucks}" AutomationProperties.Name="Turn down instead of silence" />
+                    </controls:SettingRow>
+                    <TextBlock Margin="0,12,0,0" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="{Binding ShoutGuardStatusText}" />
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+        <!-- ===================== Warm radio voice ===================== -->
+        <Expander x:Name="WarmCard" Style="{StaticResource CardExpanderStyle}">
+            <Expander.Header>
+                <DockPanel>
+                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleStyle}" VerticalAlignment="Center" IsChecked="{Binding VoiceCharacterEnabled}" AutomationProperties.Name="Warm radio voice" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Warm radio voice" />
+                    </StackPanel>
+                </DockPanel>
+            </Expander.Header>
+            <StackPanel>
+                <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap"
+                           Text="A full, close-up and smooth sound, as if you are talking straight into their ear." />
+                <StackPanel Visibility="{Binding VoiceCharacterEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Warmth" Stacked="True" ValueText="{Binding WarmthText}"
+                                         TipWhat="Adds weight to the low end of your voice."
+                                         TipBest="Your microphone makes you sound thin or small."
+                                         TipExpect="A little makes you sound fuller. Too much sounds boomy or muddy, especially on a deep voice.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding Warmth}" AutomationProperties.Name="Voice warmth" />
+                    </controls:SettingRow>
+                    <controls:SettingRow Margin="0,14,0,0" Title="Proximity" Stacked="True" ValueText="{Binding ProximityText}"
+                                         TipWhat="Adds the bass bump you hear when someone speaks close to a microphone, and takes a little harshness out of the upper mids."
+                                         TipBest="You want a close-up, radio-host sound."
+                                         TipExpect="A close and intimate voice. Too much sounds boxy.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding Proximity}" AutomationProperties.Name="Voice proximity" />
+                    </controls:SettingRow>
+                    <controls:SettingRow Margin="0,14,0,0" Title="Smoothness" Stacked="True" ValueText="{Binding SmoothnessText}"
+                                         TipWhat="Softens the high end and turns down sharp S sounds."
+                                         TipBest="Your S and T sounds are harsh or whistle."
+                                         TipExpect="A calmer, less piercing voice. Too much sounds dull or muffled.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding Smoothness}" AutomationProperties.Name="Voice smoothness" />
+                    </controls:SettingRow>
+                    <controls:SettingRow Margin="0,14,0,0" Title="Compression" Stacked="True" ValueText="{Binding CompressionText}"
+                                         TipWhat="Evens out the loud and quiet parts of your speech."
+                                         TipBest="You go from soft to loud, or move around in front of the microphone."
+                                         TipExpect="A steadier volume. Too much sounds flat and lifeless.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding Compression}" AutomationProperties.Name="Voice compression" />
+                    </controls:SettingRow>
+                    <controls:SettingRow Margin="0,14,0,0" Title="Saturation" Stacked="True" ValueText="{Binding SaturationText}"
+                                         TipWhat="Adds a little warm, tube-like distortion."
+                                         TipBest="You want a fuller, livelier voice. A touch is enough."
+                                         TipExpect="More adds grit and, near the top, obvious distortion.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding Saturation}" AutomationProperties.Name="Voice saturation" />
+                    </controls:SettingRow>
+                    <TextBlock Margin="0,12,0,0" Style="{StaticResource CaptionStyle}">
+                        <Run Text="Compressor reduction now:" />
+                        <Run Text="{Binding CompressionStatusText, Mode=OneWay}" />
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </Expander>
+
+        <!-- ===================== Buffer ===================== -->
+        <Expander x:Name="BufferCard" Style="{StaticResource CardExpanderStyle}" Margin="0,0,0,24">
+            <Expander.Header>
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardHeaderTitleStyle}" Text="Buffer size" />
+                    <TextBlock Style="{StaticResource CardHeaderSummaryStyle}" Text="{Binding BufferCardSummary}" />
+                </StackPanel>
+            </Expander.Header>
+            <controls:SettingRow Title="Buffer size"
+                                 Stacked="True"
+                                 ValueText="{Binding LatencyText}"
+                                 IsEnabled="{Binding IsStopped}"
+                                 Description="Stop processing to change it."
+                                 TipWhat="How much audio Muted collects before it sends it on."
+                                 TipBest="Leave it at 40 ms. Raise it if you hear crackling or dropouts."
+                                 TipExpect="Lower means less delay but needs a steadier PC. Higher is safer but adds delay. The noise removal itself always adds 20 ms.">
+                <Slider Minimum="20" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding TargetLatencyMilliseconds}" AutomationProperties.Name="Buffer size" />
+            </controls:SettingRow>
+        </Expander>
+    </StackPanel>
+</UserControl>

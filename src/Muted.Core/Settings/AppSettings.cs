@@ -48,6 +48,9 @@ public sealed record AppSettings
     /// <summary>Which AI model Studio Voice cleans with; Classic is DeepFilterNet3.</summary>
     public StudioModel StudioModel { get; init; } = StudioModel.DeepFilterNet3;
 
+    /// <summary>Lets Maximum step down to Balanced while the PC is too busy, as in a heavy game.</summary>
+    public bool StudioAutoStepDown { get; init; } = true;
+
     public bool LimiterEnabled { get; init; } = true;
     public bool AutoGainEnabled { get; init; }
     public float AutoGainTargetDb { get; init; } = -18f;
@@ -66,6 +69,15 @@ public sealed record AppSettings
 
     /// <summary>Lets Muted keep the boost and the gate right while you talk.</summary>
     public bool AutoTuneEnabled { get; init; } = true;
+
+    /// <summary>Holds other voices back once "Tune to my voice" has learned yours.</summary>
+    public bool OnlyMyVoice { get; init; }
+
+    /// <summary>0 lenient .. 1 strict: how much like you a voice must sound to get through.</summary>
+    public float SpeakerStrictness { get; init; } = 0.5f;
+
+    /// <summary>Your voice embedding, Base64. Describes how you sound, not what you said.</summary>
+    public string? VoiceProfile { get; init; }
     public bool MonitorEnabled { get; init; }
     public string? MonitorDeviceId { get; init; }
     public float MonitorVolume { get; init; } = 0.6f;

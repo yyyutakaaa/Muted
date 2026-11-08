@@ -7,12 +7,10 @@ using Muted.App.ViewModels;
 
 namespace Muted.App.Views;
 
-public partial class AdvancedPanel : System.Windows.Controls.UserControl
+/// <summary>Presets, saved profiles and the rules that switch profiles by themselves.</summary>
+public partial class ProfilesView : System.Windows.Controls.UserControl
 {
-    public AdvancedPanel()
-    {
-        InitializeComponent();
-    }
+    public ProfilesView() => InitializeComponent();
 
     /// <summary>
     /// A profile picked here is applied straight away. Selection that arrives through
@@ -48,19 +46,12 @@ public partial class AdvancedPanel : System.Windows.Controls.UserControl
         }
     }
 
-    private void Calibrate_OnClick(object sender, RoutedEventArgs eventArgs)
+    /// <summary>The list of running programs is only read when someone opens it.</summary>
+    private void RunningPrograms_OnDropDownOpened(object? sender, EventArgs eventArgs)
     {
-        if (DataContext is MainViewModel viewModel)
+        if (DataContext is MainViewModel viewModel && viewModel.RefreshRunningProgramsCommand.CanExecute(null))
         {
-            viewModel.SelectedPage = AppPage.Audio;
-        }
-    }
-
-    private void ManageProfiles_OnClick(object sender, RoutedEventArgs eventArgs)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.SelectedPage = AppPage.Settings;
+            viewModel.RefreshRunningProgramsCommand.Execute(null);
         }
     }
 }

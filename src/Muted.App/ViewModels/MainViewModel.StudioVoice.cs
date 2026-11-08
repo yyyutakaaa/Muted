@@ -12,6 +12,7 @@ internal sealed partial class MainViewModel
     private StudioModel _studioModel = StudioModel.DeepFilterNet3;
     private string _studioVoiceStatusText = string.Empty;
     private bool _studioVoiceUnavailable;
+    private bool _studioAutoStepDown = true;
 
     public bool StudioVoice
     {
@@ -33,6 +34,22 @@ internal sealed partial class MainViewModel
         set
         {
             if (SetAudioProperty(ref _studioModel, value))
+            {
+                RefreshStudioVoiceStatus();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Lets Maximum hand over to Balanced while the PC is too busy to run it on time,
+    /// such as during a heavy game, and take over again once there is room.
+    /// </summary>
+    public bool StudioAutoStepDown
+    {
+        get => _studioAutoStepDown;
+        set
+        {
+            if (SetAudioProperty(ref _studioAutoStepDown, value))
             {
                 RefreshStudioVoiceStatus();
             }
@@ -85,6 +102,8 @@ internal sealed partial class MainViewModel
                 : status switch
                 {
                     StudioVoiceStatus.Loading => $"Loading {modelName}…",
+                    StudioVoiceStatus.Active when _engine.StudioVoiceSteppedDown =>
+                        $"Your PC is busy, so Balanced cleans for now. {modelName} comes back by itself when there is room again.",
                     StudioVoiceStatus.Active => ActiveStudioModel is { } active && active != StudioModel
                         ? _engine.StudioVoiceSwitching
                             ? $"Switching to {modelName}; {DisplayName(active)} keeps cleaning until it is ready."

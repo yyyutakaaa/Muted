@@ -1411,5 +1411,210 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- ===================== Settings layout ===================== -->
+        <!-- Every settings page is built from the same three pieces: a card, a card
+             title, and SettingRows split by a divider. -->
+        <Style x:Key="SettingsCardStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}">
+            <Setter Property="Padding" Value="22,20" />
+            <Setter Property="Margin" Value="0,0,0,16" />
+        </Style>
+
+        <Style x:Key="SettingsCardTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource CardTitleStyle}">
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <Style x:Key="SettingsCardIntroStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+
+        <Style x:Key="RowDividerStyle" TargetType="Rectangle">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Margin" Value="0,16" />
+            <Setter Property="Fill" Value="{DynamicResource BorderBrush}" />
+        </Style>
+
+        <Style x:Key="SectionTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource PageTitleStyle}">
+            <Setter Property="FontSize" Value="24" />
+        </Style>
+
+        <Style x:Key="SectionIntroStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,6,0,20" />
+        </Style>
+
+        <!-- A settings card that folds shut. The header holds the card's title, a one-line
+             summary and, where it has one, the card's on/off switch, so a closed card still
+             tells you what it is doing. -->
+        <Style x:Key="CardExpanderStyle" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,16" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Expander">
+                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="16">
+                            <StackPanel>
+                                <ToggleButton IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                              Content="{TemplateBinding Header}"
+                                              Cursor="Hand"
+                                              FocusVisualStyle="{DynamicResource FocusRing}"
+                                              AutomationProperties.Name="Show or hide this card">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border x:Name="HeaderSurface" Background="Transparent" CornerRadius="16" Padding="22,18">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ContentPresenter VerticalAlignment="Center" />
+                                                    <TextBlock x:Name="Chevron"
+                                                               Grid.Column="1"
+                                                               Margin="16,0,0,0"
+                                                               VerticalAlignment="Center"
+                                                               FontFamily="Segoe MDL2 Assets"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource TextMutedBrush}"
+                                                               Text="&#xE70D;"
+                                                               RenderTransformOrigin="0.5,0.5">
+                                                        <TextBlock.RenderTransform>
+                                                            <RotateTransform />
+                                                        </TextBlock.RenderTransform>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsChecked" Value="True">
+                                                    <Setter TargetName="Chevron" Property="RenderTransform">
+                                                        <Setter.Value>
+                                                            <RotateTransform Angle="180" />
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Chevron" Property="Foreground" Value="{DynamicResource TextBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                                <StackPanel x:Name="Body" Margin="22,0,22,20" Visibility="Collapsed">
+                                    <Rectangle Style="{StaticResource RowDividerStyle}" Margin="0,0,0,16" />
+                                    <ContentPresenter />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A text-only button for "go to" links: accent coloured, underlined on hover. -->
+        <Style x:Key="LinkButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{DynamicResource FocusRing}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="Label" Background="Transparent" Text="{TemplateBinding Content}" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Label" Property="TextDecorations" Value="Underline" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CardHeaderTitleStyle" TargetType="TextBlock" BasedOn="{StaticResource CardTitleStyle}" />
+
+        <Style x:Key="CardHeaderSummaryStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionStyle}">
+            <Setter Property="Margin" Value="0,3,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <Style TargetType="controls:SettingRow">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="controls:SettingRow">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <StackPanel x:Name="Text" Margin="0,0,16,0" VerticalAlignment="Center">
+                                <DockPanel>
+                                    <TextBlock x:Name="Value"
+                                               DockPanel.Dock="Right"
+                                               Margin="12,0,0,0"
+                                               Style="{StaticResource ValueLabelStyle}"
+                                               Text="{TemplateBinding ValueText}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   TextWrapping="Wrap"
+                                                   Text="{TemplateBinding Title}" />
+                                        <controls:InfoTip x:Name="Tip"
+                                                          Title="{TemplateBinding Title}"
+                                                          What="{TemplateBinding TipWhat}"
+                                                          Best="{TemplateBinding TipBest}"
+                                                          Expect="{TemplateBinding TipExpect}" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock x:Name="Description"
+                                           Margin="0,3,0,0"
+                                           Style="{StaticResource CaptionStyle}"
+                                           TextWrapping="Wrap"
+                                           Text="{TemplateBinding Description}" />
+                            </StackPanel>
+                            <ContentPresenter x:Name="Control"
+                                              Grid.Column="1"
+                                              VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Description" Value="">
+                                <Setter TargetName="Description" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="Description" Value="{x:Null}">
+                                <Setter TargetName="Description" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="TipWhat" Value="">
+                                <Setter TargetName="Tip" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="ValueText" Value="">
+                                <Setter TargetName="Value" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="Stacked" Value="True">
+                                <Setter TargetName="Text" Property="Margin" Value="0" />
+                                <Setter TargetName="Control" Property="Grid.Row" Value="1" />
+                                <Setter TargetName="Control" Property="Grid.Column" Value="0" />
+                                <Setter TargetName="Control" Property="Grid.ColumnSpan" Value="2" />
+                                <Setter TargetName="Control" Property="Margin" Value="0,12,0,0" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Text" Property="Opacity" Value="0.55" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Application.Resources>
 </Application>

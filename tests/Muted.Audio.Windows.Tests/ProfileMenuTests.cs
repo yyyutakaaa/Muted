@@ -11,7 +11,7 @@ using MenuItem = System.Windows.Controls.MenuItem;
 namespace Muted.Audio.Windows.Tests;
 
 /// <summary>
-/// The three dots next to the preset picker draw with an icon font. The menu that opens
+/// The three dots next to the profile picker draw with an icon font. The menu that opens
 /// from them must still be readable text, not the empty boxes that font shows for letters.
 /// Called from the one WPF test that owns the Application.
 /// </summary>
@@ -20,7 +20,7 @@ internal static class ProfileMenuTests
     public static void Verify(Muted.App.App app, ThemeService theme)
     {
         theme.Apply(AppTheme.Dark, false);
-        var panel = new AdvancedPanel();
+        var panel = new ProfilesView();
         var window = new Window
         {
             Content = panel,

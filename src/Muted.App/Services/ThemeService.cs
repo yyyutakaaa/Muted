@@ -52,28 +52,31 @@ internal sealed class ThemeService : IDisposable
         SuccessSurface: "#251F3A",
         WarningSurface: "#352A17");
 
+    // A grey-violet page under near-white cards, so every card stands out, with
+    // borders, switches and secondary text dark enough to read: secondary text is at
+    // least 7:1 against anything it sits on, and an off switch 3:1 against its card.
     private static readonly Palette Light = new(
-        Background: "#F1EEF7",
-        Surface: "#FFFFFF",
-        SurfaceRaised: "#F1EDFB",
-        SurfaceHover: "#E6DFF8",
-        Sidebar: "#EEE9F9",
-        Border: "#E4DFEF",
-        BorderStrong: "#BCB0DC",
-        Text: "#1A1430",
-        TextMuted: "#554E72",
-        Accent: "#6D28D9",
-        AccentSoft: "#EAE2FC",
-        Success: "#7C3AED",
-        Warning: "#A2670A",
-        Danger: "#C42A55",
-        MeterTrack: "#E3DDF2",
-        ToggleTrack: "#C6BCE2",
+        Background: "#DCD8E5",
+        Surface: "#FBFAFD",
+        SurfaceRaised: "#EEEBF4",
+        SurfaceHover: "#E3DEEC",
+        Sidebar: "#D6D1E1",
+        Border: "#C8C0D9",
+        BorderStrong: "#9488B0",
+        Text: "#110D20",
+        TextMuted: "#433D58",
+        Accent: "#6224CF",
+        AccentSoft: "#E3D9FA",
+        Success: "#6224CF",
+        Warning: "#8A5300",
+        Danger: "#B01F47",
+        MeterTrack: "#D6D0E3",
+        ToggleTrack: "#9389B3",
         ToggleThumb: "#FFFFFF",
-        DangerSurface: "#FCEBF0",
-        DangerBorder: "#F0C6D4",
-        SuccessSurface: "#F0E9FD",
-        WarningSurface: "#FBF2DE");
+        DangerSurface: "#F9E3EA",
+        DangerBorder: "#E8B4C5",
+        SuccessSurface: "#ECE4FC",
+        WarningSurface: "#F8EBCF");
 
     private readonly ResourceDictionary _resources;
     private readonly Dispatcher _dispatcher;

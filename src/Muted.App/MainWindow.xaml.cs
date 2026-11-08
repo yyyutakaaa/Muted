@@ -25,6 +25,7 @@ public partial class MainWindow : Window
         viewModel.PropertyChanged += OnViewModelChanged;
         Closed += (_, _) => viewModel.PropertyChanged -= OnViewModelChanged;
         SourceInitialized += (_, _) => ApplyWindowAppearance();
+
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.System && e.SystemKey == Key.Space) { ShowWindowMenu(); e.Handled = true; }
@@ -43,20 +44,39 @@ public partial class MainWindow : Window
         {
             AppPage.Settings => new EverydaySettingsView(),
             AppPage.Advanced => new AdvancedView(),
-            AppPage.Audio => new AudioView(),
-            AppPage.Shortcuts => new ShortcutsView(),
-            AppPage.Presets => new FeaturesView(),
+            AppPage.Audio => new AdvancedView("ChainNav"),
+            AppPage.Shortcuts => new AdvancedView("ShortcutsNav"),
+            AppPage.Presets => new AdvancedView("ProfilesNav"),
             AppPage.Diagnostics => new DiagnosticsView(),
-            AppPage.About => new AboutView(),
+            AppPage.About => new EverydaySettingsView("AboutNav"),
             _ => new SimpleView()
         };
-        // Advanced keeps its menu in place and scrolls only the open section.
-        PageScroll.VerticalScrollBarVisibility = _viewModel.SelectedPage == AppPage.Advanced
+        // Advanced and Settings keep their menu in place and scroll only the open section.
+        PageScroll.VerticalScrollBarVisibility = PageHost.Content is AdvancedView or EverydaySettingsView
             ? System.Windows.Controls.ScrollBarVisibility.Disabled
             : System.Windows.Controls.ScrollBarVisibility.Visible;
         PageScroll.ScrollToTop();
     }
     private void Back_OnClick(object sender, RoutedEventArgs e) => _viewModel.SelectedPage = AppPage.Dashboard;
+
+    /// <summary>The logo goes home; on Home itself it opens the window menu, as it always did.</summary>
+    private void Logo_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedPage == AppPage.Dashboard)
+        {
+            WindowMenu_OnClick(sender, e);
+        }
+        else
+        {
+            _viewModel.SelectedPage = AppPage.Dashboard;
+        }
+    }
+
+    private void Logo_OnRightClick(object sender, MouseButtonEventArgs e)
+    {
+        WindowMenu_OnClick(sender, e);
+        e.Handled = true;
+    }
     private void Minimize_OnClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Advanced_OnClick(object sender, RoutedEventArgs e) => _viewModel.SelectedPage = AppPage.Advanced;
     private void Settings_OnClick(object sender, RoutedEventArgs e) => _viewModel.SelectedPage =

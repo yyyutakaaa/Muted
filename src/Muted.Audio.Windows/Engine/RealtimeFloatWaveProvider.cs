@@ -7,8 +7,9 @@ namespace Muted.Audio.Windows.Engine;
 internal sealed class RealtimeFloatWaveProvider : IWaveProvider
 {
     private readonly FloatRingBuffer _buffer;
-    private readonly int _targetBufferedSamples;
-    private readonly int _highWaterSamples;
+    private readonly int _headroomSamples;
+    private volatile int _targetBufferedSamples;
+    private volatile int _highWaterSamples;
     private int _startupSamplesToDrain;
     private long _underrunSamples;
     private long _trimmedSamples;
@@ -33,6 +34,7 @@ internal sealed class RealtimeFloatWaveProvider : IWaveProvider
         _buffer = new FloatRingBuffer(capacitySamples);
         _targetBufferedSamples = targetBufferedSamples;
         _highWaterSamples = highWaterSamples;
+        _headroomSamples = highWaterSamples - targetBufferedSamples;
         _startupSamplesToDrain = startupBufferedSamples - targetBufferedSamples;
     }
 
@@ -41,6 +43,21 @@ internal sealed class RealtimeFloatWaveProvider : IWaveProvider
     public int BufferedSamples => _buffer.Count;
 
     public int TargetBufferedSamples => _targetBufferedSamples;
+
+    /// <summary>
+    /// Moves the amount of audio kept in reserve. A larger reserve absorbs a late frame
+    /// without a gap; the drift correction fills or drains it slowly, so it is inaudible.
+    /// </summary>
+    public void SetTargetBufferedSamples(int samples)
+    {
+        if (samples <= 0 || samples == _targetBufferedSamples)
+        {
+            return;
+        }
+
+        _highWaterSamples = samples + _headroomSamples;
+        _targetBufferedSamples = samples;
+    }
 
     public long DroppedSamples => _buffer.DroppedSamples + Interlocked.Read(ref _trimmedSamples);
 

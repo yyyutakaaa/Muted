@@ -20,9 +20,9 @@
             <Button Content="{Binding PlayPauseText}" Command="{Binding PlayPauseClipCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,10,8"/>
             <TextBlock Text="{Binding VoiceTestStateText}" Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="0,0,0,8" AutomationProperties.LiveSetting="Polite"/>
         </WrapPanel>
-        <Expander Header="Playback and recording details" Foreground="{DynamicResource TextMutedBrush}" Margin="0,6,0,0">
+        <Expander x:Name="Details" Header="Playback and recording details" Foreground="{DynamicResource TextMutedBrush}" Margin="0,6,0,0">
             <StackPanel Margin="0,12,0,0">
-                <TextBlock Text="Playback device · use headphones" Margin="0,0,0,6"/>
+                <TextBlock Text="Playback device · use headphones. Hear yourself and the push-to-talk sounds use it too." TextWrapping="Wrap" Margin="0,0,0,6"/>
                 <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="DisplayName" AutomationProperties.Name="Voice test playback device"/>
                 <Grid Margin="0,12">
                     <Grid.ColumnDefinitions>
@@ -34,8 +34,11 @@
                 </Grid>
                 <WrapPanel>
                     <Button Content="Replay" Command="{Binding ReplayClipCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,8,8"/>
+                    <Button Content="Back 10 s" Command="{Binding RewindClipCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,8,8"/>
                     <Button Content="Delete test" Command="{Binding DeleteClipCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,8,8"/>
-                    <Button Content="Save before / after WAV…" Command="{Binding SaveComparisonCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,8,8"/>
+                    <Button Content="Save before / after WAV…" Command="{Binding SaveComparisonCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,8,8"
+                            ToolTip="One file: the same take without Muted, a short pause, then with Muted."/>
+                    <Button Content="Save diagnosis WAV…" Command="{Binding SaveClipCommand}" Style="{StaticResource TextButtonStyle}" Margin="0,0,8,8"/>
                 </WrapPanel>
                 <TextBlock Text="{Binding FeatureStatus}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" Margin="0,6,0,8"/>
                 <TextBlock Text="Tests stay in memory until deleted or Muted closes. Only Save writes a WAV file locally." TextWrapping="Wrap"/>

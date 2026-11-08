@@ -93,6 +93,7 @@ internal sealed partial class MainViewModel
         SaveClipCommand = new(SaveClip, () => _lastClip is not null && _diagnosisClip && !ClipBusy);
         DeleteClipCommand = new(DeleteClip, () => _lastClip is not null && !ClipBusy);
         InitializeTuning();
+        InitializeOnlyMyVoice();
         _featureTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(200) };
         _featureTimer.Tick += FeatureTick;
     }
@@ -157,7 +158,7 @@ internal sealed partial class MainViewModel
             OnPropertyChanged(nameof(Profiles));
             SaveProfileCommand.RaiseCanExecuteChanged();
             await ApplyProfileAsync(profile.Id);
-            FeatureStatus = name == "Meeting" ? "Meeting preset applied. Check the echo reference under Audio matches your speakers." : name + " preset applied.";
+            FeatureStatus = name == "Meeting" ? "Meeting preset applied. Check that the echo speakers under Advanced, Processing are the ones you hear." : name + " preset applied.";
         }
         catch (Exception exception) { FeatureStatus = exception.Message; }
     }

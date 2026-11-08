@@ -96,8 +96,12 @@ one.
 - **Echo cancellation**, so you can use speakers instead of a headset.
 - **Voice gate, automatic level, high-pass and a limiter**, plus a shout guard
   that catches a shout before its first loud sample.
-- **Tune to my voice**: a 24-second calibration that sets boost, gate and limits
-  for you, and can keep adjusting while you talk.
+- **Tune to my voice**: a short calibration that sets boost, gate and limits for
+  you, and can keep adjusting while you talk. It listens to what you read, so it
+  moves on as soon as you are done.
+- **Only my voice**: once the calibration has learned your voice, Muted holds
+  other voices back, like the TV or someone behind you, while you are not
+  talking.
 - **Voice presets and profiles**, which can switch on their own while a game or
   call app runs.
 - **Push to talk, push to mute** and other global shortcuts that work in

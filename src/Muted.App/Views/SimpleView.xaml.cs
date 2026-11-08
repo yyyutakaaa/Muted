@@ -18,5 +18,15 @@ public partial class SimpleView : System.Windows.Controls.UserControl
             PowerButton.BeginAnimation(OpacityProperty, new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(160)));
     }
     private void Test_OnClick(object sender, RoutedEventArgs e) => TestArea.Visibility = TestArea.IsVisible ? Visibility.Collapsed : Visibility.Visible;
-    private void Settings_OnClick(object sender, RoutedEventArgs e) { if (DataContext is MainViewModel vm) vm.SelectedPage = AppPage.Settings; }
+    private void Settings_OnClick(object sender, RoutedEventArgs e) => Devices_OnClick(sender, e);
+
+    private void Devices_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            EverydaySettingsView.OpenNext("DevicesNav");
+            vm.SelectedPage = AppPage.Settings;
+        }
+    }
+
 }

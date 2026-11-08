@@ -1,0 +1,91 @@
+<UserControl x:Class="Muted.App.Views.VoiceTuningView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Muted.App.Controls"
+             Foreground="{DynamicResource TextBrush}">
+    <StackPanel>
+        <!-- ===================== Tune to my voice ===================== -->
+        <Border Style="{StaticResource SettingsCardStyle}">
+            <StackPanel>
+                <TextBlock Style="{StaticResource SettingsCardTitleStyle}" Text="Tune to my voice" />
+                <TextBlock Style="{StaticResource SettingsCardIntroStyle}" Text="{Binding CalibrationIntro}" />
+
+                <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
+                    <Button Style="{StaticResource AccentButtonStyle}"
+                            Padding="16,9"
+                            Content="Start calibration"
+                            Command="{Binding StartCalibrationCommand}"
+                            Visibility="{Binding IsCalibrating, Converter={StaticResource InverseBoolToVisibility}}" />
+                    <Button Style="{StaticResource TextButtonStyle}"
+                            Padding="16,9"
+                            Content="Cancel"
+                            Command="{Binding CancelCalibrationCommand}"
+                            Visibility="{Binding IsCalibrating, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <Border Margin="0,16,0,0" Style="{StaticResource InsetCardStyle}" Padding="16,14"
+                        Visibility="{Binding IsCalibrating, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock FontSize="15" TextWrapping="Wrap" LineHeight="22" Text="{Binding CalibrationPrompt}" />
+                        <ProgressBar Margin="0,14,0,0"
+                                     Height="6"
+                                     Style="{StaticResource MeterStyle}"
+                                     Minimum="0" Maximum="1"
+                                     Value="{Binding CalibrationProgress, Mode=OneWay}"
+                                     AutomationProperties.Name="Calibration progress" />
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,16,0,0" Style="{StaticResource InsetCardStyle}" Padding="16,14"
+                        Visibility="{Binding HasCalibrationResult, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" LineHeight="20" Text="{Binding CalibrationResultText}" />
+                        <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                            <Button Style="{StaticResource AccentButtonStyle}" Padding="16,8" Margin="0,0,8,0" Content="Keep" Command="{Binding KeepCalibrationCommand}" />
+                            <Button Style="{StaticResource TextButtonStyle}" Padding="16,8" Content="Undo" Command="{Binding UndoCalibrationCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Rectangle Style="{StaticResource RowDividerStyle}" />
+                <controls:SettingRow Title="Keep tuning while I talk"
+                                     Description="Slowly adjusts the voice gate when the room changes, and turns the microphone down when you get louder. It never turns the microphone up.">
+                    <CheckBox Style="{StaticResource ToggleStyle}" IsChecked="{Binding AutoTuneEnabled}" AutomationProperties.Name="Keep tuning while I talk" />
+                </controls:SettingRow>
+                <TextBlock Margin="0,8,0,0"
+                           Style="{StaticResource CaptionStyle}"
+                           Visibility="{Binding AutoTuneEnabled, Converter={StaticResource BoolToVisibility}}"
+                           Text="{Binding AutoTuneStatusText}" />
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== Only my voice ===================== -->
+        <Border Style="{StaticResource SettingsCardStyle}" Margin="0,0,0,24">
+            <StackPanel>
+                <controls:SettingRow Title="Only my voice"
+                                     Description="Holds other voices back, like someone talking behind you or the TV, while you are not talking. When you talk at the same time, some of the other voice can still come through.">
+                    <CheckBox Style="{StaticResource ToggleStyle}" IsChecked="{Binding OnlyMyVoice}" IsEnabled="{Binding HasVoiceProfile}" AutomationProperties.Name="Only my voice" />
+                </controls:SettingRow>
+                <TextBlock Margin="0,10,0,0" Style="{StaticResource CaptionStyle}" TextWrapping="Wrap" Text="{Binding OnlyMyVoiceStatusText}" />
+                <StackPanel Visibility="{Binding OnlyMyVoice, Converter={StaticResource BoolToVisibility}}">
+                    <Rectangle Style="{StaticResource RowDividerStyle}" />
+                    <controls:SettingRow Title="Strictness"
+                                         Stacked="True"
+                                         ValueText="{Binding SpeakerStrictnessText}"
+                                         TipWhat="How much like you a voice has to sound to get through."
+                                         TipBest="Normal suits most microphones. Go stricter if the TV still gets through."
+                                         TipExpect="Too strict can cut you off, for example when you have a cold or whisper. Too lenient lets similar voices through.">
+                        <Slider Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" Value="{Binding SpeakerStrictness}" AutomationProperties.Name="Only my voice strictness" />
+                    </controls:SettingRow>
+                </StackPanel>
+                <Button Margin="0,14,0,0"
+                        HorizontalAlignment="Left"
+                        Style="{StaticResource TextButtonStyle}"
+                        Padding="14,8"
+                        Content="Forget my voice"
+                        Command="{Binding ForgetVoiceCommand}"
+                        Visibility="{Binding HasVoiceProfile, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -1,28 +1,35 @@
 using System.Diagnostics;
 using Muted.App.Infrastructure;
+using Muted.Audio.Windows.Speech;
 using Muted.Core.Audio;
 using Muted.Core.Dsp;
+using Muted.Core.Speech;
 
 namespace Muted.App.ViewModels;
 
 /// <summary>
-/// "Tune to my voice": a short guided calibration that picks the settings, and an
-/// optional automatic mode that keeps the boost and the gate right while you talk.
+/// "Tune to my voice": a short guided calibration that picks the settings and learns
+/// your voice, and an optional automatic mode that keeps the boost and the gate right
+/// while you talk. Speech recognition follows what you read, so each step ends when you
+/// are done instead of after a fixed time.
 /// </summary>
 internal sealed partial class MainViewModel
 {
-    private const double QuietSeconds = 4;
-    private const double SpeechEndSeconds = 19;
-    private const double CalibrationSeconds = 24;
-    private const string ReadingText =
-        "The quick brown fox jumps over the lazy dog. She sells sea shells by the sea shore, " +
-        "and on Sundays we play games together until late at night.";
+    // Whisper listens to at most this much of a step at once: the end of the sentence is
+    // what matters, and shorter audio keeps every pass under a second or so.
+    private const int ListenWindowFrames = 12 * CalibrationFlow.FramesPerSecond;
+
+    // Three seconds of speech per embedding; a voice profile needs at least one.
+    private const int EnrollmentChunkSamples = 3 * SpeakerFeatures.SampleRate;
 
     private readonly AutoTuner _autoTuner = new();
     private readonly Stopwatch _tuningClock = Stopwatch.StartNew();
     private CalibrationRecorder? _calibrationRecorder;
-    private long _calibrationStarted;
+    private CalibrationFlow? _calibrationFlow;
+    private CancellationTokenSource? _listenCancellation;
     private TuningSnapshot? _calibrationUndo;
+    private VoiceProfile? _voiceUndo;
+    private bool _voiceUndoPending;
     private bool _isCalibrating;
     private bool _hasCalibrationResult;
     private bool _autoTuneEnabled;
@@ -30,7 +37,7 @@ internal sealed partial class MainViewModel
     private double _calibrationProgress;
     private string _calibrationPrompt = string.Empty;
     private string _calibrationResultText = string.Empty;
-    private string _calibrationIntro = "Takes 24 seconds: stay quiet, read a sentence aloud, then say one thing loudly.";
+    private string _calibrationIntro = "Takes about 20 seconds: stay quiet, read a sentence aloud, then say one thing loudly. Muted moves on as soon as you are done, and learns your voice on the way.";
     private string _autoTuneStatusText = "Off";
 
     public RelayCommand StartCalibrationCommand { get; private set; } = null!;
@@ -122,7 +129,7 @@ internal sealed partial class MainViewModel
         StartCalibrationCommand = new(StartCalibration, () => IsRunning && !IsCalibrating && !IsRecording && !ClipBusy);
         CancelCalibrationCommand = new(() => CancelCalibration("Calibration cancelled."), () => IsCalibrating);
         KeepCalibrationCommand = new(KeepCalibration, () => HasCalibrationResult);
-        UndoCalibrationCommand = new(UndoCalibration, () => HasCalibrationResult && _calibrationUndo is not null);
+        UndoCalibrationCommand = new(UndoCalibration, () => HasCalibrationResult && (_calibrationUndo is not null || _voiceUndoPending));
     }
 
     private void RefreshTuningCommands()
@@ -230,47 +237,135 @@ internal sealed partial class MainViewModel
         {
             HasCalibrationResult = false;
             CalibrationResultText = string.Empty;
-            _calibrationRecorder = new CalibrationRecorder((int)Math.Ceiling(CalibrationSeconds) + 1);
+            _calibrationRecorder = new CalibrationRecorder(CalibrationFlow.MaxSeconds);
+            _calibrationFlow = new CalibrationFlow(SpeechModels.WhisperAvailable);
             _engine.BeginCalibration(_calibrationRecorder);
-            _calibrationStarted = Stopwatch.GetTimestamp();
             CalibrationProgress = 0;
             IsCalibrating = true;
+            _listenCancellation = new CancellationTokenSource();
+            if (_calibrationFlow.RecognizerAvailable)
+            {
+                var recorder = _calibrationRecorder;
+                var flow = _calibrationFlow;
+                var token = _listenCancellation.Token;
+                _ = Task.Run(() => ListenWhileCalibrating(recorder, flow, token), token);
+            }
+
             AdvanceCalibration();
         }
         catch (Exception exception)
         {
             _log.Write(exception, "Start voice calibration");
             _calibrationRecorder = null;
+            _calibrationFlow = null;
             CalibrationIntro = "Calibration could not start: " + exception.Message;
+        }
+    }
+
+    /// <summary>
+    /// Runs Whisper over the current step again and again while the calibration runs,
+    /// and hands each transcript to the UI thread. Loads the model during the quiet step.
+    /// </summary>
+    private void ListenWhileCalibrating(CalibrationRecorder recorder, CalibrationFlow flow, CancellationToken token)
+    {
+        WhisperRecognizer? recognizer = null;
+        try
+        {
+            recognizer = new WhisperRecognizer();
+            while (!token.IsCancellationRequested)
+            {
+                // Phase and its start are read from the UI thread's object without a lock;
+                // a stale read only means one transcript for a step that just ended,
+                // which the flow ignores.
+                var phase = flow.Phase;
+                if (phase is CalibrationPhase.Quiet)
+                {
+                    token.WaitHandle.WaitOne(100);
+                    continue;
+                }
+
+                if (phase is CalibrationPhase.Done)
+                {
+                    return;
+                }
+
+                var audio = recorder.RawSince(flow.PhaseStartFrame, ListenWindowFrames);
+                if (audio.Length < CalibrationRecorder.SampleRate / 2)
+                {
+                    token.WaitHandle.WaitOne(100);
+                    continue;
+                }
+
+                var text = recognizer.Transcribe(Downsampler.Downsample(audio), token);
+                _uiContext.Post(_ =>
+                {
+                    if (ReferenceEquals(_calibrationFlow, flow))
+                    {
+                        flow.Hear(phase, text);
+                    }
+                }, null);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            // Without recognition the calibration still finishes, on pauses alone.
+            _log.Write(exception, "Speech recognition during calibration");
+            _uiContext.Post(_ => flow.RecognizerAvailable = false, null);
+        }
+        finally
+        {
+            recognizer?.Dispose();
         }
     }
 
     private void AdvanceCalibration()
     {
-        var elapsed = Stopwatch.GetElapsedTime(_calibrationStarted).TotalSeconds;
-        CalibrationProgress = Math.Clamp(elapsed / CalibrationSeconds, 0, 1);
-        if (elapsed < QuietSeconds)
+        var recorder = _calibrationRecorder;
+        var flow = _calibrationFlow;
+        if (recorder is null || flow is null)
         {
-            CalibrationPrompt = $"Stay quiet for a moment… {Math.Ceiling(QuietSeconds - elapsed):0}";
+            return;
         }
-        else if (elapsed < SpeechEndSeconds)
+
+        flow.Update(recorder.RecordedFrames, recorder.ProbabilitiesSince(flow.PhaseStartFrame));
+        CalibrationProgress = flow.Progress;
+        switch (flow.Phase)
         {
-            CalibrationPrompt = $"Read this aloud, the way you normally talk:\n“{ReadingText}”";
+            case CalibrationPhase.Quiet:
+                var left = Math.Ceiling((CalibrationFlow.QuietFrames - recorder.RecordedFrames) / (double)CalibrationFlow.FramesPerSecond);
+                CalibrationPrompt = $"Stay quiet for a moment… {Math.Max(1, left):0}";
+                break;
+            case CalibrationPhase.Reading:
+                CalibrationPrompt = $"Read this aloud, the way you normally talk:\n“{CalibrationFlow.ReadingText}”" + HeardLine(flow);
+                break;
+            case CalibrationPhase.Loud:
+                CalibrationPrompt = $"Now say something loudly, like you would in a game:\n“{CalibrationFlow.LoudText}”" + HeardLine(flow);
+                break;
+            default:
+                FinishCalibration();
+                break;
         }
-        else if (elapsed < CalibrationSeconds)
-        {
-            CalibrationPrompt = $"Now say something loudly, like you would in a game. “No way, behind you!” {Math.Ceiling(CalibrationSeconds - elapsed):0}";
-        }
-        else
-        {
-            FinishCalibration();
-        }
+    }
+
+    private static string HeardLine(CalibrationFlow flow) =>
+        string.IsNullOrWhiteSpace(flow.Heard) ? string.Empty : $"\n\nHeard: {flow.Heard}";
+
+    private void StopListening()
+    {
+        _listenCancellation?.Cancel();
+        _listenCancellation?.Dispose();
+        _listenCancellation = null;
     }
 
     private void CancelCalibration(string message)
     {
+        StopListening();
         _engine.EndCalibration();
         _calibrationRecorder = null;
+        _calibrationFlow = null;
         IsCalibrating = false;
         CalibrationProgress = 0;
         CalibrationPrompt = string.Empty;
@@ -279,11 +374,14 @@ internal sealed partial class MainViewModel
 
     private void FinishCalibration()
     {
+        StopListening();
+        var flow = _calibrationFlow;
         var recording = _engine.EndCalibration();
         _calibrationRecorder = null;
+        _calibrationFlow = null;
         IsCalibrating = false;
         CalibrationPrompt = string.Empty;
-        if (recording is null || recording.Frames == 0)
+        if (recording is null || recording.Frames == 0 || flow is null)
         {
             CalibrationIntro = "Nothing was recorded. Check that the right microphone is selected.";
             return;
@@ -293,7 +391,10 @@ internal sealed partial class MainViewModel
         VoiceRecommendation recommendation;
         try
         {
-            measurement = VoiceAnalyzer.Measure(recording, QuietSeconds, SpeechEndSeconds);
+            measurement = VoiceAnalyzer.Measure(
+                recording,
+                flow.ReadingStartFrame / (double)CalibrationFlow.FramesPerSecond,
+                flow.LoudStartFrame / (double)CalibrationFlow.FramesPerSecond);
             recommendation = VoiceAnalyzer.Recommend(measurement);
         }
         catch (Exception exception)
@@ -316,6 +417,79 @@ internal sealed partial class MainViewModel
         CalibrationResultText = DescribeCalibration(measurement, recommendation, before, after);
         CalibrationIntro = "Applied, you are hearing it now. Keep it, or undo to go back.";
         HasCalibrationResult = true;
+        LearnVoice(recording, flow.ReadingStartFrame);
+    }
+
+    /// <summary>
+    /// Builds a voice profile from the speech in the calibration, off the UI thread, and
+    /// applies it when it is ready. Undo puts the previous profile back.
+    /// </summary>
+    private void LearnVoice(CalibrationRecording recording, int fromFrame)
+    {
+        if (!SpeechModels.SpeakerAvailable)
+        {
+            return;
+        }
+
+        CalibrationResultText += "\nLearning your voice…";
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                return BuildVoiceProfile(recording, fromFrame);
+            }
+            catch (Exception exception)
+            {
+                _log.Write(exception, "Learn voice from calibration");
+                return null;
+            }
+        }).ContinueWith(task => _uiContext.Post(_ =>
+        {
+            var learned = task.Result;
+            CalibrationResultText = CalibrationResultText.Replace("\nLearning your voice…", string.Empty);
+            if (learned is null)
+            {
+                CalibrationResultText += "\nYour voice could not be learned: there was too little clear speech.";
+                return;
+            }
+
+            _voiceUndo = _voiceProfile;
+            _voiceUndoPending = true;
+            LearnedVoice = learned;
+            CalibrationResultText += OnlyMyVoice
+                ? "\nOnly my voice: learned your voice, other voices are held back now."
+                : "\nOnly my voice: learned your voice. Switch it on below to hold other voices back.";
+            RefreshTuningCommands();
+        }, null), TaskScheduler.Default);
+    }
+
+    /// <summary>Your speech from the calibration, cut in 3 s pieces, each turned into an embedding and averaged.</summary>
+    private static VoiceProfile? BuildVoiceProfile(CalibrationRecording recording, int fromFrame)
+    {
+        var frameSize = CalibrationRecorder.FrameSize;
+        var speech = new List<float>();
+        for (var frame = Math.Max(0, fromFrame); frame < recording.Frames; frame++)
+        {
+            if (recording.VoiceProbabilities[frame] >= 0.6f)
+            {
+                speech.AddRange(recording.Cleaned.AsSpan(frame * frameSize, frameSize).ToArray());
+            }
+        }
+
+        var audio = Downsampler.Downsample(speech.ToArray());
+        if (audio.Length < EnrollmentChunkSamples)
+        {
+            return null;
+        }
+
+        using var embedder = new SpeakerEmbedder();
+        var embeddings = new List<float[]>();
+        for (var start = 0; start + EnrollmentChunkSamples <= audio.Length; start += EnrollmentChunkSamples)
+        {
+            embeddings.Add(embedder.Embed(audio.AsSpan(start, EnrollmentChunkSamples)));
+        }
+
+        return VoiceProfile.Average(embeddings);
     }
 
     private void ApplyRecommendation(VoiceRecommendation recommendation)
@@ -346,6 +520,8 @@ internal sealed partial class MainViewModel
     private void KeepCalibration()
     {
         _calibrationUndo = null;
+        _voiceUndo = null;
+        _voiceUndoPending = false;
         HasCalibrationResult = false;
         CalibrationIntro = "Saved. Run it again whenever your setup changes.";
         ResetAutoTuneBaseline();
@@ -366,7 +542,14 @@ internal sealed partial class MainViewModel
             }
         }
 
+        if (_voiceUndoPending)
+        {
+            LearnedVoice = _voiceUndo;
+        }
+
         _calibrationUndo = null;
+        _voiceUndo = null;
+        _voiceUndoPending = false;
         HasCalibrationResult = false;
         CalibrationIntro = "Back to your previous settings.";
         ResetAutoTuneBaseline();

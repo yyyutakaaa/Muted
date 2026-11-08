@@ -42,6 +42,31 @@ The embedded full-model provenance and verified hashes are recorded in
 - License: Apache-2.0
 - Full notice: `licenses/DPDFNet.txt`
 
+## Whisper tiny.en (Tune to my voice)
+
+- Project: Whisper by OpenAI
+- Source: https://github.com/openai/whisper
+- ONNX export: sherpa-onnx by k2-fsa (Apache-2.0),
+  https://huggingface.co/csukuangfj/sherpa-onnx-whisper-tiny.en
+- Files: `models/whisper-tiny.en-encoder.onnx` (the int8 encoder as published),
+  `models/whisper-tiny.en-decoder.onnx` and `models/whisper-tiny.en-tokens.txt`,
+  each with its SHA-256 in the matching `.sha256` file
+- Modified: in the decoder, the token embedding table is stored as 16-bit floats
+  and converted back when the model loads, which makes the file 40 MB smaller.
+  The rest of the int8 decoder is unchanged.
+- License: MIT
+- Full notice: `licenses/Whisper.txt`
+
+## WeSpeaker CAM++ (Only my voice)
+
+- Project: WeSpeaker, CAM++ trained on VoxCeleb
+- Source: https://github.com/wenet-e2e/wespeaker
+- ONNX file: `wespeaker_en_voxceleb_CAM++.onnx` from the sherpa-onnx speaker
+  recognition models, https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models
+- File: `models/wespeaker-campplus.onnx`, SHA-256 in `models/wespeaker-campplus.onnx.sha256`
+- License: Apache-2.0
+- Full notice: `licenses/WeSpeaker.txt`
+
 ## ONNX Runtime
 
 - Project: Microsoft ONNX Runtime

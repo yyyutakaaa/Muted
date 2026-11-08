@@ -93,7 +93,11 @@ public sealed record SuppressionOptions(
     VoiceCharacterOptions? Character = null,
     ShoutGuardOptions? ShoutGuard = null,
     bool StudioVoice = false,
-    StudioModel StudioModel = StudioModel.DeepFilterNet3)
+    StudioModel StudioModel = StudioModel.DeepFilterNet3,
+    bool StudioAutoStepDown = true,
+    bool OnlyMyVoice = false,
+    float SpeakerStrictness = 0.5f,
+    Speech.VoiceProfile? VoiceProfile = null)
 {
     public SuppressionOptions Normalize() => this with
     {
@@ -105,6 +109,7 @@ public sealed record SuppressionOptions(
         HighPassFrequency = Math.Clamp(HighPassFrequency, 40f, 200f),
         AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f),
         StudioModel = Enum.IsDefined(StudioModel) ? StudioModel : StudioModel.DeepFilterNet3,
+        SpeakerStrictness = float.IsFinite(SpeakerStrictness) ? Math.Clamp(SpeakerStrictness, 0f, 1f) : 0.5f,
         Character = (Character ?? VoiceCharacterOptions.Disabled).Normalize(),
         ShoutGuard = (ShoutGuard ?? ShoutGuardOptions.Disabled).Normalize()
     };

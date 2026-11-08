@@ -28,6 +28,31 @@ internal sealed partial class MainViewModel
 
     public string ProcessingActionText => IsRunning ? "Stop processing" : "Start processing";
 
+    /// <summary>True on the home screen; every other page shows a way back and the on/off pill.</summary>
+    public bool IsHomePage => SelectedPage == AppPage.Dashboard;
+
+    /// <summary>The short word next to the status on the Advanced menu.</summary>
+    public string ProcessingShortAction => IsRunning ? "Stop" : "Start";
+
+    // The two Processing cards without a switch say in their header what they are set to.
+    public string LevelsCardSummary =>
+        $"Boost {InputGainText} · high-pass {(HighPassEnabled ? HighPassText : "off")} · " +
+        $"automatic level {(AutoGainEnabled ? "on" : "off")} · limiter {(LimiterEnabled ? "on" : "off")}";
+
+    public string BufferCardSummary => LatencyText;
+
+    private static readonly HashSet<string> CardSummarySources =
+    [
+        nameof(InputGain), nameof(HighPassEnabled), nameof(HighPassFrequency), nameof(AutoGainEnabled),
+        nameof(LimiterEnabled), nameof(TargetLatencyMilliseconds)
+    ];
+
+    private void RaiseCardSummaries()
+    {
+        OnPropertyChanged(nameof(LevelsCardSummary));
+        OnPropertyChanged(nameof(BufferCardSummary));
+    }
+
     public string VoiceTestStateText => IsRecording ? "Recording…"
         : IsClipPlaying ? "Playing · " + ClipTimeText
         : ClipDuration > 0 ? "Recorded · " + ClipTimeText
@@ -58,7 +83,7 @@ internal sealed partial class MainViewModel
     }
 
     public string NoiseRemovalDescription => !SuppressionEnabled
-        ? "Noise removal is off in Technical controls. Select a level to enable it."
+        ? "Noise suppression is off under Processing. Pick a level to turn it on."
         : $"{WetMix:0%} filtered audio. Gentle keeps more room sound; Strong uses only the filtered signal.";
 
     /// <summary>The RNNoise strength controls only matter while Studio Voice is off.</summary>
@@ -74,14 +99,21 @@ internal sealed partial class MainViewModel
 
     private void RedesignSourceChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is { } name && CardSummarySources.Contains(name))
+        {
+            RaiseCardSummaries();
+        }
+
         switch (e.PropertyName)
         {
             case nameof(SelectedPage):
                 OnPropertyChanged(nameof(IsAdvancedPageOpen));
                 OnPropertyChanged(nameof(IsSettingsPageOpen));
+                OnPropertyChanged(nameof(IsHomePage));
                 break;
             case nameof(IsRunning):
                 OnPropertyChanged(nameof(ProcessingActionText));
+                OnPropertyChanged(nameof(ProcessingShortAction));
                 OnPropertyChanged(nameof(VoiceTestStateText));
                 OnPropertyChanged(nameof(ProcessingStatusText));
                 break;

@@ -9,7 +9,13 @@ public partial class VoiceTestView : System.Windows.Controls.UserControl
         typeof(bool),
         typeof(VoiceTestView),
         new PropertyMetadata(true, (sender, args) =>
-            ((VoiceTestView)sender).TitleText.Visibility = (bool)args.NewValue ? Visibility.Visible : Visibility.Collapsed));
+        {
+            // On its own page the details are the point, so they start open there.
+            var view = (VoiceTestView)sender;
+            var show = (bool)args.NewValue;
+            view.TitleText.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            view.Details.IsExpanded = !show;
+        }));
 
     public VoiceTestView() => InitializeComponent();
 

@@ -49,8 +49,9 @@ geluid nooit per ongeluk terug in je microfoon.
 - Preset **Warm Radio** zet alles in één klik goed.
 
 ### Stem afstellen
-- **Tune to my voice**: een begeleide meting van 24 seconden. Eerst even stil
-  zijn, dan een zin voorlezen, dan één keer iets hard zeggen. Muted meet je
+- **Tune to my voice**: een korte begeleide meting. Eerst even stil zijn, dan
+  een zin voorlezen, dan één keer iets hard zeggen. Muted luistert met Whisper
+  op je eigen pc mee en gaat verder zodra je klaar bent. Muted meet je
   stem en de ruimte en zet daarna zelf de microfoonboost, de voice gate, de
   high-pass, de schreeuwgrens en de warme-stem-regelaars goed. Je hoort het
   meteen en kiest **Keep** of **Undo**. Alles blijft op je eigen pc.
@@ -58,6 +59,11 @@ geluid nooit per ongeluk terug in je microfoon.
   microfoonboost en de voice gate bij, bijvoorbeeld als je verder van de mic
   gaat zitten of er een ventilator aanslaat. Kleine stappen, nooit ver van je
   startpunt, en de schreeuwbeveiliging en warme stem blijven onaangeroerd.
+- **Only my voice**: de meting leert ook hoe je stem klinkt. Zet je dit aan,
+  dan houdt Muted andere stemmen tegen, zoals iemand achter je of de tv, zolang
+  jij zelf niet praat. Praat je tegelijk met iemand anders, dan komt een deel van
+  die stem nog mee. Met de schuifregelaar stel je in hoe streng hij is, en
+  **Forget my voice** wist wat hij geleerd heeft.
 
 ### Schreeuwbeveiliging
 - **Shout guard**: wordt je te luid, dan hoort de ander niets meer (of je komt

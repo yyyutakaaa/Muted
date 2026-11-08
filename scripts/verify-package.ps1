@@ -20,13 +20,23 @@ $requiredFiles = @(
     'licenses\DeepFilterNet.txt',
     'licenses\DPDFNet.txt',
     'licenses\ONNXRuntime.txt',
+    'licenses\Whisper.txt',
+    'licenses\WeSpeaker.txt',
     'onnxruntime.dll',
     'models\deepfilternet3.onnx',
     'models\deepfilternet3.onnx.sha256',
     'models\dpdfnet2_48khz_hr.onnx',
     'models\dpdfnet2_48khz_hr.onnx.sha256',
     'models\dpdfnet8_48khz_hr.onnx',
-    'models\dpdfnet8_48khz_hr.onnx.sha256'
+    'models\dpdfnet8_48khz_hr.onnx.sha256',
+    'models\whisper-tiny.en-encoder.onnx',
+    'models\whisper-tiny.en-encoder.onnx.sha256',
+    'models\whisper-tiny.en-decoder.onnx',
+    'models\whisper-tiny.en-decoder.onnx.sha256',
+    'models\whisper-tiny.en-tokens.txt',
+    'models\whisper-tiny.en-tokens.txt.sha256',
+    'models\wespeaker-campplus.onnx',
+    'models\wespeaker-campplus.onnx.sha256'
 )
 
 foreach ($relativePath in $requiredFiles) {
@@ -48,21 +58,28 @@ if ($actualHash -ne $expectedHash) {
     throw "rnnoise.dll hash mismatch. Expected $expectedHash, got $actualHash."
 }
 
-# Studio Voice models: every file that ships must be the one that was pinned.
-foreach ($modelName in @('deepfilternet3', 'dpdfnet2_48khz_hr', 'dpdfnet8_48khz_hr')) {
-    $modelPath = Join-Path $package "models\$modelName.onnx"
+# Studio Voice and speech models: every file that ships must be the one that was pinned.
+foreach ($modelFile in @(
+        'deepfilternet3.onnx',
+        'dpdfnet2_48khz_hr.onnx',
+        'dpdfnet8_48khz_hr.onnx',
+        'whisper-tiny.en-encoder.onnx',
+        'whisper-tiny.en-decoder.onnx',
+        'whisper-tiny.en-tokens.txt',
+        'wespeaker-campplus.onnx')) {
+    $modelPath = Join-Path $package "models\$modelFile"
     $modelLine = (Get-Content -LiteralPath "$modelPath.sha256" -TotalCount 1).Trim()
     if ($modelLine -notmatch '^([0-9a-fA-F]{64})(?:\s|$)') {
-        throw "$modelName.onnx.sha256 does not contain a valid SHA-256 value."
+        throw "$modelFile.sha256 does not contain a valid SHA-256 value."
     }
 
     $expectedModelHash = $Matches[1].ToLowerInvariant()
     $actualModelHash = (Get-FileHash -LiteralPath $modelPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actualModelHash -ne $expectedModelHash) {
-        throw "$modelName.onnx hash mismatch. Expected $expectedModelHash, got $actualModelHash."
+        throw "$modelFile hash mismatch. Expected $expectedModelHash, got $actualModelHash."
     }
 
-    Write-Host "Studio Voice model $modelName SHA-256: $actualModelHash"
+    Write-Host "Model $modelFile SHA-256: $actualModelHash"
 }
 
 Write-Host "Verified package at $package"

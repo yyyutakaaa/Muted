@@ -2,8 +2,10 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.ExceptionServices;
 using Muted.Audio.Windows.Dsp;
+using Muted.Audio.Windows.Speech;
 using Muted.Core.Audio;
 using Muted.Core.Dsp;
+using Muted.Core.Speech;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -17,6 +19,10 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private const int OutputCapacitySamples = FrameSize * 16;
     private const int InputCapacitySamples = FrameSize * 16;
     private const int SteadyOutputTargetSamples = FrameSize * 2;
+
+    // Studio Voice's models take longer per frame, and a busy PC delays them more; 20 ms
+    // more in reserve rides out a late frame instead of crackling.
+    private const int StudioExtraOutputSamples = FrameSize * 2;
     private const int OutputHighWaterSamples = FrameSize * 6;
     private const int MonitorHighWaterSamples = FrameSize * 8;
 
@@ -54,7 +60,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     // background, the first time it is asked for. The host loads a newly chosen model
     // next to the one that is cleaning and crossfades when it has settled.
     private readonly StudioVoiceHost _studio = new();
+
+    // "Only my voice": the speaker check runs on its own thread, created on first use.
+    private SpeakerVerifier? _speaker;
+    private int _speakerBlocking;
     private long _studioResets;
+    private volatile bool _studioSteppedDown;
     private CancellationTokenSource? _processorCancellation;
     private Thread? _processorThread;
     private Exception? _pendingFault;
@@ -142,8 +153,23 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
     }
 
+    /// <summary>Whether "Only my voice" is checking, still loading, or cannot run here.</summary>
+    public SpeakerCheckStatus OnlyMyVoiceStatus => Volatile.Read(ref _speaker)?.Status ?? SpeakerCheckStatus.Off;
+
+    /// <summary>Why "Only my voice" cannot run, when it cannot.</summary>
+    public string? OnlyMyVoiceError => Volatile.Read(ref _speaker)?.Error;
+
+    /// <summary>How much the latest speech sounded like you, -1..1, or NaN when unknown.</summary>
+    public float SpeakerSimilarity => Volatile.Read(ref _speaker)?.Similarity ?? float.NaN;
+
+    /// <summary>True while "Only my voice" is holding another voice back.</summary>
+    public bool HoldingOtherVoice => Volatile.Read(ref _speakerBlocking) != 0;
+
     /// <summary>Which model is actually cleaning right now; they are not the same thing.</summary>
     public StudioModel? StudioVoiceActiveModel => _studio.ActiveModel;
+
+    /// <summary>True while Maximum has stepped down to Balanced because the PC is too busy.</summary>
+    public bool StudioVoiceSteppedDown => _studioSteppedDown;
 
     /// <summary>True while a newly chosen model loads or settles next to the active one.</summary>
     public bool StudioVoiceSwitching => _studio.IsSwitching;
@@ -224,6 +250,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             Interlocked.Exchange(ref _faultHandling, 0);
             Volatile.Write(ref _options, options.Normalize());
             EnsureStudioVoice(options.Suppression);
+            EnsureSpeakerCheck(options.Suppression);
             Scope.Clear();
             Volatile.Write(ref _session, new SessionAccumulator());
             SetState(AudioEngineState.Starting);
@@ -290,6 +317,33 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         EnsureStudioVoice(suppression);
+        EnsureSpeakerCheck(suppression);
+    }
+
+    /// <summary>
+    /// Starts the speaker check the first time "Only my voice" is switched on with a
+    /// profile, and keeps its profile in step with the settings afterwards.
+    /// </summary>
+    private void EnsureSpeakerCheck(SuppressionOptions suppression)
+    {
+        var wanted = suppression.OnlyMyVoice && suppression.VoiceProfile is not null;
+        var speaker = Volatile.Read(ref _speaker);
+        if (speaker is null)
+        {
+            if (!wanted || Volatile.Read(ref _disposed) != 0)
+            {
+                return;
+            }
+
+            var created = new SpeakerVerifier();
+            speaker = Interlocked.CompareExchange(ref _speaker, created, null) ?? created;
+            if (!ReferenceEquals(speaker, created))
+            {
+                created.Dispose();
+            }
+        }
+
+        speaker.Configure(wanted, suppression.VoiceProfile);
     }
 
     /// <summary>
@@ -307,7 +361,11 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     {
         if (suppression.StudioVoice)
         {
-            _studio.Request(suppression.StudioModel);
+            // While the PC is too busy for Maximum, Balanced stands in; a settings change
+            // must not undo that.
+            _studio.Request(_studioSteppedDown && suppression.StudioAutoStepDown && suppression.StudioModel == StudioModel.DpdfNet8
+                ? StudioModel.DpdfNet2
+                : suppression.StudioModel);
         }
     }
 
@@ -700,7 +758,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         var studioNeedsReset = true;
         var studioPriority = false;
         var studioWatchdog = new StudioWatchdog();
+        var studioGovernor = new StudioLoadGovernor();
+        var studioRequested = (StudioModel?)null;
+        var lastLoad = 0f;
+        var lastUnderruns = 0L;
         var voiceGate = new VoiceGate();
+        var speakerGate = new SpeakerGate(SampleRate);
         var echoCanceller = new EchoCanceller();
         var referenceFrame = new float[FrameSize];
         var highPass = new HighPassFilter(SampleRate);
@@ -802,6 +865,29 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 var gateProbability = voiceProbability;
                 var studioWanted = suppression.StudioVoice && suppression.Enabled;
                 var studioActive = false;
+
+                // Judge the last frame: did it take longer than its 10 ms, did the output
+                // run dry? Too often with Maximum, and Balanced stands in for a while.
+                var underruns = outputProvider.UnderrunSamples;
+                var effectiveModel = studioGovernor.Observe(
+                    suppression.StudioModel,
+                    _studio.ActiveModel,
+                    _studio.IsSwitching,
+                    lastLoad,
+                    underruns > lastUnderruns,
+                    studioWanted && suppression.StudioAutoStepDown);
+                lastUnderruns = underruns;
+                _studioSteppedDown = studioGovernor.SteppedDown;
+                if (studioWanted && effectiveModel != studioRequested)
+                {
+                    _studio.Request(effectiveModel);
+                    studioRequested = effectiveModel;
+                }
+                else if (!studioWanted)
+                {
+                    studioRequested = null;
+                }
+
                 if (studioWanted)
                 {
                     if (studioNeedsReset)
@@ -841,12 +927,14 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
 
                 if (studioActive != studioPriority)
                 {
-                    // Studio Voice runs a heavier model; a higher priority keeps its frames on time.
+                    // Studio Voice runs a heavier model; a higher priority keeps its frames
+                    // on time, and a deeper output reserve absorbs the ones that are late.
                     Thread.CurrentThread.Priority = studioActive ? ThreadPriority.Highest : ThreadPriority.AboveNormal;
+                    outputProvider.SetTargetBufferedSamples(
+                        SteadyOutputTargetSamples + (studioActive ? StudioExtraOutputSamples : 0));
                     studioPriority = studioActive;
                 }
 
-                Volatile.Read(ref _calibration)?.Write(rawFrame, voiceProbability);
                 tracker.Process(rawFrame, voiceProbability, shoutGuard.IsEngaged);
 
                 // Gentle and Balanced mix some of the untouched signal back in. Studio Voice
@@ -864,12 +952,28 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     wet,
                     mixed,
                     wetMix);
+
+                // The cleaned voice, before any gate, is what the calibration learns your
+                // voice from and what the speaker check compares with it.
+                Volatile.Read(ref _calibration)?.Write(rawFrame, mixed, voiceProbability);
+                var speaker = Volatile.Read(ref _speaker);
+                var onlyMyVoice = suppression.Enabled && suppression.OnlyMyVoice && speaker is { IsEnabled: true };
+                if (onlyMyVoice)
+                {
+                    speaker!.Push(mixed, gateProbability);
+                }
                 voiceGate.Process(
                     mixed,
                     gateProbability,
                     suppression.VoiceThreshold,
                     suppression.VoiceHoldMilliseconds,
                     suppression.Enabled && suppression.VoiceGateEnabled);
+                speakerGate.Process(
+                    mixed,
+                    onlyMyVoice ? speaker!.Similarity : float.NaN,
+                    suppression.SpeakerStrictness,
+                    onlyMyVoice);
+                Volatile.Write(ref _speakerBlocking, speakerGate.IsBlocking ? 1 : 0);
                 var voice = suppression.Character ?? VoiceCharacterOptions.Disabled;
                 character.Process(
                     mixed,
@@ -937,6 +1041,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 var outputPeak = AudioMath.Peak(mixed);
                 var elapsedSeconds = Stopwatch.GetElapsedTime(started).TotalSeconds;
                 var currentLoad = (float)(elapsedSeconds / (FrameSize / (double)SampleRate));
+                lastLoad = currentLoad;
                 smoothedLoad = (smoothedLoad * 0.95f) + (currentLoad * 0.05f);
                 Volatile.Write(ref _inputPeak, inputPeak);
                 Volatile.Write(ref _outputPeak, outputPeak);
@@ -1389,6 +1494,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         }
 
         _studio.Dispose();
+        Interlocked.Exchange(ref _speaker, null)?.Dispose();
 
         Task? faultTask;
         lock (_faultTaskSync)

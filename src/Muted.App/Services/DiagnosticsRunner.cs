@@ -72,7 +72,7 @@ internal sealed class DiagnosticsRunner(WasapiDeviceCatalog deviceCatalog)
         {
             return new DiagnosticCheck(
                 "Echo cancellation",
-                "Switched off. Turn it on under Audio if the other side hears themselves.",
+                "Switched off. Turn it on under Advanced, Processing if the other side hears themselves.",
                 DiagnosticSeverity.Passed);
         }
 

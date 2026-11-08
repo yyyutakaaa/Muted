@@ -55,17 +55,19 @@ public sealed class FeatureIntegrationTests
                     theme.Apply(mode, false);
                     foreach (var width in new[] { 620, 860 })
                     {
-                    var view = new FeaturesView();
-                    view.Measure(new Size(width, double.PositiveInfinity));
-                    view.Arrange(new Rect(0, 0, width, view.DesiredSize.Height));
-                    view.UpdateLayout();
-                    Assert.InRange(view.ActualHeight, 500, 2000);
-                    var bitmap = new RenderTargetBitmap(width, (int)Math.Ceiling(view.ActualHeight), 96, 96, PixelFormats.Pbgra32);
-                    bitmap.Render(view);
-                    var encoder = new PngBitmapEncoder();
-                    encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                    using var stream = File.Create(Path.Combine(AppContext.BaseDirectory, $"features-{mode}-{width}.png"));
-                    encoder.Save(stream);
+                        foreach (var (name, view) in new (string, FrameworkElement)[] { ("profiles", new ProfilesView()), ("processing", new ProcessingView()), ("settings", new EverydaySettingsView()) })
+                        {
+                            view.Measure(new Size(width, double.PositiveInfinity));
+                            view.Arrange(new Rect(0, 0, width, view.DesiredSize.Height));
+                            view.UpdateLayout();
+                            Assert.InRange(view.ActualHeight, 300, 4000);
+                            var bitmap = new RenderTargetBitmap(width, (int)Math.Ceiling(view.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+                            bitmap.Render(view);
+                            var encoder = new PngBitmapEncoder();
+                            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                            using var stream = File.Create(Path.Combine(AppContext.BaseDirectory, $"{name}-{mode}-{width}.png"));
+                            encoder.Save(stream);
+                        }
                     }
                 }
                 UpdateDialogTests.Verify(theme);
@@ -120,12 +122,29 @@ public sealed class FeatureIntegrationTests
             SaveWindow(window, "advanced");
             // Every Advanced menu entry opens its own section.
             var advancedView = (AdvancedView)((ContentControl)window.FindName("PageHost")).Content;
-            foreach (var entry in new[] { "DevicesNav", "TestNav", "TuneNav", "ChainNav", "ToolsNav", "ShortcutsNav", "SoundNav" })
+            foreach (var entry in new[] { "VoiceNav", "ChainNav", "TestNav", "ProfilesNav", "HearNav", "ShortcutsNav", "SoundNav" })
             {
                 ((RadioButton)advancedView.FindName(entry)).IsChecked = true;
                 Pump();
                 SaveWindow(window, $"advanced-{entry}");
             }
+
+            // The light theme, on the pages with the most text and controls.
+            theme.Apply(AppTheme.Light, false);
+            foreach (var entry in new[] { "ChainNav", "VoiceNav", "SoundNav" })
+            {
+                ((RadioButton)advancedView.FindName(entry)).IsChecked = true;
+                Pump();
+                SaveWindow(window, $"light-advanced-{entry}");
+            }
+
+            model.SelectedPage = AppPage.Dashboard;
+            Pump();
+            SaveWindow(window, "light-simple");
+            model.SelectedPage = AppPage.Advanced;
+            Pump();
+            advancedView = (AdvancedView)((ContentControl)window.FindName("PageHost")).Content;
+            theme.Apply(AppTheme.Dark, false);
             var host = (ContentControl)window.FindName("PageHost");
             Assert.IsType<AdvancedView>(host.Content);
             // Opening the simplified controls must preserve legacy custom blends and

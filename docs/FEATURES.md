@@ -26,13 +26,18 @@ Muted has three pages:
 
 - **Home** is the microphone: one button to start or stop, your microphone, and
   a quick voice test.
-- **Advanced** has your devices, noise removal strength, voice level, echo
-  cancellation and the voice test, with the full processing chain, profiles,
-  recording tools and keyboard shortcuts in sections below.
-- **Settings** has startup, appearance, updates, the in-game indicator, the
-  setup check and the setup guide.
+- **Advanced** is everything about how you sound. Under Your sound: **Sound**
+  (Studio Voice, noise removal, voice level), **Your voice** (Tune to my voice
+  and Only my voice) and **Processing** (every step of the chain, once, in the
+  order your voice goes through it). Under Tools: **Voice test**, **Profiles**,
+  **What you hear** and **Shortcuts**.
+- **Settings** is everything about the app, with the same kind of menu:
+  **Devices**, **Startup**, **Indicators**, **Appearance**, **Updates**, **Help**
+  (with the setup guide) and **About**.
 
 Nothing on Advanced changes how Muted sounds until you change it yourself.
+Click the logo to go home from any page. The cards under Processing fold shut,
+each with its on/off switch in the header.
 
 ## Shortcuts
 
@@ -65,10 +70,44 @@ A model loads in the background. Until it is ready, or if it can't run, the
 standard noise removal keeps working. Switching models crossfades, so your
 microphone never drops out. All three models add 50 ms of delay.
 
+Maximum needs about 7 ms of every 10 ms on one core. When a heavy game takes the
+processor, its frames come late and your voice crackles. With **Step down when
+the PC is busy** on, which is the default, Balanced then takes over until there
+is room again, and the status line says so. With Studio Voice on, Muted also
+keeps 20 ms more audio in reserve to ride out a single late frame.
+
+Running the models on the graphics card was measured and left out. Per 10 ms
+frame the processor was faster, also with every core busy, because each frame
+is too small to be worth the trip to the graphics card, and DeepFilterNet3 did
+not run on DirectML at all.
+
 ## Voice tools
 
-**Tune to my voice** is a 24-second guided calibration: four seconds of silence,
-fifteen of normal reading, then one loud phrase. Muted records the raw microphone and
+### Tune to my voice and Only my voice
+
+Tune to my voice asks you to stay quiet for a moment, read a sentence aloud and
+then say one thing loudly. Whisper tiny.en listens on your PC and shows what it
+heard. Each step ends as soon as you are done: when the end of the sentence is
+heard, and when the loud phrase is said. If speech recognition can't run, a
+pause after enough speech ends a step. Nothing is uploaded.
+
+The calibration also learns how your voice sounds. That is a list of 512
+numbers, a voice embedding from WeSpeaker's CAM++ model, stored in your
+settings. It describes your voice, not what you said.
+
+Turn on **Only my voice** under Advanced, Your voice. Muted then
+compares the voice in your microphone with yours about twice a second. When it
+is someone else, like a person behind you or the TV, it turns the microphone
+down by 30 dB until you talk again. The slider sets how strict it is. Make it
+more lenient if it cuts you off, stricter if other voices get through.
+
+It has limits. When you and someone else talk at the same time, the other voice
+comes along with yours. A new voice can get through for about a second before
+it is recognised. And when the check is unsure, it lets the sound through
+rather than cut you off. **Forget my voice** deletes the profile.
+
+**Tune to my voice** is a guided calibration: four seconds of silence, the
+sentence read normally, then one loud phrase. Muted records the raw microphone and
 RNNoise's speech probability in memory, then measures the room noise, your speech
 level and peaks, your pitch, how sharp your s sounds are and how much your level
 varies. From that it sets the microphone boost (speech at -22 dBFS, normal peaks

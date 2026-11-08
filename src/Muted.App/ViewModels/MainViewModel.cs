@@ -1061,6 +1061,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _highPassFrequency = _settings.HighPassFrequency;
         _studioVoice = _settings.StudioVoice;
         _studioModel = Enum.IsDefined(_settings.StudioModel) ? _settings.StudioModel : StudioModel.DeepFilterNet3;
+        _studioAutoStepDown = _settings.StudioAutoStepDown;
         RefreshStudioVoiceStatus();
         _limiterEnabled = _settings.LimiterEnabled;
         _autoGainEnabled = _settings.AutoGainEnabled;
@@ -1068,6 +1069,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _echoEnabled = _settings.EchoCancellationEnabled;
         _echoStrength = _settings.EchoStrength;
         LoadVoiceSettings(_settings);
+        LoadOnlyMyVoiceSettings(_settings);
         _monitorEnabled = _settings.MonitorEnabled;
         _monitorVolume = _settings.MonitorVolume;
         _targetLatencyMilliseconds = _settings.TargetLatencyMilliseconds;
@@ -1779,6 +1781,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         {
             EngineState = state;
             RefreshStudioVoiceStatus();
+            RefreshOnlyMyVoiceStatus();
             StatusText = state switch
             {
                 AudioEngineState.Starting => "Starting…",
@@ -1936,7 +1939,11 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         Character: BuildVoiceCharacterOptions(),
         ShoutGuard: BuildShoutGuardOptions(),
         StudioVoice: StudioVoice,
-        StudioModel: StudioModel);
+        StudioModel: StudioModel,
+        StudioAutoStepDown: StudioAutoStepDown,
+        OnlyMyVoice: OnlyMyVoice,
+        SpeakerStrictness: (float)SpeakerStrictness,
+        VoiceProfile: _voiceProfile);
 
     private MonitorOptions BuildMonitorOptions() =>
         new(MonitorEnabled, SelectedMonitor?.Id, (float)MonitorVolume);
@@ -1958,7 +1965,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         }
     }
 
-    private AppSettings BuildSettings(bool? wasRunning = null) => WithGrowthSettings(WithVoiceSettings(new AppSettings
+    private AppSettings BuildSettings(bool? wasRunning = null) => WithOnlyMyVoiceSettings(WithGrowthSettings(WithVoiceSettings(new AppSettings
     {
         InputDeviceId = SelectedInput?.Id,
         OutputDeviceId = SelectedOutput?.Id,
@@ -1973,6 +1980,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         HighPassEnabled = HighPassEnabled,
         HighPassFrequency = (float)HighPassFrequency,
         StudioVoice = StudioVoice,
+        StudioAutoStepDown = StudioAutoStepDown,
         StudioModel = StudioModel,
         LimiterEnabled = LimiterEnabled,
         AutoGainEnabled = AutoGainEnabled,
@@ -2003,7 +2011,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         ActiveProfileId = ActiveProfileId,
         Hotkeys = GetHotkeyBindings(),
         Profiles = Profiles.ToArray()
-    }));
+    })));
 
     private void QueueSave()
     {
@@ -2137,6 +2145,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         UpdateLayoutMetrics(metrics.BufferedMilliseconds, metrics.ProcessingLoad, running: true);
         UpdateVoiceReadouts(metrics, IsRunning);
         RefreshStudioVoiceStatus();
+        RefreshOnlyMyVoiceStatus();
 
         var dropped = metrics.DroppedInputSamples + metrics.DroppedOutputSamples;
         DropoutText = dropped == 0 && metrics.OutputUnderrunSamples == 0

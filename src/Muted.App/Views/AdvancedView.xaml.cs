@@ -16,19 +16,26 @@ public partial class AdvancedView : System.Windows.Controls.UserControl
     private readonly Dictionary<RadioButton, FrameworkElement> _sections;
 
     public AdvancedView()
+        : this(null)
+    {
+    }
+
+    /// <param name="section">The menu entry to open, such as "ChainNav"; null reopens the last one.</param>
+    public AdvancedView(string? section)
     {
         InitializeComponent();
         _sections = new()
         {
             [SoundNav] = SoundSection,
-            [DevicesNav] = DevicesSection,
-            [TestNav] = TestSection,
-            [TuneNav] = TuneSection,
+            [VoiceNav] = VoiceSection,
             [ChainNav] = ChainSection,
-            [ToolsNav] = ToolsSection,
+            [TestNav] = TestSection,
+            [ProfilesNav] = ProfilesSection,
+            [HearNav] = HearSection,
             [ShortcutsNav] = ShortcutsSection
         };
-        var start = _sections.Keys.FirstOrDefault(item => item.Name == _lastSection) ?? SoundNav;
+        var wanted = section ?? _lastSection;
+        var start = _sections.Keys.FirstOrDefault(item => item.Name == wanted) ?? SoundNav;
         start.IsChecked = true;
 
         SizeChanged += (_, _) => UpdateMenuWidth();
@@ -70,7 +77,19 @@ public partial class AdvancedView : System.Windows.Controls.UserControl
         var labels = compact ? Visibility.Collapsed : Visibility.Visible;
         MenuTitle.Visibility = labels;
         MoreTitle.Visibility = labels;
-        ProcessingButton.Visibility = labels;
+        StatusLine.Visibility = labels;
+    }
+
+    /// <summary>Makes the next AdvancedView open on this section, such as "SoundNav".</summary>
+    public static void OpenNext(string navName) => _lastSection = navName;
+
+    /// <summary>Opens a section by its menu entry, such as "SoundNav".</summary>
+    public void ShowSection(string navName)
+    {
+        if (_sections.Keys.FirstOrDefault(item => item.Name == navName) is { } item)
+        {
+            item.IsChecked = true;
+        }
     }
 
     private void Menu_OnChecked(object sender, RoutedEventArgs eventArgs)

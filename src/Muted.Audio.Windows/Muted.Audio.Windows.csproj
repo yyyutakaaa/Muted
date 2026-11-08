@@ -63,4 +63,49 @@
     </Content>
   </ItemGroup>
 
+  <!-- Speech: Whisper tiny.en follows what you read during "Tune to my voice", and the
+       CAM++ speaker model learns your voice for "Only my voice". -->
+  <ItemGroup Condition="Exists('models\whisper-tiny.en-encoder.onnx')">
+    <Content Include="models\whisper-tiny.en-encoder.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\whisper-tiny.en-encoder.onnx</TargetPath>
+    </Content>
+    <Content Include="models\whisper-tiny.en-encoder.onnx.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\whisper-tiny.en-encoder.onnx.sha256</TargetPath>
+    </Content>
+    <Content Include="models\whisper-tiny.en-decoder.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\whisper-tiny.en-decoder.onnx</TargetPath>
+    </Content>
+    <Content Include="models\whisper-tiny.en-decoder.onnx.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\whisper-tiny.en-decoder.onnx.sha256</TargetPath>
+    </Content>
+    <Content Include="models\whisper-tiny.en-tokens.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\whisper-tiny.en-tokens.txt</TargetPath>
+    </Content>
+    <Content Include="models\whisper-tiny.en-tokens.txt.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\whisper-tiny.en-tokens.txt.sha256</TargetPath>
+    </Content>
+    <Content Include="models\wespeaker-campplus.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\wespeaker-campplus.onnx</TargetPath>
+    </Content>
+    <Content Include="models\wespeaker-campplus.onnx.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\wespeaker-campplus.onnx.sha256</TargetPath>
+    </Content>
+  </ItemGroup>
+
 </Project>

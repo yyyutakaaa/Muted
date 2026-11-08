@@ -11,11 +11,64 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-08
+
+### Added
+
+- **Tune to my voice listens to what you say.** Whisper tiny.en runs on your PC
+  and follows the sentence while you read it. As soon as the end is heard, the
+  calibration moves on to the loud phrase, and it finishes when you have said
+  that. No more waiting for a timer. What it heard shows under the sentence. If
+  speech recognition cannot run, a pause after enough speech ends a step, and
+  every step still has a time limit.
+- **Only my voice**, under Advanced > Your voice. Tune to my voice now also
+  learns how your voice sounds. With Only my voice on, Muted holds other voices
+  back, like someone talking behind you or the TV, while you are not talking.
+  A slider sets how strict it is, and Forget my voice deletes what it learned.
+  When you and someone else talk at the same time, part of the other voice can
+  still come through. The check runs in the background with WeSpeaker's CAM++
+  model and never on the audio thread. When it is unsure, it lets the sound
+  through.
+- The installer is about 90 MB bigger because of the two speech models.
+
 ### Changed
 
 - Muted is now source available under the PolyForm Noncommercial License 1.0.0
   instead of MIT. You can still read the code and use Muted for yourself.
   Commercial use needs permission. Versions up to and including 0.9.1 stay MIT.
+- Advanced and Settings are reorganised, so every setting is in exactly one
+  place. Advanced is how you sound: Sound, Your voice and Processing, then Voice
+  test, Profiles, What you hear and Shortcuts. Fine-tune is gone; its controls
+  and their "i" cards are on Processing, which also no longer hides half of the
+  chain. Settings is the app itself, with the same menu on the left as Advanced:
+  Devices, Startup, Indicators, Appearance, Updates, Help and About. Session
+  statistics moved to the setup check.
+- The cards under Processing fold shut, so the page is a short list until you
+  open a card. A card keeps its on/off switch in its header; Levels and Buffer
+  size say what they are set to. Noise removal and echo cancellation start open,
+  and cards stay the way you leave them while Muted runs.
+- The big Start processing button under the Advanced menu is now a quiet status
+  line, such as "Stopped · Start". Clicking the logo goes back home from any
+  page; right-click it for the window menu.
+- Noise removal strength lives in one place, under Sound, with a Fine-tune
+  slider below Gentle, Balanced and Strong. Processing links there instead of
+  repeating it.
+- The light theme is easier to read. Cards were white on an almost white page;
+  the page is now grey-violet so every card stands out, and secondary text,
+  borders, warnings and switches that are off are clearly darker. Secondary
+  text is at least 7:1 against what it sits on.
+
+### Fixed
+
+- Studio Voice Maximum crackled while a heavy game such as Fortnite used the
+  processor. Measured with every core busy, about one frame in five came too
+  late. Maximum now steps down to Balanced by itself when frames come late or
+  the output runs dry, and goes back to Maximum after a minute with room to
+  spare. If the game is still running, it waits twice as long before the next
+  try. The switch crossfades, so it is not heard. It can be turned off under
+  Advanced > Sound with "Step down when the PC is busy".
+- With Studio Voice on, Muted keeps 20 ms more audio in reserve, so one late
+  frame no longer becomes a gap.
 
 ## [0.9.1] - 2026-11-08
 
@@ -298,7 +351,10 @@ First public preview.
 - Device refresh on hotplug, tray mode and autostart.
 - An installer.
 
-[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/yyyutakaaa/Muted/compare/v0.9.1...v0.10.0
+[0.9.1]: https://github.com/yyyutakaaa/Muted/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/yyyutakaaa/Muted/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/yyyutakaaa/Muted/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/yyyutakaaa/Muted/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/yyyutakaaa/Muted/compare/v0.6.0...v0.7.0
