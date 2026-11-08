@@ -11,7 +11,7 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
-## [0.10.0] - 2026-11-08
+## [0.10.0-beta1] - 2026-11-08
 
 ### Added
 
@@ -351,8 +351,8 @@ First public preview.
 - Device refresh on hotplug, tray mode and autostart.
 - An installer.
 
-[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.10.0...HEAD
-[0.10.0]: https://github.com/yyyutakaaa/Muted/compare/v0.9.1...v0.10.0
+[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.10.0-beta1...HEAD
+[0.10.0-beta1]: https://github.com/yyyutakaaa/Muted/compare/v0.9.1...v0.10.0-beta1
 [0.9.1]: https://github.com/yyyutakaaa/Muted/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/yyyutakaaa/Muted/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/yyyutakaaa/Muted/compare/v0.8.0...v0.8.1
