@@ -10,10 +10,23 @@ Muted is a small Windows app that runs your microphone through
 your game ever hears the signal. Fan noise, mic hiss, and keyboard clatter get
 filtered out along the way. It can clean what you hear from others too.
 
-![Muted's main window: the live waveform, input and output meters, four switches for noise reduction, echo cancellation, voice gate and auto level, and the Advanced settings panel](docs/images/muted-dashboard.png)
+<p align="center">
+  <img src="docs/images/home.webp" alt="Muted's home screen: the power button, the microphone picker, the Studio Voice switch and a Test your voice button" width="360">
+</p>
 
 **[Download the installer](https://github.com/yyyutakaaa/Muted/releases/latest)** ·
 free, no account, no cloud, no telemetry.
+
+## Screenshots
+
+The home screen is the only thing most people need. The Advanced page has the
+rest.
+
+| Sound | Processing | Fine-tune |
+|-------|------------|-----------|
+| <img src="docs/images/sound.webp" alt="The Sound page: Studio Voice with the Classic, Balanced and Maximum models, voice level and echo cancellation" width="260"> | <img src="docs/images/processing.webp" alt="The Processing page: noise suppression, echo cancellation, voice gate, microphone boost and Tune to my voice" width="260"> | <img src="docs/images/finetune.webp" alt="The Fine-tune page: preset, input and output gain, high-pass filter, limiter, noise reduction strength and gate settings" width="260"> |
+
+The version number sits in the bottom right corner of the window, on every page.
 
 ## Why Muted
 
