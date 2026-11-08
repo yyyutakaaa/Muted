@@ -15,6 +15,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         _viewModel = viewModel;
         DataContext = viewModel;
+        var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
+        VersionLabel.Text = version is null ? string.Empty : $"v{version.ToString(3)}";
         var area = SystemParameters.WorkArea;
         Width = Math.Min(Width, area.Width - 24);
         Height = Math.Min(Height, area.Height - 24);

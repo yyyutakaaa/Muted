@@ -36,7 +36,7 @@ To try the app for real you also need a virtual audio cable such as
 ```powershell
 .\scripts\publish.ps1                 # small, needs the .NET 9 Desktop Runtime
 .\scripts\publish.ps1 -SelfContained  # larger, includes the runtime
-.\scripts\build-installer.ps1 -Version 0.9.0   # needs Inno Setup
+.\scripts\build-installer.ps1 -Version 0.9.1   # needs Inno Setup
 ```
 
 Both publish variants land in `artifacts\Muted-win-x64`, plus

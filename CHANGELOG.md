@@ -11,6 +11,17 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-08
+
+### Added
+
+- The version number now shows in the bottom right corner of the window, on
+  every page.
+
+### Changed
+
+- New screenshots in the README and on the website.
+
 ### Removed
 
 - The SignPath code signing policy and the optional signing step in the
