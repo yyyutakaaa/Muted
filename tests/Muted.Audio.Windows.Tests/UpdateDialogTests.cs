@@ -49,12 +49,15 @@ internal static class UpdateDialogTests
         Pump();
         var primary = (Button)dialog.FindName("PrimaryButton");
         primary.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-        Pump();
+
+        // Wait for the install to report back instead of for a fixed time: on a busy build
+        // machine the continuation can take far longer than the 50 ms the fake install waits.
+        PumpUntil(() => dialog.Result == UpdateDialogResult.Failed);
         Assert.Equal(UpdateDialogResult.Failed, dialog.Result);
         Assert.Equal("Update failed", ((TextBlock)dialog.FindName("TitleText")).Text);
         Save(dialog, "failed-Dark");
         primary.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-        Pump();
+        PumpUntil(() => !dialog.IsVisible);
         Assert.False(dialog.IsVisible);
     }
 
@@ -76,6 +79,20 @@ internal static class UpdateDialogTests
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var output = File.Create(Path.Combine(AppContext.BaseDirectory, $"update-dialog-{name}.png"));
         encoder.Save(output);
+    }
+
+    /// <summary>Runs the dispatcher until the condition holds, for at most 20 seconds.</summary>
+    private static void PumpUntil(Func<bool> done)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(20);
+        while (!done() && DateTime.UtcNow < deadline)
+        {
+            var frame = new DispatcherFrame();
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(25) };
+            timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+            timer.Start();
+            Dispatcher.PushFrame(frame);
+        }
     }
 
     private static void Pump()
