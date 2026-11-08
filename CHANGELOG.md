@@ -11,6 +11,13 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+### Removed
+
+- The SignPath code signing policy and the optional signing step in the
+  release workflow, because the SignPath Foundation application was not
+  approved. Installers are not code signed, so Windows SmartScreen may warn
+  when you run one.
+
 ## [0.9.0] - 2026-11-08
 
 ### Added

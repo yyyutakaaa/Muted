@@ -110,20 +110,6 @@ The installer and the portable zip include everything else.
 - [Changelog](CHANGELOG.md): what changed in each version.
 - [Nederlandstalige uitleg](docs/nl/UITLEG.md): wat Muted doet, in het Nederlands.
 
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io/),
-certificate by [SignPath Foundation](https://signpath.org/).
-
-Only the installer built by this repository's
-[release workflow](.github/workflows/release.yml) from tagged source is signed,
-and every signing request is approved by hand.
-
-Team roles:
-
-- Committers and reviewers: [Mehdi Oulad Khlie (@yyyutakaaa)](https://github.com/yyyutakaaa)
-- Approvers: [Mehdi Oulad Khlie (@yyyutakaaa)](https://github.com/yyyutakaaa)
-
 ## Privacy
 
 Muted processes your audio on your own PC. It has no account and no telemetry,
