@@ -67,6 +67,12 @@ Pins and build details are in [native/rnnoise/README.md](native/rnnoise/README.m
 | `tests` | Unit tests for Core and integration tests for the audio layer. |
 | `installer`, `scripts`, `packaging`, `bucket` | Installer, build scripts, winget and Scoop. |
 
+The main window's view model is one partial class, `MainViewModel`, split into a
+file per topic: `MainViewModel.Engine.cs`, `.Devices.cs`, `.Processing.cs`,
+`.Profiles.cs`, `.Recording.cs` and so on. Put a new setting or command in the file
+for its topic, and give it its own `Load…Settings` and `With…Settings` methods
+there if it is saved.
+
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the audio path is put
 together and why.
 

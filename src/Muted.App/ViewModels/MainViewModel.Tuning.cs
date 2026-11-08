@@ -14,6 +14,7 @@ internal sealed partial class MainViewModel
     private const double QuietSeconds = 4;
     private const double SpeechEndSeconds = 19;
     private const double CalibrationSeconds = 24;
+
     private const string ReadingText =
         "The quick brown fox jumps over the lazy dog. She sells sea shells by the sea shore, " +
         "and on Sundays we play games together until late at night.";
@@ -34,8 +35,11 @@ internal sealed partial class MainViewModel
     private string _autoTuneStatusText = "Off";
 
     public RelayCommand StartCalibrationCommand { get; private set; } = null!;
+
     public RelayCommand CancelCalibrationCommand { get; private set; } = null!;
+
     public RelayCommand KeepCalibrationCommand { get; private set; } = null!;
+
     public RelayCommand UndoCalibrationCommand { get; private set; } = null!;
 
     public bool IsCalibrating
