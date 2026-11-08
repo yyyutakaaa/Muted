@@ -82,7 +82,7 @@
                 <Rectangle Height="1" Margin="0,18" Fill="{DynamicResource BorderBrush}" />
                 <TextBlock Style="{StaticResource CaptionStyle}"
                            TextWrapping="Wrap"
-                           Text="Muted is MIT-licensed. Bundled components: RNNoise (BSD-3-Clause) and NAudio (MIT). See THIRD-PARTY-NOTICES.md for details." />
+                           Text="Muted is source available under the PolyForm Noncommercial License 1.0.0. Bundled components: RNNoise (BSD-3-Clause) and NAudio (MIT). See LICENSE and THIRD-PARTY-NOTICES.md for details." />
             </StackPanel>
         </Border>
     </StackPanel>

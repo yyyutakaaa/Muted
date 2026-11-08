@@ -2,7 +2,10 @@
   "version": "0.9.1",
   "description": "Removes background noise from your microphone with RNNoise, locally, before Discord, Teams or your game hears it.",
   "homepage": "https://github.com/yyyutakaaa/Muted",
-  "license": "MIT",
+  "license": {
+    "identifier": "PolyForm-Noncommercial-1.0.0",
+    "url": "https://github.com/yyyutakaaa/Muted/blob/master/LICENSE"
+  },
   "notes": [
     "Muted sends your filtered voice into a virtual audio cable, such as VB-CABLE:",
     "https://vb-audio.com/Cable/",

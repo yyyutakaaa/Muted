@@ -122,4 +122,5 @@ Two optional steps switch themselves on when their settings exist:
 ## License
 
 By contributing you agree that your contribution is licensed under the
-[MIT License](LICENSE), like the rest of Muted.
+[PolyForm Noncommercial License 1.0.0](LICENSE), like the rest of Muted, and
+that the author may also use it in commercial licenses of Muted.

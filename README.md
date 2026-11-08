@@ -3,7 +3,7 @@
 [![Latest release](https://img.shields.io/github/v/release/yyyutakaaa/Muted)](https://github.com/yyyutakaaa/Muted/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/yyyutakaaa/Muted/total)](https://github.com/yyyutakaaa/Muted/releases)
 [![CI](https://github.com/yyyutakaaa/Muted/actions/workflows/ci.yml/badge.svg)](https://github.com/yyyutakaaa/Muted/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-violet)](LICENSE)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-violet)](LICENSE)
 
 Muted is a small Windows app that runs your microphone through
 [RNNoise](https://github.com/xiph/rnnoise), locally, before Discord, Teams, or
@@ -36,7 +36,7 @@ The version number sits in the bottom right corner of the window, on every page.
 | Works on any PC, no RTX card      | yes   | no, needs RTX    | yes          |
 | No account or sign-in             | yes   | yes              | no           |
 | Free without time limits          | yes   | yes              | paid plans   |
-| Open source                       | yes   | no               | no           |
+| Source code you can read          | yes   | no               | no           |
 | Cleans your microphone            | yes   | yes              | yes          |
 | Cleans what you hear              | yes   | yes              | yes          |
 | Echo cancellation for speakers    | yes   | yes              | yes          |
@@ -164,7 +164,16 @@ it maintained: [buymeacoffee.com/yyyutakaaa](https://www.buymeacoffee.com/yyyuta
 
 ## License
 
-Muted itself is MIT-licensed, see [LICENSE](LICENSE). RNNoise
-(BSD-3-Clause) and NAudio (MIT) are bundled with their own notices intact,
-see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and the `licenses`
-folder.
+Muted is source available under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). You can read the code, use
+Muted for yourself, and build on it for noncommercial purposes. Keep the
+copyright notice and a copy of the license with it. You may not use it
+commercially, or sell it, without my permission. For that, open a
+[discussion](https://github.com/yyyutakaaa/Muted/discussions) or contact me.
+
+Versions up to and including 0.9.1 were released under the MIT License, and
+those releases stay MIT.
+
+RNNoise (BSD-3-Clause), NAudio (MIT) and the other bundled components keep their
+own licenses, see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and the
+`licenses` folder.

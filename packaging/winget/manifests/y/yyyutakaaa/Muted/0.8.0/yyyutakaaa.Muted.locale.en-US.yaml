@@ -7,7 +7,7 @@ PublisherUrl: https://github.com/yyyutakaaa
 PublisherSupportUrl: https://github.com/yyyutakaaa/Muted/issues
 PackageName: Muted
 PackageUrl: https://github.com/yyyutakaaa/Muted
-License: MIT
+License: PolyForm Noncommercial License 1.0.0
 LicenseUrl: https://github.com/yyyutakaaa/Muted/blob/master/LICENSE
 ShortDescription: Local RNNoise noise suppression for your microphone, before Discord, Teams or your game hears it.
 Description: |-

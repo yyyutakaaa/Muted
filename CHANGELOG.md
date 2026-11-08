@@ -11,6 +11,12 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- Muted is now source available under the PolyForm Noncommercial License 1.0.0
+  instead of MIT. You can still read the code and use Muted for yourself.
+  Commercial use needs permission. Versions up to and including 0.9.1 stay MIT.
+
 ## [0.9.1] - 2026-11-08
 
 ### Added
