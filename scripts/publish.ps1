@@ -3,7 +3,11 @@ param(
     [switch] $SelfContained,
     [switch] $SkipTests,
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.1.0'
+    [string] $Version = '0.1.0',
+
+    # The full release name, such as 0.10.0-beta1. The app shows "Beta" for a suffix.
+    [ValidatePattern('^(\d+\.\d+\.\d+(-[0-9A-Za-z][0-9A-Za-z.]*)?)?$')]
+    [string] $InformationalVersion = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -37,6 +41,10 @@ if (Test-Path -LiteralPath $output) {
     Remove-Item -LiteralPath $resolvedOutput -Recurse -Force
 }
 
+if ([string]::IsNullOrEmpty($InformationalVersion)) {
+    $InformationalVersion = $Version
+}
+
 Invoke-DotNet -Arguments @('restore', $solution)
 Invoke-DotNet -Arguments @(
     'build', $solution,
@@ -44,7 +52,8 @@ Invoke-DotNet -Arguments @(
     '--no-restore',
     "-p:Version=$Version",
     "-p:AssemblyVersion=$Version.0",
-    "-p:FileVersion=$Version.0"
+    "-p:FileVersion=$Version.0",
+    "-p:InformationalVersion=$InformationalVersion"
 )
 if (-not $SkipTests) {
     Invoke-DotNet -Arguments @('test', $solution, '--configuration', 'Release', '--no-build')
@@ -60,6 +69,7 @@ Invoke-DotNet -Arguments @(
     "-p:Version=$Version",
     "-p:AssemblyVersion=$Version.0",
     "-p:FileVersion=$Version.0",
+    "-p:InformationalVersion=$InformationalVersion",
     '-p:DebugSymbols=false',
     '-p:DebugType=None'
 )

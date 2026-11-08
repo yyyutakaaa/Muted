@@ -12,8 +12,7 @@ public partial class AboutView : System.Windows.Controls.UserControl
     public AboutView()
     {
         InitializeComponent();
-        var version = Assembly.GetEntryAssembly()?.GetName().Version;
-        VersionText.Text = version is null ? "Version unknown" : $"Version {version.ToString(3)}";
+        VersionText.Text = $"Version {Infrastructure.AppVersion.Display} · {Infrastructure.AppVersion.ChannelAndBuild}";
     }
 
     private void SupportButton_OnClick(object sender, RoutedEventArgs eventArgs) => Shell.Open(SupportUrl);

@@ -69,7 +69,7 @@ jobs:
 
       - name: Build, test, and package
         shell: pwsh
-        run: .\scripts\build-installer.ps1 -Version $env:VERSION
+        run: .\scripts\build-installer.ps1 -Version $env:VERSION -InformationalVersion $env:TAG.Substring(1)
 
       # Only once the installer exists, so a failed build never leaves a tag
       # behind that blocks a retry with the same version.

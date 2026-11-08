@@ -11,6 +11,14 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+## [0.10.0-beta2] - 2026-11-08
+
+### Added
+
+- The version in the corner of the window now says whether it is a Beta or a
+  Stable release, and which build it is: the first 7 characters of the commit
+  it was built from, such as "Beta · c6bd6a6". About shows the same.
+
 ## [0.10.0-beta1] - 2026-11-08
 
 ### Added
@@ -351,7 +359,8 @@ First public preview.
 - Device refresh on hotplug, tray mode and autostart.
 - An installer.
 
-[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.10.0-beta1...HEAD
+[Unreleased]: https://github.com/yyyutakaaa/Muted/compare/v0.10.0-beta2...HEAD
+[0.10.0-beta2]: https://github.com/yyyutakaaa/Muted/compare/v0.10.0-beta1...v0.10.0-beta2
 [0.10.0-beta1]: https://github.com/yyyutakaaa/Muted/compare/v0.9.1...v0.10.0-beta1
 [0.9.1]: https://github.com/yyyutakaaa/Muted/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/yyyutakaaa/Muted/compare/v0.8.1...v0.9.0

@@ -3,7 +3,11 @@ param(
     [switch] $SkipTests,
     [switch] $SkipPublish,
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string] $Version = '0.1.0'
+    [string] $Version = '0.1.0',
+
+    # The full release name, such as 0.10.0-beta1. The app shows "Beta" for a suffix.
+    [ValidatePattern('^(\d+\.\d+\.\d+(-[0-9A-Za-z][0-9A-Za-z.]*)?)?$')]
+    [string] $InformationalVersion = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,10 +20,10 @@ $publishOutput = Join-Path $repoRoot 'artifacts\Muted-win-x64'
 
 if (-not $SkipPublish) {
     if ($SkipTests) {
-        & $publishScript -SelfContained -SkipTests -Version $Version
+        & $publishScript -SelfContained -SkipTests -Version $Version -InformationalVersion $InformationalVersion
     }
     else {
-        & $publishScript -SelfContained -Version $Version
+        & $publishScript -SelfContained -Version $Version -InformationalVersion $InformationalVersion
     }
     if ($LASTEXITCODE -ne 0) {
         throw "publish.ps1 failed with exit code $LASTEXITCODE."

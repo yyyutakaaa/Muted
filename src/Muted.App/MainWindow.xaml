@@ -90,7 +90,7 @@
                 <ContentControl x:Name="PageHost" HorizontalContentAlignment="Stretch"/>
             </ScrollViewer>
         </Grid>
-        <TextBlock x:Name="VersionLabel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,5" FontSize="11" Opacity="0.7" IsHitTestVisible="False" Style="{StaticResource CaptionStyle}" AutomationProperties.Name="Muted version"/>
+        <TextBlock x:Name="VersionLabel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,5" FontSize="11" LineHeight="13" TextAlignment="Right" Opacity="0.7" IsHitTestVisible="False" Style="{StaticResource CaptionStyle}" AutomationProperties.Name="Muted version"/>
         </Grid>
     </Border>
 </Window>
