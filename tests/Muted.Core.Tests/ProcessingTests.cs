@@ -102,7 +102,24 @@ public sealed class ProcessingTests
         }
 
         Assert.True(control.CurrentGain > startGain * 2f);
-        Assert.True(control.CurrentGain <= 6f);
+        Assert.True(control.CurrentGain <= 4f);
+    }
+
+    [Fact]
+    public void AutoGain_SoftSyllablesDoNotDriftTheLevelUp()
+    {
+        var control = new AutoGainControl(frameRate: 100f);
+        var loud = Tone(200, 480, amplitude: 0.14f);
+        var soft = Tone(200, 480, amplitude: 0.007f);
+
+        // Twenty seconds of speech mixing loud syllables and soft word endings.
+        for (var frame = 0; frame < 2_000; frame++)
+        {
+            control.Process((float[])(frame % 2 == 0 ? loud : soft).Clone(), voiceProbability: 0.9f, targetDb: -18f, enabled: true);
+        }
+
+        // Average speech is about -23 dBFS, so -18 needs roughly +5 dB (1.8x), not the maximum.
+        Assert.InRange(control.CurrentGain, 1.4f, 2.2f);
     }
 
     [Fact]

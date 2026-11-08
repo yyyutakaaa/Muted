@@ -5,6 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <PackageReference Include="NAudio" Version="2.3.0" />
   </ItemGroup>
 
@@ -21,6 +22,44 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <TargetPath>rnnoise.dll</TargetPath>
+    </Content>
+  </ItemGroup>
+
+  <!-- Studio Voice (DeepFilterNet3). The SHA-256 next to it is checked by the release package. -->
+  <ItemGroup Condition="Exists('models\deepfilternet3.onnx')">
+    <Content Include="models\deepfilternet3.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\deepfilternet3.onnx</TargetPath>
+    </Content>
+    <Content Include="models\deepfilternet3.onnx.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\deepfilternet3.onnx.sha256</TargetPath>
+    </Content>
+  </ItemGroup>
+
+  <!-- Studio Voice: the two DPDFNet variants, Balanced and Maximum quality. -->
+  <ItemGroup Condition="Exists('models\dpdfnet2_48khz_hr.onnx')">
+    <Content Include="models\dpdfnet2_48khz_hr.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\dpdfnet2_48khz_hr.onnx</TargetPath>
+    </Content>
+    <Content Include="models\dpdfnet2_48khz_hr.onnx.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\dpdfnet2_48khz_hr.onnx.sha256</TargetPath>
+    </Content>
+    <Content Include="models\dpdfnet8_48khz_hr.onnx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\dpdfnet8_48khz_hr.onnx</TargetPath>
+    </Content>
+    <Content Include="models\dpdfnet8_48khz_hr.onnx.sha256">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>models\dpdfnet8_48khz_hr.onnx.sha256</TargetPath>
     </Content>
   </ItemGroup>
 

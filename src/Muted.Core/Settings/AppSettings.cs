@@ -43,6 +43,11 @@ public sealed record AppSettings
     public float OutputGain { get; init; } = 1f;
     public bool HighPassEnabled { get; init; }
     public float HighPassFrequency { get; init; } = 80f;
+    public bool StudioVoice { get; init; }
+
+    /// <summary>Which AI model Studio Voice cleans with; Classic is DeepFilterNet3.</summary>
+    public StudioModel StudioModel { get; init; } = StudioModel.DeepFilterNet3;
+
     public bool LimiterEnabled { get; init; } = true;
     public bool AutoGainEnabled { get; init; }
     public float AutoGainTargetDb { get; init; } = -18f;
@@ -133,8 +138,12 @@ public sealed record AppSettings
                 EchoStrength = EchoStrength
             } : profile).Normalize())
             .DistinctBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
-            .Take(MaximumProfiles)
             .ToList();
+
+        // A name belongs to one profile. Older files could hold two "Meeting" profiles, one
+        // from the defaults and one from the preset button.
+        var merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        profiles = MergeSameNames(profiles, ActiveProfileId, merged).Take(MaximumProfiles).ToList();
 
         if (profiles.Count == 0)
         {
@@ -168,9 +177,12 @@ public sealed record AppSettings
             }).Normalize();
         }
 
+        var requestedActiveId = ActiveProfileId is not null && merged.TryGetValue(ActiveProfileId, out var keptId)
+            ? keptId
+            : ActiveProfileId;
         var activeProfileId = profiles.Any(profile =>
-                string.Equals(profile.Id, ActiveProfileId, StringComparison.OrdinalIgnoreCase))
-            ? ActiveProfileId
+                string.Equals(profile.Id, requestedActiveId, StringComparison.OrdinalIgnoreCase))
+            ? requestedActiveId
             : profiles[0].Id;
 
         // Schema 4 rebuilt the palette around one violet. A settings file older than
@@ -182,6 +194,7 @@ public sealed record AppSettings
         var rules = (AutoProfileRules ?? [])
             .Where(rule => rule is not null)
             .Select(rule => rule.Normalize())
+            .Select(rule => merged.TryGetValue(rule.ProfileId, out var kept) ? rule with { ProfileId = kept } : rule)
             .Where(rule => rule.ProcessName.Length > 0 && profileIds.Contains(rule.ProfileId))
             .DistinctBy(rule => rule.ProcessName, StringComparer.Ordinal)
             .Take(AutoProfileRule.MaximumRules)
@@ -213,6 +226,7 @@ public sealed record AppSettings
                 ? Math.Clamp(ShoutThresholdDb, ShoutGuard.MinimumThresholdDb, ShoutGuard.MaximumThresholdDb)
                 : -6f,
             ShoutGuardMode = Enum.IsDefined(ShoutGuardMode) ? ShoutGuardMode : ShoutGuardMode.Silence,
+            StudioModel = Enum.IsDefined(StudioModel) ? StudioModel : StudioModel.DeepFilterNet3,
             MonitorVolume = Math.Clamp(MonitorVolume, 0f, 1f),
             TargetLatencyMilliseconds = Math.Clamp(TargetLatencyMilliseconds, 20, 100),
             Theme = Enum.IsDefined(Theme) ? Theme : AppTheme.System,
@@ -221,6 +235,35 @@ public sealed record AppSettings
             Hotkeys = HotkeyBinding.Complete(Hotkeys),
             Profiles = profiles
         };
+    }
+
+    /// <summary>
+    /// Keeps one profile for every name. The one you are using stays, so what you hear does
+    /// not change; otherwise the preset profile wins over a plain one, otherwise the first.
+    /// <paramref name="merged"/> maps every dropped id to the id that replaced it, so the
+    /// active profile and the program rules keep pointing at a profile that exists.
+    /// </summary>
+    private static List<AudioProfile> MergeSameNames(
+        IEnumerable<AudioProfile> profiles,
+        string? activeProfileId,
+        Dictionary<string, string> merged)
+    {
+        var kept = new List<AudioProfile>();
+        foreach (var group in profiles.GroupBy(profile => profile.Name.Trim(), StringComparer.OrdinalIgnoreCase))
+        {
+            var members = group.ToList();
+            var keep = members.FirstOrDefault(profile => string.Equals(profile.Id, activeProfileId, StringComparison.OrdinalIgnoreCase))
+                       ?? members.FirstOrDefault(profile => profile.Id.StartsWith("preset-", StringComparison.OrdinalIgnoreCase))
+                       ?? members[0];
+            foreach (var other in members.Where(profile => !ReferenceEquals(profile, keep)))
+            {
+                merged[other.Id] = keep.Id;
+            }
+
+            kept.Add(keep);
+        }
+
+        return kept;
     }
 
     private static float Amount(float value) => float.IsFinite(value) ? Math.Clamp(value, 0f, 1f) : 0f;

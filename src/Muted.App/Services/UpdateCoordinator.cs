@@ -33,10 +33,12 @@ internal sealed class UpdateCoordinator
             {
                 if (showNoUpdateMessage)
                 {
-                    ShowMessage(owner, result.Message, MessageBoxButton.OK,
-                        result.Status == UpdateCheckStatus.UpToDate
-                            ? MessageBoxImage.Information
-                            : MessageBoxImage.Warning);
+                    var upToDate = result.Status == UpdateCheckStatus.UpToDate;
+                    UpdateDialog.ShowNotice(
+                        owner,
+                        upToDate ? "You're up to date" : "No update right now",
+                        result.Message,
+                        upToDate ? UpdateNoticeKind.UpToDate : UpdateNoticeKind.Warning);
                 }
 
                 return new UpdatePromptResult(result.Message, false);
@@ -52,50 +54,32 @@ internal sealed class UpdateCoordinator
                 return new UpdatePromptResult($"Muted {version} is available but skipped.", false);
             }
 
-            var answer = ShowMessage(
+            var update = result.Update;
+            var choice = UpdateDialog.ShowUpdate(
                 owner,
-                $"Muted {version} is available.{Environment.NewLine}{Environment.NewLine}" +
-                $"Yes: download and install now, Muted restarts automatically.{Environment.NewLine}" +
-                $"No: remind me next time.{Environment.NewLine}" +
-                "Cancel: skip this version.",
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Information);
+                update,
+                progress => _updateService.DownloadAndStartAsync(update, progress));
 
-            if (answer == MessageBoxResult.Cancel)
+            switch (choice)
             {
-                return new UpdatePromptResult($"Muted {version} was skipped.", false, version);
+                case UpdateDialogResult.Skip:
+                    return new UpdatePromptResult($"Muted {version} was skipped.", false, version);
+                case UpdateDialogResult.Failed:
+                    return new UpdatePromptResult(
+                        "The update could not be downloaded or started. Please try again later.",
+                        false);
+                case UpdateDialogResult.Installing:
+                    InstallStarted?.Invoke(this, EventArgs.Empty);
+                    return new UpdatePromptResult($"Installing Muted {version}…", true);
+                default:
+                    return new UpdatePromptResult($"Muted {version} is available. Update postponed.", false);
             }
-
-            if (answer != MessageBoxResult.Yes)
-            {
-                return new UpdatePromptResult($"Muted {version} is available. Update postponed.", false);
-            }
-
-            var started = await _updateService.DownloadAndStartAsync(result.Update);
-            if (!started)
-            {
-                const string message = "The update could not be downloaded or started. Please try again later.";
-                ShowMessage(owner, message, MessageBoxButton.OK, MessageBoxImage.Error);
-                return new UpdatePromptResult(message, false);
-            }
-
-            InstallStarted?.Invoke(this, EventArgs.Empty);
-            return new UpdatePromptResult($"Installing Muted {version}…", true);
         }
         finally
         {
             Interlocked.Exchange(ref _isChecking, 0);
         }
     }
-
-    private static MessageBoxResult ShowMessage(
-        Window? owner,
-        string message,
-        MessageBoxButton buttons,
-        MessageBoxImage image) =>
-        owner?.IsVisible == true
-            ? System.Windows.MessageBox.Show(owner, message, "Muted update", buttons, image)
-            : System.Windows.MessageBox.Show(message, "Muted update", buttons, image);
 }
 
 internal sealed record UpdatePromptResult(

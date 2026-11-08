@@ -32,5 +32,39 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <!-- A clean speech sample, so the model tests measure what real speech keeps. -->
+  <ItemGroup Condition="Exists('fixtures\speech-48k-mono.wav')">
+    <Content Include="fixtures\speech-48k-mono.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- The checksum tests read the models the app ships, so they come along too. -->
+  <ItemGroup Condition="Exists('..\..\src\Muted.Audio.Windows\models\deepfilternet3.onnx')">
+    <Content Include="..\..\src\Muted.Audio.Windows\models\deepfilternet3.onnx">
+      <Link>models\deepfilternet3.onnx</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Muted.Audio.Windows\models\deepfilternet3.onnx.sha256">
+      <Link>models\deepfilternet3.onnx.sha256</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Muted.Audio.Windows\models\dpdfnet2_48khz_hr.onnx">
+      <Link>models\dpdfnet2_48khz_hr.onnx</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Muted.Audio.Windows\models\dpdfnet2_48khz_hr.onnx.sha256">
+      <Link>models\dpdfnet2_48khz_hr.onnx.sha256</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Muted.Audio.Windows\models\dpdfnet8_48khz_hr.onnx">
+      <Link>models\dpdfnet8_48khz_hr.onnx</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\src\Muted.Audio.Windows\models\dpdfnet8_48khz_hr.onnx.sha256">
+      <Link>models\dpdfnet8_48khz_hr.onnx.sha256</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>

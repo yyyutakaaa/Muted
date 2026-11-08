@@ -61,6 +61,9 @@ internal sealed partial class MainViewModel
         ? "Noise removal is off in Technical controls. Select a level to enable it."
         : $"{WetMix:0%} filtered audio. Gentle keeps more room sound; Strong uses only the filtered signal.";
 
+    /// <summary>The RNNoise strength controls only matter while Studio Voice is off.</summary>
+    public bool CanAdjustNoiseBlend => SuppressionEnabled && !StudioVoice;
+
     public double VoiceLevelDb
     {
         get => 20 * Math.Log10(OutputGain);
@@ -100,6 +103,7 @@ internal sealed partial class MainViewModel
             case nameof(SuppressionEnabled):
                 OnPropertyChanged(nameof(NoiseRemoval));
                 OnPropertyChanged(nameof(NoiseRemovalDescription));
+                OnPropertyChanged(nameof(CanAdjustNoiseBlend));
                 break;
             case nameof(OutputGain):
                 OnPropertyChanged(nameof(VoiceLevelDb));

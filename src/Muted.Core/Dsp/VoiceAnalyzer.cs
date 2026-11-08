@@ -20,6 +20,7 @@ public sealed record VoiceMeasurement(
 /// <summary>Settings worked out from a <see cref="VoiceMeasurement"/>.</summary>
 public sealed record VoiceRecommendation(
     float InputGain,
+    float OutputGain,
     float VoiceThreshold,
     float HighPassFrequency,
     float ShoutThresholdDb,
@@ -45,7 +46,17 @@ public static class VoiceAnalyzer
     public const float PeakHeadroomDb = -3f;
 
     public const float MinimumGainDb = -12.04f;
-    public const float MaximumGainDb = 12.04f;
+
+    /// <summary>
+    /// The microphone boost is never raised above unity. A digital boost lifts the leftover
+    /// room noise by the same amount whether it sits before or after the noise removal,
+    /// and before it, loud peaks hit the ceiling and clip. It is only used to trim a signal
+    /// that is too hot.
+    /// </summary>
+    public const float MaximumInputBoostDb = 0f;
+
+    /// <summary>The most volume added after the noise removal. More is a job for the microphone's own level.</summary>
+    public const float MaximumMakeupDb = 6f;
 
     private const int SampleRate = CalibrationRecorder.SampleRate;
     private const int FrameSize = CalibrationRecorder.FrameSize;
@@ -134,18 +145,25 @@ public static class VoiceAnalyzer
             notes.Add("Too little speech was heard. Move closer to the microphone and try again.");
         }
 
-        // Boost: bring speech to the target, but never push normal peaks into clipping.
-        var gainDb = TargetSpeechDb - measurement.SpeechLevelDb;
-        gainDb = MathF.Min(gainDb, PeakHeadroomDb - measurement.SpeechPeakDb);
-        if (gainDb > MaximumGainDb && reliable)
-        {
-            notes.Add("Your microphone is very quiet, even at full boost. Raise its level in the Windows sound settings.");
-        }
-
-        gainDb = Math.Clamp(gainDb, MinimumGainDb, MaximumGainDb);
+        // Level: bring speech to the target. A signal that is too hot is trimmed before the
+        // noise removal; a quiet one gets a small make-up after it, never a big boost before.
+        var neededDb = TargetSpeechDb - measurement.SpeechLevelDb;
+        var gainDb = Math.Clamp(MathF.Min(neededDb, MaximumInputBoostDb), MinimumGainDb, MaximumInputBoostDb);
+        var makeupWantedDb = MathF.Max(0f, neededDb - gainDb);
+        var peakRoomDb = MathF.Max(0f, PeakHeadroomDb - (measurement.SpeechPeakDb + gainDb));
+        var makeupDb = Math.Clamp(MathF.Min(makeupWantedDb, peakRoomDb), 0f, MaximumMakeupDb);
         if (!reliable)
         {
             gainDb = 0f;
+            makeupDb = 0f;
+        }
+        else if (makeupWantedDb - makeupDb > 1.5f)
+        {
+            notes.Add(
+                $"Your microphone is quiet: speech sits at {measurement.SpeechLevelDb:0} dB. Muted adds at most " +
+                $"{MaximumMakeupDb:0} dB after the noise removal, because a digital boost lifts the leftover noise by the " +
+                $"same amount. Raise the microphone level in the Windows sound settings by about " +
+                $"{makeupWantedDb - makeupDb:0} dB, or turn up the gain on the microphone, and calibrate again.");
         }
 
         if (measurement.Clipped)
@@ -162,7 +180,7 @@ public static class VoiceAnalyzer
 
         threshold = Math.Clamp(threshold, 0.05f, 0.99f);
 
-        if (measurement.NoiseFloorDb + gainDb > -45f)
+        if (measurement.NoiseFloorDb + gainDb + makeupDb > -45f)
         {
             notes.Add("The room is fairly noisy. Keep noise suppression on.");
         }
@@ -210,6 +228,7 @@ public static class VoiceAnalyzer
 
         return new VoiceRecommendation(
             MathF.Pow(10f, gainDb / 20f),
+            MathF.Pow(10f, makeupDb / 20f),
             threshold,
             highPass,
             shout,

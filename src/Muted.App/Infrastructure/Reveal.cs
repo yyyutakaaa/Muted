@@ -17,9 +17,9 @@ namespace Muted.App.Infrastructure;
 /// </remarks>
 public static class Reveal
 {
-    private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(160));
-    private static readonly Duration LiftDuration = new(TimeSpan.FromMilliseconds(180));
-    private const double LiftDistance = 6;
+    private static readonly Duration FadeDuration = new(TimeSpan.FromMilliseconds(220));
+    private static readonly Duration LiftDuration = new(TimeSpan.FromMilliseconds(340));
+    private const double LiftDistance = 10;
 
     public static readonly DependencyProperty DelayProperty = DependencyProperty.RegisterAttached(
         "Delay",

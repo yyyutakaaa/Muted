@@ -623,6 +623,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             if (SetAudioProperty(ref _suppressionEnabled, value))
             {
                 OnPropertyChanged(nameof(SuppressionStatusText));
+                OnPropertyChanged(nameof(CanAdjustNoiseBlend));
             }
         }
     }
@@ -1058,6 +1059,9 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _outputGain = _settings.OutputGain;
         _highPassEnabled = _settings.HighPassEnabled;
         _highPassFrequency = _settings.HighPassFrequency;
+        _studioVoice = _settings.StudioVoice;
+        _studioModel = Enum.IsDefined(_settings.StudioModel) ? _settings.StudioModel : StudioModel.DeepFilterNet3;
+        RefreshStudioVoiceStatus();
         _limiterEnabled = _settings.LimiterEnabled;
         _autoGainEnabled = _settings.AutoGainEnabled;
         _autoGainTargetDb = _settings.AutoGainTargetDb;
@@ -1103,7 +1107,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             nameof(WetMixText), nameof(VoiceGateEnabled), nameof(VoiceSensitivity),
             nameof(VoiceSensitivityText), nameof(VoiceHoldMilliseconds), nameof(VoiceHoldText),
             nameof(InputGain), nameof(InputGainText), nameof(OutputGain), nameof(OutputGainText),
-            nameof(HighPassEnabled), nameof(HighPassFrequency), nameof(HighPassText),
+            nameof(HighPassEnabled), nameof(HighPassFrequency), nameof(HighPassText), nameof(StudioVoice),
             nameof(LimiterEnabled), nameof(AutoGainEnabled), nameof(AutoGainTargetDb),
             nameof(AutoGainTargetText), nameof(EchoCancellationEnabled), nameof(EchoStrength),
             nameof(EchoStrengthText), nameof(MonitorEnabled), nameof(MonitorVolume),
@@ -1316,6 +1320,13 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
             name = name[..AudioProfile.MaximumNameLength];
         }
 
+        var typed = name;
+        name = UniqueProfileName(name);
+        if (!name.Equals(typed, StringComparison.Ordinal))
+        {
+            FeatureStatus = $"A profile called \"{typed}\" already exists, so this one is saved as \"{name}\".";
+        }
+
         var profile = BuildProfile(Guid.NewGuid().ToString("N"), name);
         Profiles.Add(profile);
         SelectedProfile = profile;
@@ -1325,6 +1336,19 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         DeleteProfileCommand.RaiseCanExecuteChanged();
         SaveProfileCommand.RaiseCanExecuteChanged();
         QueueSave();
+    }
+
+    /// <summary>The name itself when it is free, otherwise the name with " (2)", " (3)" and so on.</summary>
+    private string UniqueProfileName(string name)
+    {
+        var candidate = name;
+        for (var suffix = 2; Profiles.Any(p => p.Name.Trim().Equals(candidate.Trim(), StringComparison.OrdinalIgnoreCase)); suffix++)
+        {
+            var tail = $" ({suffix})";
+            candidate = name[..Math.Min(name.Length, AudioProfile.MaximumNameLength - tail.Length)] + tail;
+        }
+
+        return candidate;
     }
 
     /// <summary>Writes the settings that are live right now back into the selected profile.</summary>
@@ -1754,6 +1778,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _uiContext.Post(_ =>
         {
             EngineState = state;
+            RefreshStudioVoiceStatus();
             StatusText = state switch
             {
                 AudioEngineState.Starting => "Starting…",
@@ -1909,7 +1934,9 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         AutoGainEnabled: AutoGainEnabled,
         AutoGainTargetDb: (float)AutoGainTargetDb,
         Character: BuildVoiceCharacterOptions(),
-        ShoutGuard: BuildShoutGuardOptions());
+        ShoutGuard: BuildShoutGuardOptions(),
+        StudioVoice: StudioVoice,
+        StudioModel: StudioModel);
 
     private MonitorOptions BuildMonitorOptions() =>
         new(MonitorEnabled, SelectedMonitor?.Id, (float)MonitorVolume);
@@ -1945,6 +1972,8 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         OutputGain = (float)OutputGain,
         HighPassEnabled = HighPassEnabled,
         HighPassFrequency = (float)HighPassFrequency,
+        StudioVoice = StudioVoice,
+        StudioModel = StudioModel,
         LimiterEnabled = LimiterEnabled,
         AutoGainEnabled = AutoGainEnabled,
         AutoGainTargetDb = (float)AutoGainTargetDb,
@@ -2107,6 +2136,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         HealthText = $"{metrics.BufferedMilliseconds:0} ms buffer · {metrics.ProcessingLoad * 100:0}% load";
         UpdateLayoutMetrics(metrics.BufferedMilliseconds, metrics.ProcessingLoad, running: true);
         UpdateVoiceReadouts(metrics, IsRunning);
+        RefreshStudioVoiceStatus();
 
         var dropped = metrics.DroppedInputSamples + metrics.DroppedOutputSamples;
         DropoutText = dropped == 0 && metrics.OutputUnderrunSamples == 0

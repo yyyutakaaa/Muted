@@ -94,7 +94,9 @@ internal sealed class UpdateService
                 installerAsset.Name,
                 installerAsset.DownloadUrl,
                 installerAsset.Size,
-                checksumAsset.DownloadUrl);
+                checksumAsset.DownloadUrl,
+                release.HtmlUrl,
+                release.Prerelease);
             var suffix = release.Prerelease ? " (beta)" : string.Empty;
             return new UpdateCheckResult(
                 UpdateCheckStatus.UpdateAvailable,
@@ -188,6 +190,7 @@ internal sealed class UpdateService
 
     public async Task<bool> DownloadAndStartAsync(
         AvailableUpdate update,
+        IProgress<double>? progress = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -207,6 +210,7 @@ internal sealed class UpdateService
                         update.InstallerUrl,
                         temporaryPath,
                         update.InstallerSize,
+                        progress,
                         cancellationToken)
                     .ConfigureAwait(false);
                 if (!CryptographicOperations.FixedTimeEquals(actualHash, expectedHash))
@@ -406,6 +410,7 @@ internal sealed class UpdateService
         string url,
         string path,
         long expectedSize,
+        IProgress<double>? progress,
         CancellationToken cancellationToken)
     {
         using var response = await HttpClient.GetAsync(
@@ -443,6 +448,7 @@ internal sealed class UpdateService
             await destination.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken)
                 .ConfigureAwait(false);
             hash.AppendData(buffer, 0, bytesRead);
+            progress?.Report(Math.Min(1d, (double)totalBytes / expectedSize));
         }
 
         if (totalBytes != expectedSize)
@@ -466,6 +472,7 @@ internal sealed class UpdateService
         [property: System.Text.Json.Serialization.JsonPropertyName("tag_name")] string TagName,
         [property: System.Text.Json.Serialization.JsonPropertyName("draft")] bool Draft,
         [property: System.Text.Json.Serialization.JsonPropertyName("prerelease")] bool Prerelease,
+        [property: System.Text.Json.Serialization.JsonPropertyName("html_url")] string? HtmlUrl,
         [property: System.Text.Json.Serialization.JsonPropertyName("assets")] GitHubAsset[]? Assets);
 
     private sealed record GitHubAsset(
@@ -488,7 +495,9 @@ internal sealed record AvailableUpdate(
     string InstallerName,
     string InstallerUrl,
     long InstallerSize,
-    string ChecksumUrl);
+    string ChecksumUrl,
+    string? ReleaseUrl,
+    bool IsPrerelease = false);
 
 internal sealed record UpdateCheckResult(
     UpdateCheckStatus Status,

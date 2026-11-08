@@ -114,7 +114,12 @@ internal sealed partial class MainViewModel
         {
             var id = "preset-" + name.ToLowerInvariant().Replace(' ', '-');
             var warmRadio = name == "Warm Radio";
-            var existing = Profiles.FirstOrDefault(p => p.Id == id);
+
+            // One profile per name: a preset reuses the profile that already carries it, whether
+            // it came from an earlier preset or from the default profiles, and keeps its id so
+            // the active profile and program rules still point at it.
+            var existing = Profiles.FirstOrDefault(p => p.Id == id)
+                           ?? Profiles.FirstOrDefault(p => p.Name.Trim().Equals(name, StringComparison.OrdinalIgnoreCase));
             if (existing is null && Profiles.Count >= AppSettings.MaximumProfiles)
                 throw new InvalidOperationException("Delete a profile before adding another preset (maximum 20).");
             var reference = SelectedEchoReference is { } selected && selected.Id != SelectedOutput?.Id &&
@@ -122,7 +127,9 @@ internal sealed partial class MainViewModel
                 !WasapiDeviceCatalog.IsLikelyVirtualCable(d.Name) && d.Id != SelectedOutput?.Id);
             var profile = new AudioProfile
             {
-                Id = id, Name = name,
+                Id = existing?.Id ?? id, Name = name,
+                InputDeviceId = existing?.InputDeviceId,
+                OutputDeviceId = existing?.OutputDeviceId,
                 VoiceGateEnabled = name != "Natural",
                 VoiceThreshold = name == "Gaming" ? .68f : .42f,
                 VoiceHoldMilliseconds = name == "Gaming" ? 160 : 400,

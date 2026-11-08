@@ -5,7 +5,7 @@
              xmlns:views="clr-namespace:Muted.App.Views"
              Foreground="{DynamicResource TextBrush}">
     <StackPanel>
-        <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
+        <StackPanel x:Name="Header" Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Audio" />
             <TextBlock Margin="0,5,0,0"
                        Style="{StaticResource CaptionStyle}"
@@ -162,7 +162,7 @@
                         <TextBlock Margin="0,3,0,0"
                                    Style="{StaticResource CaptionStyle}"
                                    TextWrapping="Wrap"
-                                   Text="Slowly adjusts the microphone boost and the voice gate when you move or the room changes, in small steps and never far from where you started. Leaves the shout guard and the warm voice alone." />
+                                   Text="Slowly adjusts the voice gate when the room changes, and turns the microphone down when you get louder. It never turns the microphone up. Leaves the shout guard and the warm voice alone." />
                     </StackPanel>
                     <CheckBox HorizontalAlignment="Right"
                               VerticalAlignment="Center"
@@ -386,7 +386,7 @@
                     <Slider Margin="0,10,0,0"
                             Minimum="0" Maximum="1"
                             SmallChange="0.05" LargeChange="0.1"
-                            IsEnabled="{Binding SuppressionEnabled}"
+                            IsEnabled="{Binding CanAdjustNoiseBlend}"
                             Value="{Binding WetMix}"
                             AutomationProperties.Name="Filter strength" />
 

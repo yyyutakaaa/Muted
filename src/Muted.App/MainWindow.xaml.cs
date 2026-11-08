@@ -10,7 +10,6 @@ namespace Muted.App;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
-    private AppPage? _lastSizedPage;
     internal MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
@@ -38,18 +37,6 @@ public partial class MainWindow : Window
     }
     private void ShowPage()
     {
-        if (_lastSizedPage != _viewModel.SelectedPage &&
-            _viewModel.SelectedPage is AppPage.Dashboard or AppPage.Advanced)
-        {
-            _lastSizedPage = _viewModel.SelectedPage;
-            if (WindowState == WindowState.Normal)
-            {
-                var area = SystemParameters.WorkArea;
-                var advanced = _viewModel.SelectedPage == AppPage.Advanced;
-                Width = Math.Min(advanced ? 980 : 690, area.Width - 24);
-                Height = Math.Min(advanced ? 980 : 830, area.Height - 24);
-            }
-        }
         PageHost.Content = _viewModel.SelectedPage switch
         {
             AppPage.Settings => new EverydaySettingsView(),
@@ -61,6 +48,10 @@ public partial class MainWindow : Window
             AppPage.About => new AboutView(),
             _ => new SimpleView()
         };
+        // Advanced keeps its menu in place and scrolls only the open section.
+        PageScroll.VerticalScrollBarVisibility = _viewModel.SelectedPage == AppPage.Advanced
+            ? System.Windows.Controls.ScrollBarVisibility.Disabled
+            : System.Windows.Controls.ScrollBarVisibility.Visible;
         PageScroll.ScrollToTop();
     }
     private void Back_OnClick(object sender, RoutedEventArgs e) => _viewModel.SelectedPage = AppPage.Dashboard;

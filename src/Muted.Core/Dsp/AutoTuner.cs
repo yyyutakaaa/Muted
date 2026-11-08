@@ -91,7 +91,9 @@ public sealed class AutoTuner
             newGainDb = Math.Clamp(
                 gainDb + step,
                 MathF.Max(_baselineGainDb - MaximumGainDriftDb, VoiceAnalyzer.MinimumGainDb),
-                MathF.Min(_baselineGainDb + MaximumGainDriftDb, VoiceAnalyzer.MaximumGainDb));
+                // It may turn a hot signal down, but never amplifies beyond unity or beyond
+                // where the boost started, whichever is higher.
+                MathF.Min(_baselineGainDb + MaximumGainDriftDb, MathF.Max(_baselineGainDb, VoiceAnalyzer.MaximumInputBoostDb)));
             if (MathF.Abs(newGainDb - gainDb) >= 0.1f)
             {
                 reasons.Add(newGainDb > gainDb

@@ -4,9 +4,7 @@
              Foreground="{DynamicResource TextBrush}">
     <UserControl.Resources>
         <Style TargetType="Button" BasedOn="{StaticResource TextButtonStyle}" />
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-        </Style>
+        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}" />
     </UserControl.Resources>
     <StackPanel>
         <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,0">

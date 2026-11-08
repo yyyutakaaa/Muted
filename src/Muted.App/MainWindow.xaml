@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" x:Class="Muted.App.MainWindow" Title="Muted" Icon="pack://siteoforigin:,,,/icon.ico" Width="690" Height="830" MinWidth="480" MinHeight="540" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="NoResize" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework" x:Class="Muted.App.MainWindow" Title="Muted" Icon="pack://siteoforigin:,,,/icon.ico" Width="780" Height="880" MinWidth="480" MinHeight="540" WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="NoResize" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="0" CornerRadius="16" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
@@ -10,41 +10,58 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="FocusVisualStyle" Value="{DynamicResource FocusRing}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="ButtonSurface" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="10">
-                            <Grid>
-                                <Border x:Name="ActiveTint" Background="{DynamicResource AccentSoftBrush}" CornerRadius="9" Opacity="0" IsHitTestVisible="False"/>
-                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Grid>
-                        </Border>
+                        <Grid Background="Transparent" RenderTransformOrigin="0.5,0.5">
+                            <Grid.RenderTransform>
+                                <ScaleTransform x:Name="IconScale"/>
+                            </Grid.RenderTransform>
+                            <Border x:Name="HoverTint" Background="{DynamicResource TextBrush}" CornerRadius="10" Opacity="0"/>
+                            <Border x:Name="ActiveTint" Background="{DynamicResource AccentSoftBrush}" CornerRadius="10" Opacity="0"/>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
-                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                 <Trigger.EnterActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="ActiveTint" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverTint" Storyboard.TargetProperty="Opacity" To="0.07" Duration="0:0:0.14"/></Storyboard></BeginStoryboard>
                                 </Trigger.EnterActions>
                                 <Trigger.ExitActions>
-                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="ActiveTint" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.12"/></Storyboard></BeginStoryboard>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="HoverTint" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22"/></Storyboard></BeginStoryboard>
                                 </Trigger.ExitActions>
                             </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="ActiveTint" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18"/></Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetName="ActiveTint" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.14"/></Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
                             </Trigger>
-                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleX" To="0.9" Duration="0:0:0.08"/>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleY" To="0.9" Duration="0:0:0.08"/>
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard><Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.26"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.7"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetName="IconScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.26"><DoubleAnimation.EasingFunction><BackEase EasingMode="EaseOut" Amplitude="0.7"/></DoubleAnimation.EasingFunction></DoubleAnimation>
+                                    </Storyboard></BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.55"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
     </Window.Resources>
-    <Border Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="16">
+    <Border Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16">
         <Grid Margin="26,16,26,24">
             <Grid.RowDefinitions>
                 <RowDefinition Height="48"/>
@@ -64,7 +81,7 @@
                     </ToggleButton>
                 </StackPanel>
             </Grid>
-            <ScrollViewer x:Name="PageScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Padding="0,0,8,0">
+            <ScrollViewer x:Name="PageScroll" Grid.Row="1" VerticalScrollBarVisibility="Visible" HorizontalContentAlignment="Stretch" Padding="0,0,8,0">
                 <ContentControl x:Name="PageHost" HorizontalContentAlignment="Stretch"/>
             </ScrollViewer>
         </Grid>

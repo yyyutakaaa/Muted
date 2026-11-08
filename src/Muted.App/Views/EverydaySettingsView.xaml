@@ -4,8 +4,7 @@
         <TextBlock Text="Settings" FontSize="30" FontWeight="SemiBold" Margin="0,0,0,24"/>
         <Border Style="{StaticResource CardStyle}" Padding="22">
             <StackPanel>
-                <TextBlock Text="Simple is your home screen. Open Advanced beside Settings whenever you want more audio controls." TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,4"/>
-                <TextBlock Text="Microphone" FontSize="17" FontWeight="SemiBold" Margin="0,24,0,12"/>
+                <TextBlock Text="Microphone" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
                 <DockPanel Margin="0,0,0,12">
                     <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleStyle}" IsChecked="{Binding FollowDefaultInput}" AutomationProperties.Name="Follow the Windows default microphone"/>
                     <TextBlock Text="Follow the Windows default microphone" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0"/>
@@ -29,8 +28,7 @@
         </Border>
         <Border Style="{StaticResource CardStyle}" Padding="22" Margin="0,16,0,0">
             <StackPanel>
-                <TextBlock Text="Appearance" FontSize="17" FontWeight="SemiBold" />
-                <TextBlock Text="Choose how Muted looks." Foreground="{DynamicResource TextMutedBrush}" Margin="0,5,0,14" />
+                <TextBlock Text="Appearance" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,14" />
                 <StackPanel Orientation="Horizontal">
                     <RadioButton Style="{StaticResource PillRadioStyle}" GroupName="AppTheme" Content="System" IsChecked="{Binding Theme, Converter={StaticResource EnumToBoolean}, ConverterParameter=System}" AutomationProperties.Name="Follow Windows theme" Margin="0,0,8,0" />
                     <RadioButton Style="{StaticResource PillRadioStyle}" GroupName="AppTheme" Content="Dark" IsChecked="{Binding Theme, Converter={StaticResource EnumToBoolean}, ConverterParameter=Dark}" AutomationProperties.Name="Dark theme" Margin="0,0,8,0" />

@@ -6,6 +6,132 @@ namespace Muted.Core.Tests;
 public sealed class SettingsTests
 {
     [Fact]
+    public void StudioVoice_IsOffByDefaultAndSurvivesSaving()
+    {
+        Assert.False(new AppSettings().StudioVoice);
+        Assert.False(new SuppressionOptions().StudioVoice);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(new AppSettings { StudioVoice = true });
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json)!.Normalize();
+
+        Assert.True(loaded.StudioVoice);
+        Assert.True(new SuppressionOptions(StudioVoice: true).Normalize().StudioVoice);
+    }
+
+    [Fact]
+    public void StudioModel_SurvivesSavingAndDefaultsToTheLightestModel()
+    {
+        Assert.Equal(StudioModel.DeepFilterNet3, new AppSettings().StudioModel);
+        Assert.Equal(StudioModel.DeepFilterNet3, new SuppressionOptions().Normalize().StudioModel);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(new AppSettings
+        {
+            StudioVoice = true,
+            StudioModel = StudioModel.DpdfNet8
+        });
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(json)!.Normalize();
+
+        Assert.Equal(StudioModel.DpdfNet8, loaded.StudioModel);
+        Assert.Equal(StudioModel.DpdfNet8, new SuppressionOptions(StudioModel: StudioModel.DpdfNet8).Normalize().StudioModel);
+    }
+
+    [Fact]
+    public void UnknownModelFallsBackInsteadOfThrowing()
+    {
+        Assert.Equal(StudioModel.DeepFilterNet3, new AppSettings { StudioModel = (StudioModel)99 }.Normalize().StudioModel);
+    }
+
+    [Fact]
+    public void SettingsFromTheRemovedTuningSwitchStillLoad()
+    {
+        // An earlier build saved a TuningMode; it is gone now and must simply be ignored.
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(
+            "{\"StudioVoice\":true,\"StudioModel\":1,\"TuningMode\":1,\"InputGain\":1.2}")!.Normalize();
+
+        Assert.True(loaded.StudioVoice);
+        Assert.Equal(StudioModel.DpdfNet2, loaded.StudioModel);
+        Assert.Equal(1.2f, loaded.InputGain);
+    }
+
+    private static AudioProfile Profile(string id, string name, float threshold = 0.42f) =>
+        new() { Id = id, Name = name, VoiceThreshold = threshold };
+
+    [Fact]
+    public void Normalize_KeepsOneProfilePerName()
+    {
+        // The saved file of a real user: the defaults plus the preset buttons.
+        var settings = new AppSettings
+        {
+            ActiveProfileId = "preset-natural",
+            Profiles =
+            [
+                Profile("balanced", "Balanced"),
+                Profile("meeting", "Meeting"),
+                Profile("gaming", "Gaming"),
+                Profile("preset-meeting", "Meeting", 0.5f),
+                Profile("preset-natural", "Natural"),
+                Profile("preset-gaming", "gaming", 0.7f)
+            ]
+        }.Normalize();
+
+        Assert.Equal(["Balanced", "Meeting", "Gaming", "Natural"], settings.Profiles.Select(p => p.Name.Trim()).Select(n => char.ToUpper(n[0]) + n[1..].ToLowerInvariant()).ToArray());
+        Assert.Equal(settings.Profiles.Count, settings.Profiles.Select(p => p.Name.ToLowerInvariant()).Distinct().Count());
+
+        // Nobody picked the one in use, so the preset profile wins over the plain default.
+        Assert.Equal(0.5f, settings.Profiles.Single(p => p.Name == "Meeting").VoiceThreshold);
+        Assert.Equal("preset-natural", settings.ActiveProfileId);
+    }
+
+    [Fact]
+    public void Normalize_KeepsTheProfileThatIsInUse_AndFollowsReferencesToTheOneThatWasDropped()
+    {
+        var settings = new AppSettings
+        {
+            ActiveProfileId = "meeting",
+            AutoProfileEnabled = true,
+            AutoProfileRules =
+            [
+                new AutoProfileRule { ProcessName = "teams", ProfileId = "preset-meeting" },
+                new AutoProfileRule { ProcessName = "zoom", ProfileId = "meeting" }
+            ],
+            Profiles = [Profile("meeting", "Meeting", 0.3f), Profile("preset-meeting", "Meeting", 0.5f), Profile("gaming", "Gaming")]
+        }.Normalize();
+
+        // What you are hearing now does not change.
+        var meeting = settings.Profiles.Single(p => p.Name == "Meeting");
+        Assert.Equal("meeting", meeting.Id);
+        Assert.Equal(0.3f, meeting.VoiceThreshold);
+        Assert.Equal("meeting", settings.ActiveProfileId);
+
+        // A rule that pointed at the dropped profile now points at the one that stayed.
+        Assert.All(settings.AutoProfileRules, rule => Assert.Equal("meeting", rule.ProfileId));
+        Assert.Equal(2, settings.AutoProfileRules.Count);
+    }
+
+    [Fact]
+    public void Normalize_FollowsTheActiveProfileWhenItWasTheDroppedOne()
+    {
+        var settings = new AppSettings
+        {
+            ActiveProfileId = "gaming",
+            Profiles = [Profile("balanced", "Balanced"), Profile("gaming", "Gaming"), Profile("preset-gaming", "Gaming", 0.7f)]
+        }.Normalize();
+
+        // The active one is the one that stays, because you were using it.
+        Assert.Equal("gaming", settings.ActiveProfileId);
+        Assert.DoesNotContain(settings.Profiles, p => p.Id == "preset-gaming");
+    }
+
+    [Fact]
+    public void Normalize_LeavesDistinctProfilesAlone()
+    {
+        var profiles = AudioProfile.CreateDefaults();
+        var settings = new AppSettings { Profiles = profiles }.Normalize();
+
+        Assert.Equal(profiles.Select(p => p.Id), settings.Profiles.Select(p => p.Id));
+    }
+
+    [Fact]
     public void Normalize_ClampsUnsafeValues()
     {
         var settings = new AppSettings

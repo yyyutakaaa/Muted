@@ -19,6 +19,28 @@ public sealed record AudioEngineOptions(
     };
 }
 
+/// <summary>Where Studio Voice stands: asked for or not, and whether its model runs.</summary>
+public enum StudioVoiceStatus
+{
+    Off,
+    Loading,
+    Active,
+    Unavailable
+}
+
+/// <summary>The AI models Studio Voice can clean with. All three run at 48 kHz mono.</summary>
+public enum StudioModel
+{
+    /// <summary>DeepFilterNet3: the original Studio Voice, lightest of the three.</summary>
+    DeepFilterNet3,
+
+    /// <summary>DPDFNet 2: dual-path RNN, stronger on noise that looks like a voice.</summary>
+    DpdfNet2,
+
+    /// <summary>DPDFNet 8: the same family with eight dual-path blocks, the best quality.</summary>
+    DpdfNet8
+}
+
 /// <summary>
 /// Echo cancellation needs a reference: a loopback of whatever the speakers are
 /// playing. Without a device to listen to there is nothing to subtract.
@@ -69,7 +91,9 @@ public sealed record SuppressionOptions(
     bool AutoGainEnabled = false,
     float AutoGainTargetDb = -18f,
     VoiceCharacterOptions? Character = null,
-    ShoutGuardOptions? ShoutGuard = null)
+    ShoutGuardOptions? ShoutGuard = null,
+    bool StudioVoice = false,
+    StudioModel StudioModel = StudioModel.DeepFilterNet3)
 {
     public SuppressionOptions Normalize() => this with
     {
@@ -80,6 +104,7 @@ public sealed record SuppressionOptions(
         OutputGain = Math.Clamp(OutputGain, 0.25f, 4f),
         HighPassFrequency = Math.Clamp(HighPassFrequency, 40f, 200f),
         AutoGainTargetDb = Math.Clamp(AutoGainTargetDb, -30f, -6f),
+        StudioModel = Enum.IsDefined(StudioModel) ? StudioModel : StudioModel.DeepFilterNet3,
         Character = (Character ?? VoiceCharacterOptions.Disabled).Normalize(),
         ShoutGuard = (ShoutGuard ?? ShoutGuardOptions.Disabled).Normalize()
     };

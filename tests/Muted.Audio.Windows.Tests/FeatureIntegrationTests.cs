@@ -68,6 +68,9 @@ public sealed class FeatureIntegrationTests
                     encoder.Save(stream);
                     }
                 }
+                UpdateDialogTests.Verify(theme);
+                InfoTipTests.Verify(app, theme);
+                ProfileMenuTests.Verify(app, theme);
                 VerifyRedesignInRunningWindow(app, theme);
             }
             catch (Exception exception) { failure = exception; }
@@ -115,6 +118,14 @@ public sealed class FeatureIntegrationTests
             model.SelectedPage = AppPage.Advanced;
             Pump();
             SaveWindow(window, "advanced");
+            // Every Advanced menu entry opens its own section.
+            var advancedView = (AdvancedView)((ContentControl)window.FindName("PageHost")).Content;
+            foreach (var entry in new[] { "DevicesNav", "TestNav", "TuneNav", "ChainNav", "ToolsNav", "ShortcutsNav", "SoundNav" })
+            {
+                ((RadioButton)advancedView.FindName(entry)).IsChecked = true;
+                Pump();
+                SaveWindow(window, $"advanced-{entry}");
+            }
             var host = (ContentControl)window.FindName("PageHost");
             Assert.IsType<AdvancedView>(host.Content);
             // Opening the simplified controls must preserve legacy custom blends and

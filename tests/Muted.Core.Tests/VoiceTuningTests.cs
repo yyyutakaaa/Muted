@@ -61,8 +61,9 @@ public sealed class VoiceTuningTests
         Assert.False(measurement.Clipped);
         Assert.True(recommendation.Reliable);
 
-        // Speech lands on the target once the boost is applied.
-        var boostedSpeech = measurement.SpeechLevelDb + (20f * MathF.Log10(recommendation.InputGain));
+        // Speech lands on the target once the trim and the make-up after the noise removal are applied.
+        var boostedSpeech = measurement.SpeechLevelDb + (20f * MathF.Log10(recommendation.InputGain)) +
+                            (20f * MathF.Log10(recommendation.OutputGain));
         Assert.InRange(boostedSpeech, VoiceAnalyzer.TargetSpeechDb - 1.5f, VoiceAnalyzer.TargetSpeechDb + 1.5f);
 
         // The shout limit sits between normal peaks and the shout.
@@ -92,8 +93,51 @@ public sealed class VoiceTuningTests
             PitchHz: 150f, SibilanceDb: -20f, DynamicRangeDb: 12f, RumbleShareDb: -20f,
             QuietVoiceProbability: 0.1f, SpeechVoiceProbability: 0.9f, SpeechSeconds: 12, Clipped: false));
 
-        var gainDb = 20f * MathF.Log10(recommendation.InputGain);
+        // Both the trim before the noise removal and the make-up after it count.
+        var gainDb = 20f * MathF.Log10(recommendation.InputGain) + (20f * MathF.Log10(recommendation.OutputGain));
         Assert.True(-6f + gainDb <= VoiceAnalyzer.PeakHeadroomDb + 0.01f);
+    }
+
+    [Fact]
+    public void Analyzer_NeverBoostsTheMicrophoneBeforeTheNoiseRemoval()
+    {
+        // A quiet microphone: speech at -32 dB asked for +10 dB of boost before.
+        var recommendation = VoiceAnalyzer.Recommend(new VoiceMeasurement(
+            NoiseFloorDb: -55f, SpeechLevelDb: -32f, SpeechPeakDb: -14f, LoudPeakDb: -4f,
+            PitchHz: 140f, SibilanceDb: -20f, DynamicRangeDb: 12f, RumbleShareDb: -20f,
+            QuietVoiceProbability: 0.1f, SpeechVoiceProbability: 0.9f, SpeechSeconds: 12, Clipped: false));
+
+        Assert.Equal(1f, recommendation.InputGain, 3);
+
+        // The make-up after the noise removal is small, and the rest goes to the microphone.
+        var makeupDb = 20f * MathF.Log10(recommendation.OutputGain);
+        Assert.InRange(makeupDb, 5.9f, VoiceAnalyzer.MaximumMakeupDb + 0.01f);
+        Assert.Contains(recommendation.Notes, note => note.Contains("Windows sound settings") && note.Contains("about 4 dB"));
+    }
+
+    [Fact]
+    public void Analyzer_TrimsAHotMicrophoneBeforeTheNoiseRemoval()
+    {
+        var recommendation = VoiceAnalyzer.Recommend(new VoiceMeasurement(
+            NoiseFloorDb: -60f, SpeechLevelDb: -14f, SpeechPeakDb: -4f, LoudPeakDb: -1f,
+            PitchHz: 140f, SibilanceDb: -20f, DynamicRangeDb: 12f, RumbleShareDb: -20f,
+            QuietVoiceProbability: 0.1f, SpeechVoiceProbability: 0.9f, SpeechSeconds: 12, Clipped: false));
+
+        Assert.InRange(20f * MathF.Log10(recommendation.InputGain), -8.1f, -7.9f);
+        Assert.Equal(1f, recommendation.OutputGain, 3);
+    }
+
+    [Fact]
+    public void Analyzer_AQuietButCleanMicrophoneNeedsNoWarning()
+    {
+        var recommendation = VoiceAnalyzer.Recommend(new VoiceMeasurement(
+            NoiseFloorDb: -70f, SpeechLevelDb: -26f, SpeechPeakDb: -12f, LoudPeakDb: -4f,
+            PitchHz: 140f, SibilanceDb: -20f, DynamicRangeDb: 12f, RumbleShareDb: -20f,
+            QuietVoiceProbability: 0.1f, SpeechVoiceProbability: 0.9f, SpeechSeconds: 12, Clipped: false));
+
+        Assert.Equal(1f, recommendation.InputGain, 3);
+        Assert.InRange(20f * MathF.Log10(recommendation.OutputGain), 3.9f, 4.1f);
+        Assert.DoesNotContain(recommendation.Notes, note => note.Contains("quiet"));
     }
 
     [Fact]
@@ -105,6 +149,7 @@ public sealed class VoiceTuningTests
 
         Assert.False(recommendation.Reliable);
         Assert.Equal(1f, recommendation.InputGain, 3);
+        Assert.Equal(1f, recommendation.OutputGain, 3);
         Assert.NotEmpty(recommendation.Notes);
     }
 
@@ -202,30 +247,59 @@ public sealed class VoiceTuningTests
     }
 
     [Fact]
-    public void Tuner_RaisesBoostInSmallBoundedSteps()
+    public void Tuner_NeverTurnsTheMicrophoneUp()
     {
         var tuner = new AutoTuner();
         tuner.Reset(1f, 0.55f, 0, 0);
         var gain = 1f;
-        var threshold = 0.55f;
         long speech = 0;
 
-        var first = tuner.Update(10, -40f, 0.43f, speech += 400, gain, threshold);
-        Assert.NotNull(first);
-        Assert.InRange(20f * MathF.Log10(first!.Value.InputGain), 1.4f, 1.6f);
-
-        for (var step = 2; step < 40; step++)
+        // Speech 18 dB short of the target for five minutes: the boost stays at unity.
+        for (var step = 1; step < 40; step++)
         {
-            if (tuner.Update(step * 10, -40f, 0.43f, speech += 400, gain, threshold) is { } next)
+            if (tuner.Update(step * 10, -40f, 0.43f, speech += 400, gain, 0.55f) is { } next)
             {
                 gain = next.InputGain;
-                threshold = next.VoiceThreshold;
             }
         }
 
-        // 18 dB short, but the boost never wanders more than 6 dB from where it started.
-        Assert.InRange(20f * MathF.Log10(gain), AutoTuner.MaximumGainDriftDb - 0.01f, AutoTuner.MaximumGainDriftDb + 0.01f);
-        Assert.InRange(threshold, 0.54f, 0.56f);
+        Assert.Equal(1f, gain, 3);
+    }
+
+    [Fact]
+    public void Tuner_LowersAHotMicrophoneInSmallBoundedSteps()
+    {
+        var tuner = new AutoTuner();
+        tuner.Reset(1f, 0.55f, 0, 0);
+        var gain = 1f;
+        long speech = 0;
+
+        var first = tuner.Update(10, -10f, 0.1f, speech += 400, gain, 0.55f);
+        Assert.NotNull(first);
+        Assert.InRange(20f * MathF.Log10(first!.Value.InputGain), -1.6f, -1.4f);
+        gain = first.Value.InputGain;
+
+        for (var step = 2; step < 40; step++)
+        {
+            if (tuner.Update(step * 10, -10f, 0.1f, speech += 400, gain, 0.55f) is { } next)
+            {
+                gain = next.InputGain;
+            }
+        }
+
+        // 12 dB too hot, but the boost never wanders more than 6 dB from where it started.
+        Assert.InRange(20f * MathF.Log10(gain), -AutoTuner.MaximumGainDriftDb - 0.01f, -AutoTuner.MaximumGainDriftDb + 0.01f);
+    }
+
+    [Fact]
+    public void Tuner_KeepsAManualBoostWhereItIs()
+    {
+        // Someone who set +3 dB themselves is not pulled down, and not pushed further up.
+        var tuner = new AutoTuner();
+        var manual = MathF.Pow(10f, 3f / 20f);
+        tuner.Reset(manual, 0.55f, 0, 0);
+
+        Assert.Null(tuner.Update(10, -40f, 0.43f, 400, manual, 0.55f)?.InputGain is { } up && up > manual + 0.001f ? "raised" : null);
     }
 
     [Fact]
@@ -260,8 +334,8 @@ public sealed class VoiceTuningTests
         var tuner = new AutoTuner();
         tuner.Reset(1f, 0.55f, speechFrames: 5_000, nowSeconds: 0);
 
-        Assert.Null(tuner.Update(10, -40f, 0.43f, 100, 1f, 0.55f));     // counter restarted from zero
-        Assert.NotNull(tuner.Update(20, -40f, 0.43f, 500, 1f, 0.55f));
+        Assert.Null(tuner.Update(10, -10f, 0.43f, 100, 1f, 0.55f));     // counter restarted from zero
+        Assert.NotNull(tuner.Update(20, -10f, 0.43f, 500, 1f, 0.55f));
     }
 
     // ---------------------------------------------------------------- helpers

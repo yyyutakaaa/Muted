@@ -49,6 +49,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     private RealtimeFloatWaveProvider? _outputProvider;
     private RealtimeFloatWaveProvider? _monitorProvider;
     private RnnoiseProcessor? _rnnoise;
+
+    // Studio Voice outlives a single start and stop: a model loads once, in the
+    // background, the first time it is asked for. The host loads a newly chosen model
+    // next to the one that is cleaning and crossfades when it has settled.
+    private readonly StudioVoiceHost _studio = new();
+    private long _studioResets;
     private CancellationTokenSource? _processorCancellation;
     private Thread? _processorThread;
     private Exception? _pendingFault;
@@ -110,6 +116,37 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     }
 
     public CalibrationRecording? EndCalibration() => Interlocked.Exchange(ref _calibration, null)?.Finish();
+
+    /// <summary>Why Studio Voice is unavailable, when it is.</summary>
+    public string? StudioVoiceError => _studio.Error;
+
+    /// <summary>How often the model was restarted because it stopped removing noise.</summary>
+    public long StudioVoiceResets => Interlocked.Read(ref _studioResets);
+
+    public StudioVoiceStatus StudioVoiceStatus
+    {
+        get
+        {
+            var suppression = Volatile.Read(ref _options)?.Suppression;
+            if (suppression is not { StudioVoice: true })
+            {
+                return StudioVoiceStatus.Off;
+            }
+
+            if (_studio.ActiveModel is not null)
+            {
+                return StudioVoiceStatus.Active;
+            }
+
+            return _studio.Error is null ? StudioVoiceStatus.Loading : StudioVoiceStatus.Unavailable;
+        }
+    }
+
+    /// <summary>Which model is actually cleaning right now; they are not the same thing.</summary>
+    public StudioModel? StudioVoiceActiveModel => _studio.ActiveModel;
+
+    /// <summary>True while a newly chosen model loads or settles next to the active one.</summary>
+    public bool StudioVoiceSwitching => _studio.IsSwitching;
 
     public event EventHandler<AudioEngineState>? StateChanged;
 
@@ -186,6 +223,7 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
             Interlocked.Exchange(ref _pendingFault, null);
             Interlocked.Exchange(ref _faultHandling, 0);
             Volatile.Write(ref _options, options.Normalize());
+            EnsureStudioVoice(options.Suppression);
             Scope.Clear();
             Volatile.Write(ref _session, new SessionAccumulator());
             SetState(AudioEngineState.Starting);
@@ -249,6 +287,27 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         if (current is not null)
         {
             Volatile.Write(ref _options, current with { Suppression = suppression.Normalize() });
+        }
+
+        EnsureStudioVoice(suppression);
+    }
+
+    /// <summary>
+    /// Turns Studio Voice's local signal-to-noise estimate into a speech probability:
+    /// -5 dB and below is surely not a voice, +10 dB and above surely is.
+    /// </summary>
+    internal static float StudioSpeechProbability(float localSnrDb) =>
+        float.IsFinite(localSnrDb) ? Math.Clamp((localSnrDb + 5f) / 15f, 0f, 1f) : 0f;
+
+    /// <summary>
+    /// Asks for the chosen Studio Voice model. It loads off the audio thread; until it
+    /// is ready the current model keeps cleaning, or RNNoise when there is none yet.
+    /// </summary>
+    private void EnsureStudioVoice(SuppressionOptions suppression)
+    {
+        if (suppression.StudioVoice)
+        {
+            _studio.Request(suppression.StudioModel);
         }
     }
 
@@ -632,6 +691,15 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         var monitorFrame = new float[FrameSize];
         var driftOutput = new float[FrameSize + 1];
         var dryDelay = new SampleDelayLine(RnnoiseProcessor.AlgorithmicDelaySamples);
+
+        // Studio Voice runs later than RNNoise, so the untouched signal gets its own,
+        // longer delay. Both lines keep running so switching never misaligns the mix.
+        var studioDelayedDry = new float[FrameSize];
+        var studioDryDelay = new SampleDelayLine(IDenoiser.LatencySamples);
+        var studioWet = new float[FrameSize];
+        var studioNeedsReset = true;
+        var studioPriority = false;
+        var studioWatchdog = new StudioWatchdog();
         var voiceGate = new VoiceGate();
         var echoCanceller = new EchoCanceller();
         var referenceFrame = new float[FrameSize];
@@ -725,18 +793,80 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 shoutGuard.Analyze(input, shout.ThresholdDb, shout.Enabled);
 
                 dryDelay.Process(input, delayedDry);
+                studioDryDelay.Process(input, studioDelayedDry);
+
+                // RNNoise always runs: its speech probability drives the gate, auto-tuning
+                // and the meters, also while Studio Voice does the cleaning.
                 var voiceProbability = rnnoise.Process(input, wet);
+                var dry = delayedDry;
+                var gateProbability = voiceProbability;
+                var studioWanted = suppression.StudioVoice && suppression.Enabled;
+                var studioActive = false;
+                if (studioWanted)
+                {
+                    if (studioNeedsReset)
+                    {
+                        _studio.Reset();
+                        studioWatchdog.Reset();
+                        studioNeedsReset = false;
+                    }
+
+                    // Process also picks up a model that just finished loading, so it runs
+                    // even before any model is active; it reports whether one cleaned.
+                    studioActive = _studio.Process(input, studioWet);
+                    if (studioActive)
+                    {
+                        dry = studioDelayedDry;
+
+                        // Both lines are delayed by the same amount, so this compares a
+                        // frame with exactly what the model made of it.
+                        if (!_studio.IsSwitching &&
+                            studioWatchdog.Observe(AudioMath.Rms(studioDelayedDry), AudioMath.Rms(studioWet), voiceProbability))
+                        {
+                            // The model stopped cleaning: start it fresh, as switching it off and on does.
+                            _studio.Reset();
+                            Interlocked.Increment(ref _studioResets);
+                        }
+
+                        // RNNoise mistakes about one key click in five for speech; Studio
+                        // Voice almost never does. The gate opens only when both hear a
+                        // voice, so typing stays silent.
+                        gateProbability = MathF.Min(voiceProbability, _studio.SpeechConfidence);
+                    }
+                }
+                else
+                {
+                    studioNeedsReset = true;
+                }
+
+                if (studioActive != studioPriority)
+                {
+                    // Studio Voice runs a heavier model; a higher priority keeps its frames on time.
+                    Thread.CurrentThread.Priority = studioActive ? ThreadPriority.Highest : ThreadPriority.AboveNormal;
+                    studioPriority = studioActive;
+                }
+
                 Volatile.Read(ref _calibration)?.Write(rawFrame, voiceProbability);
                 tracker.Process(rawFrame, voiceProbability, shoutGuard.IsEngaged);
 
+                // Gentle and Balanced mix some of the untouched signal back in. Studio Voice
+                // takes over noise removal completely: mixing the noisy original back in
+                // would only return the noise it removed.
+                var wetMix = suppression.Enabled ? suppression.WetMix : 0f;
+                if (dry == studioDelayedDry)
+                {
+                    wetMix = 1f;
+                    studioWet.AsSpan().CopyTo(wet);
+                }
+
                 AudioMath.Mix(
-                    delayedDry,
+                    dry,
                     wet,
                     mixed,
-                    suppression.Enabled ? suppression.WetMix : 0f);
+                    wetMix);
                 voiceGate.Process(
                     mixed,
-                    voiceProbability,
+                    gateProbability,
                     suppression.VoiceThreshold,
                     suppression.VoiceHoldMilliseconds,
                     suppression.Enabled && suppression.VoiceGateEnabled);
@@ -749,9 +879,11 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                     voice.Compression,
                     voice.Saturation,
                     voice.Enabled);
+                // With Studio Voice the stricter of the two models decides what counts as
+                // speech, so room noise can never push the level up.
                 autoGain.Process(
                     mixed,
-                    voiceProbability,
+                    gateProbability,
                     suppression.AutoGainTargetDb,
                     suppression.AutoGainEnabled);
                 AudioMath.ApplyGainAndClamp(mixed, suppression.OutputGain);
@@ -764,10 +896,10 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 Volatile.Read(ref _clip)?.Write(mixed);
 
                 // The "before" side: same moment, same boost, no RNNoise. Mute still means silence.
-                Volatile.Read(ref _rawClip)?.Write(suppression.IsMuted ? mixed : delayedDry);
+                Volatile.Read(ref _rawClip)?.Write(suppression.IsMuted ? mixed : dry);
 
                 // How much RNNoise actually removed, measured before and after the model.
-                var dryRms = AudioMath.Rms(delayedDry);
+                var dryRms = AudioMath.Rms(dry);
                 var wetRms = AudioMath.Rms(wet);
                 if (dryRms > 0.0015f && suppression.Enabled)
                 {
@@ -1255,6 +1387,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
         {
             disposeException = exception;
         }
+
+        _studio.Dispose();
 
         Task? faultTask;
         lock (_faultTaskSync)

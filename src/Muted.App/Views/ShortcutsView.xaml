@@ -5,7 +5,7 @@
              xmlns:controls="clr-namespace:Muted.App.Controls"
              Foreground="{DynamicResource TextBrush}">
     <StackPanel>
-        <StackPanel Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
+        <StackPanel x:Name="Header" Margin="0,14,0,20" infrastructure:Reveal.Delay="0">
             <TextBlock Style="{StaticResource PageTitleStyle}" Text="Shortcuts" />
             <TextBlock Margin="0,5,0,0"
                        Style="{StaticResource CaptionStyle}"

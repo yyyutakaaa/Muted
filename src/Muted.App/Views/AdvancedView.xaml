@@ -4,14 +4,23 @@
         <Style x:Key="Group" TargetType="Border">
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="0,0,0,16"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="16"/>
             <Setter Property="Background" Value="{DynamicResource SurfaceBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource PageTitleStyle}">
+            <Setter Property="FontSize" Value="24"/>
+        </Style>
+        <Style x:Key="SectionIntro" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,20"/>
         </Style>
         <Style x:Key="Segment" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{DynamicResource FocusRing}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
@@ -22,109 +31,209 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Foreground" Value="{DynamicResource BackgroundBrush}"/>
                             </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
-                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="IsChecked" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Surface" Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+                            </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
     </UserControl.Resources>
-    <StackPanel Margin="4,16,4,8">
-        <TextBlock Text="Advanced settings" FontSize="30" FontWeight="SemiBold"/>
-        <TextBlock Text="Fine-tune what matters. Muted handles the rest." TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" Margin="0,6,0,18"/>
-        <Border Style="{StaticResource Group}" motion:Reveal.Delay="30">
-            <StackPanel>
-                <TextBlock Text="Devices" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,16"/>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="130"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Text="Microphone" VerticalAlignment="Center" Margin="0,0,12,12"/>
-                    <ComboBox Grid.Column="1" Margin="0,0,0,12" ItemsSource="{Binding InputDevices}" SelectedItem="{Binding SelectedInput}" DisplayMemberPath="DisplayName" IsEnabled="{Binding CanSelectInput}" AutomationProperties.Name="Microphone input"/>
-                    <TextBlock Grid.Row="1" Text="Cable output" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedOutput}" DisplayMemberPath="DisplayName" IsEnabled="{Binding IsStopped}" AutomationProperties.Name="Processed output"/>
-                </Grid>
-                <TextBlock Text="Stop processing to change devices. Rescan devices in Settings if needed." TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0"/>
-                <TextBlock Text="A virtual cable is needed to send your processed voice to other apps." TextWrapping="Wrap" Foreground="{DynamicResource WarningBrush}" Margin="0,10,0,0" Visibility="{Binding NeedsVirtualCableSetup, Converter={StaticResource BoolToVisibility}}"/>
-                <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" Margin="0,8,0,0"/>
+
+    <!-- A menu on the left and one section at a time on the right. The menu stays
+         put while the section scrolls. -->
+    <Grid Margin="0,12,0,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="MenuColumn" Width="190"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <DockPanel Margin="0,0,16,0">
+            <TextBlock x:Name="MenuTitle" DockPanel.Dock="Top" Text="Advanced" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="14,4,0,10"/>
+            <Button x:Name="ProcessingButton" DockPanel.Dock="Bottom" Command="{Binding ToggleCommand}" Content="{Binding ProcessingActionText}" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch" Margin="0,12,0,0"/>
+            <StackPanel x:Name="Menu">
+                <RadioButton x:Name="SoundNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Sound" Tag="&#xE767;" Checked="Menu_OnChecked" AutomationProperties.Name="Sound"/>
+                <RadioButton x:Name="DevicesNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Devices" Tag="&#xE720;" Checked="Menu_OnChecked" AutomationProperties.Name="Devices"/>
+                <RadioButton x:Name="TestNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Voice test" Tag="&#xE768;" Checked="Menu_OnChecked" AutomationProperties.Name="Voice test"/>
+                <TextBlock x:Name="MoreTitle" Text="More" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextMutedBrush}" Margin="14,18,0,6"/>
+                <RadioButton x:Name="TuneNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Fine-tune" Tag="&#xE9E9;" Checked="Menu_OnChecked" AutomationProperties.Name="Fine-tune"/>
+                <RadioButton x:Name="ChainNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Processing" Tag="&#xE713;" Checked="Menu_OnChecked" AutomationProperties.Name="Processing chain"/>
+                <RadioButton x:Name="ToolsNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Profiles &amp; tools" Tag="&#xE8F1;" Checked="Menu_OnChecked" AutomationProperties.Name="Profiles and tools"/>
+                <RadioButton x:Name="ShortcutsNav" GroupName="AdvancedMenu" Style="{StaticResource NavItemStyle}" Content="Shortcuts" Tag="&#xE765;" Checked="Menu_OnChecked" AutomationProperties.Name="Keyboard shortcuts"/>
             </StackPanel>
-        </Border>
-        <Border Style="{StaticResource Group}" motion:Reveal.Delay="65">
-            <StackPanel>
-                <TextBlock Text="Sound" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,18"/>
-                <DockPanel>
-                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding AutoTuneEnabled}" Style="{StaticResource ToggleStyle}" AutomationProperties.Name="Automatic tuning"/>
-                    <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="Automatic tuning" FontSize="15"/>
-                        <TextBlock Text="Adapts microphone boost and the voice gate as you speak." TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </DockPanel>
-                <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,12"/>
-                <TextBlock Text="Noise removal" FontSize="15" Margin="0,0,0,10"/>
-                <Border Background="{DynamicResource BackgroundBrush}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1" CornerRadius="9">
-                    <Grid x:Name="NoiseTrack" SizeChanged="NoiseTrack_OnSizeChanged">
-                        <Border x:Name="NoiseIndicator" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="8">
-                            <Border.RenderTransform>
-                                <TranslateTransform x:Name="NoiseShift"/>
-                            </Border.RenderTransform>
-                        </Border>
-                        <UniformGrid Columns="3">
-                            <RadioButton Content="Gentle" GroupName="Noise" Style="{StaticResource Segment}" IsChecked="{Binding NoiseRemoval, Converter={StaticResource EnumToBoolean}, ConverterParameter=Gentle}"/>
-                            <RadioButton Content="Balanced" GroupName="Noise" Style="{StaticResource Segment}" IsChecked="{Binding NoiseRemoval, Converter={StaticResource EnumToBoolean}, ConverterParameter=Balanced}"/>
-                            <RadioButton Content="Strong" GroupName="Noise" Style="{StaticResource Segment}" IsChecked="{Binding NoiseRemoval, Converter={StaticResource EnumToBoolean}, ConverterParameter=Strong}"/>
-                        </UniformGrid>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding NoiseRemovalDescription}" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,12"/>
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding VoiceLevelText}"/>
-                    <TextBlock Text="Voice level" FontSize="15"/>
-                </DockPanel>
-                <Slider Minimum="-12.05" Maximum="12.05" SmallChange="1" LargeChange="3" Value="{Binding VoiceLevelDb}" AutomationProperties.Name="Voice level in decibels" Margin="0,12,0,8"/>
-                <TextBlock Text="Output adjustment after automatic level handling." TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}"/>
-                <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,12"/>
-                <DockPanel>
-                    <CheckBox DockPanel.Dock="Right" IsChecked="{Binding EchoCancellationEnabled}" Style="{StaticResource ToggleStyle}" AutomationProperties.Name="Echo cancellation"/>
-                    <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="Echo cancellation" FontSize="15"/>
-                        <TextBlock Text="Useful when using speakers." Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </DockPanel>
-                <StackPanel Visibility="{Binding EchoCancellationEnabled, Converter={StaticResource BoolToVisibility}}" Margin="0,12,0,0">
-                    <TextBlock Text="Speaker reference" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,6"/>
-                    <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedEchoReference}" DisplayMemberPath="DisplayName" IsEnabled="{Binding IsStopped}" AutomationProperties.Name="Echo cancellation speaker reference"/>
+        </DockPanel>
+
+        <ScrollViewer x:Name="SectionScroll" Grid.Column="1" VerticalScrollBarVisibility="Visible" Padding="0,0,8,0">
+            <Grid>
+                <!-- Sound -->
+                <StackPanel x:Name="SoundSection" motion:Reveal.Delay="0">
+                    <TextBlock Text="Sound" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="How much noise Muted removes and how loud you sound." Style="{StaticResource SectionIntro}"/>
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding StudioVoice}" Style="{StaticResource ToggleStyle}" AutomationProperties.Name="Studio Voice"/>
+                                <StackPanel Margin="0,0,16,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE945;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Studio Voice" FontSize="15" FontWeight="SemiBold"/>
+                                        <Border Background="{DynamicResource AccentSoftBrush}" CornerRadius="6" Padding="7,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="NEW" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"/>
+                                        </Border>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding StudioVoiceStatusText}" TextWrapping="Wrap" Margin="0,4,0,0" AutomationProperties.LiveSetting="Polite">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding StudioVoiceUnavailable}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <!-- The three models, only meaningful while Studio Voice is on. -->
+                            <StackPanel Margin="0,16,0,0" Visibility="{Binding StudioVoice, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="Model" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,10"/>
+                                <Border Background="{DynamicResource SurfaceRaisedBrush}" CornerRadius="9">
+                                    <Grid x:Name="ModelTrack" SizeChanged="Track_OnSizeChanged" RadioButton.Checked="Track_OnChecked">
+                                        <Border HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="8">
+                                            <Border.RenderTransform>
+                                                <TranslateTransform/>
+                                            </Border.RenderTransform>
+                                        </Border>
+                                    <UniformGrid Columns="3">
+                                        <RadioButton Content="Classic" GroupName="StudioModel" Style="{StaticResource Segment}"
+                                                     IsChecked="{Binding StudioModel, Converter={StaticResource EnumToBoolean}, ConverterParameter=DeepFilterNet3}"
+                                                     ToolTip="DeepFilterNet3 · lightest, and strong in quiet rooms"
+                                                     AutomationProperties.Name="Classic, DeepFilterNet3"/>
+                                        <RadioButton Content="Balanced" GroupName="StudioModel" Style="{StaticResource Segment}"
+                                                     IsChecked="{Binding StudioModel, Converter={StaticResource EnumToBoolean}, ConverterParameter=DpdfNet2}"
+                                                     ToolTip="DPDFNet 2 · also removes noise that sits in the same band as your voice"
+                                                     AutomationProperties.Name="Balanced, DPDFNet 2"/>
+                                        <RadioButton Content="Maximum" GroupName="StudioModel" Style="{StaticResource Segment}"
+                                                     IsChecked="{Binding StudioModel, Converter={StaticResource EnumToBoolean}, ConverterParameter=DpdfNet8}"
+                                                     ToolTip="DPDFNet 8 · strongest, keeps the most detail, uses the most processor"
+                                                     AutomationProperties.Name="Maximum quality, DPDFNet 8"/>
+                                    </UniformGrid>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{Binding StudioModelSummary}" TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Group}" Visibility="{Binding StudioVoice, Converter={StaticResource InverseBoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="Noise removal" FontSize="15" Margin="0,0,0,10"/>
+                            <Border Background="{DynamicResource SurfaceRaisedBrush}" CornerRadius="9">
+                                <Grid x:Name="NoiseTrack" SizeChanged="Track_OnSizeChanged" RadioButton.Checked="Track_OnChecked">
+                                    <Border HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" CornerRadius="8">
+                                        <Border.RenderTransform>
+                                            <TranslateTransform/>
+                                        </Border.RenderTransform>
+                                    </Border>
+                                    <UniformGrid Columns="3">
+                                        <RadioButton Content="Gentle" GroupName="Noise" Style="{StaticResource Segment}" IsChecked="{Binding NoiseRemoval, Converter={StaticResource EnumToBoolean}, ConverterParameter=Gentle}"/>
+                                        <RadioButton Content="Balanced" GroupName="Noise" Style="{StaticResource Segment}" IsChecked="{Binding NoiseRemoval, Converter={StaticResource EnumToBoolean}, ConverterParameter=Balanced}"/>
+                                        <RadioButton Content="Strong" GroupName="Noise" Style="{StaticResource Segment}" IsChecked="{Binding NoiseRemoval, Converter={StaticResource EnumToBoolean}, ConverterParameter=Strong}"/>
+                                    </UniformGrid>
+                                </Grid>
+                            </Border>
+                            <TextBlock Text="{Binding NoiseRemovalDescription}" Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding VoiceLevelText}"/>
+                                <TextBlock Text="Voice level" FontSize="15"/>
+                            </DockPanel>
+                            <Slider Minimum="-12.05" Maximum="12.05" SmallChange="1" LargeChange="3" Value="{Binding VoiceLevelDb}" AutomationProperties.Name="Voice level in decibels" Margin="0,12,0,8"/>
+                            <TextBlock Text="Output adjustment after automatic level handling." TextWrapping="Wrap" Foreground="{DynamicResource TextMutedBrush}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding EchoCancellationEnabled}" Style="{StaticResource ToggleStyle}" AutomationProperties.Name="Echo cancellation"/>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="Echo cancellation" FontSize="15"/>
+                                    <TextBlock Text="Useful when using speakers." Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"/>
+                                </StackPanel>
+                            </DockPanel>
+                            <StackPanel Visibility="{Binding EchoCancellationEnabled, Converter={StaticResource BoolToVisibility}}" Margin="0,14,0,0">
+                                <TextBlock Text="Speaker reference" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,6"/>
+                                <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedEchoReference}" DisplayMemberPath="DisplayName" IsEnabled="{Binding IsStopped}" AutomationProperties.Name="Echo cancellation speaker reference"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
-            </StackPanel>
-        </Border>
-        <Border Style="{StaticResource Group}">
-            <views:VoiceTestView/>
-        </Border>
-        <Expander Header="Technical controls" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,16">
-            <StackPanel Margin="0,16,0,0">
-                <TextBlock Text="Existing detailed controls and tools. These can change the sound beyond the choices above." TextWrapping="Wrap" Margin="0,0,0,16"/>
-                <views:AdvancedPanel/>
-                <Expander Header="Full processing chain and calibration" Margin="0,20,0,0">
-                    <views:AudioView/>
-                </Expander>
-                <Expander Header="Profiles, recording export and other tools" Margin="0,16,0,0">
+
+                <!-- Devices -->
+                <StackPanel x:Name="DevicesSection" motion:Reveal.Delay="0" Visibility="Collapsed">
+                    <TextBlock Text="Devices" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Stop processing to change devices." Style="{StaticResource SectionIntro}"/>
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <TextBlock Text="Microphone" Foreground="{DynamicResource TextMutedBrush}" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding InputDevices}" SelectedItem="{Binding SelectedInput}" DisplayMemberPath="DisplayName" IsEnabled="{Binding CanSelectInput}" AutomationProperties.Name="Microphone input"/>
+                            <TextBlock Text="Cable output" Foreground="{DynamicResource TextMutedBrush}" Margin="0,18,0,6"/>
+                            <ComboBox ItemsSource="{Binding OutputDevices}" SelectedItem="{Binding SelectedOutput}" DisplayMemberPath="DisplayName" IsEnabled="{Binding IsStopped}" AutomationProperties.Name="Processed output"/>
+                            <TextBlock Text="A virtual cable is needed to send your processed voice to other apps." TextWrapping="Wrap" Foreground="{DynamicResource WarningBrush}" Margin="0,14,0,0" Visibility="{Binding NeedsVirtualCableSetup, Converter={StaticResource BoolToVisibility}}"/>
+                            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" Margin="0,10,0,0"/>
+                            <Button Content="Rescan devices" Command="{Binding RescanDevicesCommand}" Style="{StaticResource TextButtonStyle}" HorizontalAlignment="Left" Margin="0,18,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Voice test -->
+                <StackPanel x:Name="TestSection" motion:Reveal.Delay="0" Visibility="Collapsed">
+                    <TextBlock Text="Voice test" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Record a few seconds and hear what others hear." Style="{StaticResource SectionIntro}"/>
+                    <Border Style="{StaticResource Group}">
+                        <views:VoiceTestView ShowTitle="False"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Fine-tune -->
+                <StackPanel x:Name="TuneSection" motion:Reveal.Delay="0" Visibility="Collapsed">
+                    <TextBlock Text="Fine-tune" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Detailed controls. These can change the sound beyond the choices under Sound." Style="{StaticResource SectionIntro}"/>
+                    <Border Style="{StaticResource Group}">
+                        <views:AdvancedPanel/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Full processing chain -->
+                <StackPanel x:Name="ChainSection" motion:Reveal.Delay="0" Visibility="Collapsed">
+                    <TextBlock Text="Processing" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Each step of the sound chain, and tuning to your voice." Style="{StaticResource SectionIntro}"/>
+                    <views:AudioView ShowHeader="False"/>
+                </StackPanel>
+
+                <!-- Profiles, recordings and other tools -->
+                <StackPanel x:Name="ToolsSection" motion:Reveal.Delay="0" Visibility="Collapsed">
+                    <TextBlock Text="Profiles &amp; tools" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Presets, saved profiles, recordings and extras." Style="{StaticResource SectionIntro}" Margin="0,6,0,4"/>
                     <views:FeaturesView/>
-                </Expander>
-                <Expander Header="Keyboard shortcuts" Margin="0,16,0,0">
-                    <views:ShortcutsView/>
-                </Expander>
-            </StackPanel>
-        </Expander>
-        <Button Command="{Binding ToggleCommand}" Content="{Binding ProcessingActionText}" Style="{StaticResource TextButtonStyle}" HorizontalAlignment="Right"/>
-    </StackPanel>
+                </StackPanel>
+
+                <!-- Keyboard shortcuts -->
+                <StackPanel x:Name="ShortcutsSection" motion:Reveal.Delay="0" Visibility="Collapsed">
+                    <TextBlock Text="Shortcuts" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock Text="Work anywhere in Windows, even in a full-screen game." Style="{StaticResource SectionIntro}"/>
+                    <views:ShortcutsView ShowHeader="False"/>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

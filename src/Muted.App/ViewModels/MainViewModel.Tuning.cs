@@ -157,7 +157,8 @@ internal sealed partial class MainViewModel
             return;
         }
 
-        if (!AutoTuneEnabled || !IsRunning)
+        // Studio Voice only removes noise; it never moves a control for you.
+        if (StudioVoice || !AutoTuneEnabled || !IsRunning)
         {
             return;
         }
@@ -323,6 +324,10 @@ internal sealed partial class MainViewModel
         try
         {
             InputGain = recommendation.InputGain;
+
+            // Automatic level already evens out the volume after the noise removal, so
+            // the make-up stays out of its way.
+            OutputGain = AutoGainEnabled ? 1.0 : recommendation.OutputGain;
             VoiceSensitivity = recommendation.VoiceThreshold;
             HighPassEnabled = true;
             HighPassFrequency = recommendation.HighPassFrequency;
@@ -377,6 +382,9 @@ internal sealed partial class MainViewModel
         var pitch = float.IsFinite(measurement.PitchHz) ? $"around {measurement.PitchHz:0} Hz" : "pitch unclear";
         lines.Add($"Your voice: {pitch}, speech {measurement.SpeechLevelDb:0} dB, room {measurement.NoiseFloorDb:0} dB.");
         lines.Add($"Microphone boost: {FormatGain(before.InputGain)} → {FormatGain(after.InputGain)}");
+        lines.Add(AutoGainEnabled
+            ? "Voice level: left to Automatic level."
+            : $"Voice level, after the noise removal: {FormatGain(before.OutputGain)} → {FormatGain(after.OutputGain)}");
         lines.Add($"Voice gate: {before.VoiceThreshold:0.00} → {after.VoiceThreshold:0.00}");
         lines.Add($"High-pass: {(before.HighPassEnabled ? $"{before.HighPassFrequency:0} Hz" : "off")} → {after.HighPassFrequency:0} Hz");
         lines.Add($"Shout limit: {before.ShoutThresholdDb:0} dB → {after.ShoutThresholdDb:0} dB" +
@@ -391,6 +399,7 @@ internal sealed partial class MainViewModel
     /// <summary>Every value the calibration may change, so Undo can put it back.</summary>
     private sealed record TuningSnapshot(
         double InputGain,
+        double OutputGain,
         double VoiceThreshold,
         bool HighPassEnabled,
         double HighPassFrequency,
@@ -402,6 +411,7 @@ internal sealed partial class MainViewModel
     {
         public static TuningSnapshot Capture(MainViewModel model) => new(
             model.InputGain,
+            model.OutputGain,
             model.VoiceSensitivity,
             model.HighPassEnabled,
             model.HighPassFrequency,
@@ -414,6 +424,7 @@ internal sealed partial class MainViewModel
         public void Restore(MainViewModel model)
         {
             model.InputGain = InputGain;
+            model.OutputGain = OutputGain;
             model.VoiceSensitivity = VoiceThreshold;
             model.HighPassEnabled = HighPassEnabled;
             model.HighPassFrequency = HighPassFrequency;

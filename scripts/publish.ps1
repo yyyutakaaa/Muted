@@ -73,7 +73,14 @@ if (-not (Test-Path -LiteralPath $executable -PathType Leaf) -or
 
 & $verifyScript -PackagePath $output
 
-$hashEntries = foreach ($relativePath in @('Muted.exe', 'Muted.dll', 'rnnoise.dll')) {
+$hashEntries = foreach ($relativePath in @(
+        'Muted.exe',
+        'Muted.dll',
+        'rnnoise.dll',
+        'onnxruntime.dll',
+        'models\deepfilternet3.onnx',
+        'models\dpdfnet2_48khz_hr.onnx',
+        'models\dpdfnet8_48khz_hr.onnx')) {
     $hash = (Get-FileHash -LiteralPath (Join-Path $output $relativePath) -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $relativePath"
 }
