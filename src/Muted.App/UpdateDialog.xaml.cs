@@ -55,10 +55,10 @@ public partial class UpdateDialog : Window
         Func<IProgress<double>, Task<bool>> install)
     {
         var dialog = new UpdateDialog(owner) { _install = install, _releaseUrl = update.ReleaseUrl };
-        var version = update.AvailableVersion.ToString(3);
-        dialog.TitleText.Text = update.IsPrerelease ? $"Muted {version} beta is here" : $"Muted {version} is here";
+        var version = update.AvailableName;
+        dialog.TitleText.Text = $"Muted {version} is here";
         dialog.SubtitleText.Text = "A new version is ready to install.";
-        dialog.CurrentVersionText.Text = update.CurrentVersion.ToString(3);
+        dialog.CurrentVersionText.Text = update.CurrentName;
         dialog.NewVersionText.Text = version;
         dialog.MessageText.Text =
             "Muted downloads the update, closes for a moment and restarts on its own. " +

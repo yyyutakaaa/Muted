@@ -36,6 +36,7 @@ internal sealed class UpdateService
         CancellationToken cancellationToken = default)
     {
         var currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0);
+        var currentSuffix = Infrastructure.AppVersion.Suffix;
         if (!IsInstalledCopy())
         {
             return new UpdateCheckResult(
@@ -65,14 +66,18 @@ internal sealed class UpdateService
                     "The latest release information is invalid.");
             }
 
-            if (availableVersion <= currentVersion)
+            // Betas share their numbers with the release they lead up to, so the
+            // suffix decides between them: beta1 < beta2 < the release itself.
+            var availableSuffix = ReleaseSuffix(release.TagName);
+            if (CompareReleases(availableVersion, availableSuffix, currentVersion, currentSuffix) <= 0)
             {
                 return new UpdateCheckResult(
                     UpdateCheckStatus.UpToDate,
-                    $"Muted {currentVersion.ToString(3)} is up to date.");
+                    $"Muted {ReleaseName(currentVersion, currentSuffix)} is up to date.");
             }
 
             var versionText = availableVersion.ToString(3);
+            var releaseName = ReleaseName(availableVersion, availableSuffix);
             var installerName = $"Muted-Setup-{versionText}.exe";
             var installerAsset = FindInstallerAsset(release, installerName);
             var checksumAsset = installerAsset is null
@@ -85,7 +90,7 @@ internal sealed class UpdateService
                 _log.WriteMessage($"Release {release.TagName} has no valid installer and checksum assets.");
                 return new UpdateCheckResult(
                     UpdateCheckStatus.Unavailable,
-                    $"Muted {versionText} is published, but its installer is unavailable.");
+                    $"Muted {releaseName} is published, but its installer is unavailable.");
             }
 
             var update = new AvailableUpdate(
@@ -96,11 +101,14 @@ internal sealed class UpdateService
                 installerAsset.Size,
                 checksumAsset.DownloadUrl,
                 release.HtmlUrl,
-                release.Prerelease);
-            var suffix = release.Prerelease ? " (beta)" : string.Empty;
+                release.Prerelease)
+            {
+                CurrentName = ReleaseName(currentVersion, currentSuffix),
+                AvailableName = releaseName
+            };
             return new UpdateCheckResult(
                 UpdateCheckStatus.UpdateAvailable,
-                $"Muted {versionText}{suffix} is available.",
+                $"Muted {releaseName} is available.",
                 update);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -154,13 +162,13 @@ internal sealed class UpdateService
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        return releases?
+        var candidates = (releases ?? [])
             .Where(release => release is { Draft: false })
-            .Select(release => (Release: release, Parsed: TryParseVersion(release.TagName, out var version), Version: version))
+            .Select(release => (Release: release, Parsed: TryParseVersion(release.TagName, out var version), Version: version, Suffix: ReleaseSuffix(release.TagName)))
             .Where(candidate => candidate.Parsed)
-            .OrderByDescending(candidate => candidate.Version)
-            .Select(candidate => candidate.Release)
-            .FirstOrDefault();
+            .ToList();
+        candidates.Sort((first, second) => CompareReleases(second.Version, second.Suffix, first.Version, first.Suffix));
+        return candidates.Count == 0 ? null : candidates[0].Release;
     }
 
     private static GitHubAsset? FindInstallerAsset(GitHubRelease release, string preferredName)
@@ -325,6 +333,70 @@ internal sealed class UpdateService
         }
 
         return TryParseVersion(fileName[prefix.Length..^".exe".Length], out version);
+    }
+
+    /// <summary>The prerelease part of a tag, such as "beta2" for v0.10.0-beta2; empty for a release.</summary>
+    internal static string ReleaseSuffix(string? tagName)
+    {
+        var value = tagName?.Trim() ?? string.Empty;
+        var metadata = value.IndexOf('+');
+        if (metadata >= 0)
+        {
+            value = value[..metadata];
+        }
+
+        var dash = value.IndexOf('-');
+        return dash > 0 ? value[(dash + 1)..] : string.Empty;
+    }
+
+    /// <summary>Such as "0.10.0 beta2", or "0.10.0" for a release.</summary>
+    internal static string ReleaseName(Version version, string suffix) =>
+        suffix.Length > 0 ? $"{version.ToString(3)} {suffix}" : version.ToString(3);
+
+    /// <summary>
+    /// Orders releases: by their numbers first; with the same numbers a release comes
+    /// after all of its prereleases, and prereleases compare by name with their number
+    /// read as a number, so beta2 &lt; beta10 &lt; rc1.
+    /// </summary>
+    internal static int CompareReleases(Version first, string firstSuffix, Version second, string secondSuffix)
+    {
+        var byNumbers = first.CompareTo(second);
+        if (byNumbers != 0)
+        {
+            return byNumbers;
+        }
+
+        if (firstSuffix.Length == 0 && secondSuffix.Length == 0)
+        {
+            return 0;
+        }
+
+        if (firstSuffix.Length == 0)
+        {
+            return 1;
+        }
+
+        if (secondSuffix.Length == 0)
+        {
+            return -1;
+        }
+
+        var (firstName, firstNumber) = SplitSuffix(firstSuffix);
+        var (secondName, secondNumber) = SplitSuffix(secondSuffix);
+        var byName = string.Compare(firstName, secondName, StringComparison.OrdinalIgnoreCase);
+        return byName != 0 ? byName : firstNumber.CompareTo(secondNumber);
+    }
+
+    private static (string Name, long Number) SplitSuffix(string suffix)
+    {
+        var digits = suffix.Length;
+        while (digits > 0 && char.IsAsciiDigit(suffix[digits - 1]))
+        {
+            digits--;
+        }
+
+        var number = digits < suffix.Length && long.TryParse(suffix[digits..], out var parsed) ? parsed : 0;
+        return (suffix[..digits].TrimEnd('.', '-'), number);
     }
 
     internal static bool TryParseVersion(string? tagName, out Version version)
@@ -497,7 +569,14 @@ internal sealed record AvailableUpdate(
     long InstallerSize,
     string ChecksumUrl,
     string? ReleaseUrl,
-    bool IsPrerelease = false);
+    bool IsPrerelease = false)
+{
+    /// <summary>The installed version as people read it, such as "0.10.0 beta1".</summary>
+    public string CurrentName { get; init; } = CurrentVersion.ToString(3);
+
+    /// <summary>The offered version as people read it, such as "0.10.0 beta2".</summary>
+    public string AvailableName { get; init; } = AvailableVersion.ToString(3);
+}
 
 internal sealed record UpdateCheckResult(
     UpdateCheckStatus Status,

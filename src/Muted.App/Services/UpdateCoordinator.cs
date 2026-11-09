@@ -44,7 +44,8 @@ internal sealed class UpdateCoordinator
                 return new UpdatePromptResult(result.Message, false);
             }
 
-            var version = result.Update.AvailableVersion.ToString(3);
+            // The full name, so skipping one beta does not also skip the next one.
+            var version = result.Update.AvailableName;
 
             // A version the user skipped stays quiet in the background, but an explicit
             // "check for updates" always shows what is out there.
