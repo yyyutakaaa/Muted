@@ -16,6 +16,7 @@
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageReference Include="System.Speech" Version="9.0.0" />
+    <PackageReference Include="Concentus" Version="2.2.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +37,10 @@
   <!-- A clean speech sample, so the model tests measure what real speech keeps. -->
   <ItemGroup Condition="Exists('fixtures\speech-48k-mono.wav')">
     <Content Include="fixtures\speech-48k-mono.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Microsoft's DNSMOS P.835 quality model (CC-BY-4.0), for the quality harness only. -->
+    <Content Include="fixtures\dnsmos-sig_bak_ovr.onnx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

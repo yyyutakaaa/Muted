@@ -140,6 +140,11 @@
                                     </Grid>
                                 </Border>
                                 <TextBlock Text="{Binding StudioModelSummary}" TextWrapping="Wrap" Style="{StaticResource CaptionStyle}" Margin="0,10,0,0"/>
+                                <Rectangle Style="{StaticResource RowDividerStyle}"/>
+                                <controls:SettingRow Title="Natural room tone"
+                                                     Description="Keeps a faint sound of your room, also between your words, instead of dead silence. You sound more natural and people can tell you are still there.">
+                                    <CheckBox IsChecked="{Binding StudioRoomTone}" Style="{StaticResource ToggleStyle}" AutomationProperties.Name="Natural room tone"/>
+                                </controls:SettingRow>
                                 <StackPanel Visibility="{Binding StudioModel, Converter={StaticResource EnumToVisibility}, ConverterParameter=DpdfNet8}">
                                     <Rectangle Style="{StaticResource RowDividerStyle}"/>
                                     <controls:SettingRow Title="Step down when the PC is busy"

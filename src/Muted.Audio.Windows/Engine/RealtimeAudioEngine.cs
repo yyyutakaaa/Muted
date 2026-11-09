@@ -23,6 +23,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
     // Studio Voice's models take longer per frame, and a busy PC delays them more; 20 ms
     // more in reserve rides out a late frame instead of crackling.
     private const int StudioExtraOutputSamples = FrameSize * 2;
+
+    /// <summary>
+    /// How loud the untouched signal comes back under Studio Voice with room tone on:
+    /// 20 dB down. Measured with DNSMOS after Opus, 20 dB scored best or close to best
+    /// for all three models (see RoomToneSweep in the tests).
+    /// </summary>
+    internal const float StudioRoomToneGain = 0.1f;
     private const int OutputHighWaterSamples = FrameSize * 6;
     private const int MonitorHighWaterSamples = FrameSize * 8;
 
@@ -863,6 +870,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 var voiceProbability = rnnoise.Process(input, wet);
                 var dry = delayedDry;
                 var gateProbability = voiceProbability;
+
+                // What keeps the gate open: Studio Voice's own confidence, which lines up
+                // with the audio at the gate. RNNoise has heard the same moment 40 to 50 ms
+                // earlier, so its probability is what opens the gate before a word arrives.
+                var confirmProbability = voiceProbability;
+                var earlyProbability = 0f;
                 var studioWanted = suppression.StudioVoice && suppression.Enabled;
                 var studioActive = false;
 
@@ -918,6 +931,8 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                         // Voice almost never does. The gate opens only when both hear a
                         // voice, so typing stays silent.
                         gateProbability = MathF.Min(voiceProbability, _studio.SpeechConfidence);
+                        confirmProbability = _studio.SpeechConfidence;
+                        earlyProbability = voiceProbability;
                     }
                 }
                 else
@@ -938,12 +953,13 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 tracker.Process(rawFrame, voiceProbability, shoutGuard.IsEngaged);
 
                 // Gentle and Balanced mix some of the untouched signal back in. Studio Voice
-                // takes over noise removal completely: mixing the noisy original back in
-                // would only return the noise it removed.
+                // does all the cleaning; with room tone on, the untouched signal comes back
+                // 20 dB down, so the background is a faint room instead of dead silence and
+                // the voice keeps the detail full removal shaves off.
                 var wetMix = suppression.Enabled ? suppression.WetMix : 0f;
                 if (dry == studioDelayedDry)
                 {
-                    wetMix = 1f;
+                    wetMix = suppression.StudioRoomTone ? 1f - StudioRoomToneGain : 1f;
                     studioWet.AsSpan().CopyTo(wet);
                 }
 
@@ -964,10 +980,12 @@ public sealed class RealtimeAudioEngine : IAsyncDisposable
                 }
                 voiceGate.Process(
                     mixed,
-                    gateProbability,
+                    earlyProbability,
+                    confirmProbability,
                     suppression.VoiceThreshold,
                     suppression.VoiceHoldMilliseconds,
-                    suppression.Enabled && suppression.VoiceGateEnabled);
+                    suppression.Enabled && suppression.VoiceGateEnabled,
+                    studioActive && suppression.StudioRoomTone ? VoiceGate.RoomToneFloorGain : VoiceGate.DefaultFloorGain);
                 speakerGate.Process(
                     mixed,
                     onlyMyVoice ? speaker!.Similarity : float.NaN,

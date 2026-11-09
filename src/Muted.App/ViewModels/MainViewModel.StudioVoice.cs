@@ -13,6 +13,7 @@ internal sealed partial class MainViewModel
     private string _studioVoiceStatusText = string.Empty;
     private bool _studioVoiceUnavailable;
     private bool _studioAutoStepDown = true;
+    private bool _studioRoomTone = true;
 
     public bool StudioVoice
     {
@@ -54,6 +55,13 @@ internal sealed partial class MainViewModel
                 RefreshStudioVoiceStatus();
             }
         }
+    }
+
+    /// <summary>A faint room sound under Studio Voice instead of dead silence.</summary>
+    public bool StudioRoomTone
+    {
+        get => _studioRoomTone;
+        set => SetAudioProperty(ref _studioRoomTone, value);
     }
 
     /// <summary>The three model choices, for the model descriptions.</summary>

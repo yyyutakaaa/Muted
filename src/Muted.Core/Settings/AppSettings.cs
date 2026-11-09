@@ -51,6 +51,9 @@ public sealed record AppSettings
     /// <summary>Lets Maximum step down to Balanced while the PC is too busy, as in a heavy game.</summary>
     public bool StudioAutoStepDown { get; init; } = true;
 
+    /// <summary>Keeps a faint room sound under Studio Voice instead of dead silence.</summary>
+    public bool StudioRoomTone { get; init; } = true;
+
     public bool LimiterEnabled { get; init; } = true;
     public bool AutoGainEnabled { get; init; }
     public float AutoGainTargetDb { get; init; } = -18f;

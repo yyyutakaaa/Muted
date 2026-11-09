@@ -104,7 +104,8 @@ internal sealed partial class MainViewModel
     }
 
     public string SetupCallAppText =>
-        $"In Discord, Teams or your game, choose {CableRecordingName} as the microphone, and turn the app's own noise suppression off.";
+        $"In Discord, Teams or your game, choose {CableRecordingName} as the microphone. Then turn off that app's own " +
+        "noise suppression (Krisp in Discord), echo cancellation and automatic gain control, so your voice is not cleaned twice.";
 
     public string SetupCableText => HasVirtualCable
         ? "Found a virtual cable. Muted sends your cleaned voice into it."

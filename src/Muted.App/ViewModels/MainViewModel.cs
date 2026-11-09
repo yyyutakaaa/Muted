@@ -1062,6 +1062,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         _studioVoice = _settings.StudioVoice;
         _studioModel = Enum.IsDefined(_settings.StudioModel) ? _settings.StudioModel : StudioModel.DeepFilterNet3;
         _studioAutoStepDown = _settings.StudioAutoStepDown;
+        _studioRoomTone = _settings.StudioRoomTone;
         RefreshStudioVoiceStatus();
         _limiterEnabled = _settings.LimiterEnabled;
         _autoGainEnabled = _settings.AutoGainEnabled;
@@ -1941,6 +1942,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         StudioVoice: StudioVoice,
         StudioModel: StudioModel,
         StudioAutoStepDown: StudioAutoStepDown,
+        StudioRoomTone: StudioRoomTone,
         OnlyMyVoice: OnlyMyVoice,
         SpeakerStrictness: (float)SpeakerStrictness,
         VoiceProfile: _voiceProfile);
@@ -1981,6 +1983,7 @@ internal sealed partial class MainViewModel : ObservableObject, IAsyncDisposable
         HighPassFrequency = (float)HighPassFrequency,
         StudioVoice = StudioVoice,
         StudioAutoStepDown = StudioAutoStepDown,
+        StudioRoomTone = StudioRoomTone,
         StudioModel = StudioModel,
         LimiterEnabled = LimiterEnabled,
         AutoGainEnabled = AutoGainEnabled,

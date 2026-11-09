@@ -11,6 +11,41 @@ workflow puts that section at the top of the GitHub release notes.
 
 ## [Unreleased]
 
+### Changed
+
+- **The first word after a pause is no longer cut off.** The voice gate used to
+  open only when both RNNoise and Studio Voice were sure, which meant it opened
+  after the word had arrived. It now opens on RNNoise, which hears the word 40 to
+  50 ms before it reaches the gate, and stays open while Studio Voice confirms it.
+  A click that Studio Voice never confirms closes it again after 80 ms. Measured on
+  speech after five seconds of fan noise, the first 60 ms of the word went from
+  7% (Maximum), 22% (Balanced) and 26% (Classic) through to all of it.
+- **Natural room tone**, on by default: under Studio Voice the room comes back
+  20 dB down instead of dead silence, and the voice gate then only turns it down
+  another 10 dB between words, so the room stays audible. Voices keep more detail
+  and nobody wonders whether you dropped out. In a quiet room there is little to
+  hear. It can be turned off under Advanced > Sound, which also brings back the
+  deeper 30 dB gate.
+- A closed voice gate turns the sound down by 30 dB instead of muting it, and it
+  fades out over 50 ms instead of snapping shut.
+- Only my voice turns another voice down by 12 dB instead of 30, so a wrong guess
+  never makes you disappear.
+- The setup guide now names what to switch off in Discord and Teams: their own
+  noise suppression (Krisp), echo cancellation and automatic gain control.
+- Behind the scenes: a quality harness runs every setup through the real models,
+  then through Opus as Discord sends it, and scores it with Microsoft's DNSMOS. It
+  fails the build when a change makes the voice sound worse. With the new gate and
+  room tone, DNSMOS rates the voice higher for every Studio Voice model.
+
+### Fixed
+
+- The beta channel never offered a newer beta of the same version, such as
+  0.10.0-beta2 to someone on 0.10.0-beta1, because it compared only the
+  numbers. It now reads the beta number too, so beta1 < beta2 < the release
+  itself. This works from beta2 on: earlier copies did not know they were a beta.
+  The update dialog and the "skip this version" choice use the full name, so
+  skipping one beta no longer skips the next.
+
 ## [0.10.0-beta2] - 2026-11-08
 
 ### Added

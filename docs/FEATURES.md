@@ -76,6 +76,14 @@ the PC is busy** on, which is the default, Balanced then takes over until there
 is room again, and the status line says so. With Studio Voice on, Muted also
 keeps 20 ms more audio in reserve to ride out a single late frame.
 
+With **Natural room tone** on, the default, the untouched signal comes back 20 dB
+down under Studio Voice: a faint room instead of dead silence, and more of the
+detail of your voice. The voice gate opens on RNNoise, which hears a word 40 to
+50 ms before it reaches the gate, and stays open while Studio Voice confirms the
+voice, so the first syllable after a pause is never cut off. A closed gate turns
+the sound down by 30 dB instead of muting it, or by 10 dB with room tone on so
+the room stays audible, and it fades rather than snaps.
+
 Running the models on the graphics card was measured and left out. Per 10 ms
 frame the processor was faster, also with every core busy, because each frame
 is too small to be worth the trip to the graphics card, and DeepFilterNet3 did
@@ -98,7 +106,7 @@ settings. It describes your voice, not what you said.
 Turn on **Only my voice** under Advanced, Your voice. Muted then
 compares the voice in your microphone with yours about twice a second. When it
 is someone else, like a person behind you or the TV, it turns the microphone
-down by 30 dB until you talk again. The slider sets how strict it is. Make it
+down by 12 dB until you talk again, enough to push it into the background without ever making you disappear. The slider sets how strict it is. Make it
 more lenient if it cuts you off, stricter if other voices get through.
 
 It has limits. When you and someone else talk at the same time, the other voice

@@ -9,8 +9,12 @@ namespace Muted.Core.Speech;
 /// </summary>
 public sealed class SpeakerGate
 {
-    /// <summary>How far a blocked voice is turned down: 30 dB.</summary>
-    public const float BlockedGain = 0.0316f;
+    /// <summary>
+    /// How far a blocked voice is turned down: 12 dB. Enough to push a TV or a person
+    /// behind you into the background, gentle enough that a wrong guess never makes you
+    /// disappear.
+    /// </summary>
+    public const float BlockedGain = 0.25f;
 
     // Closing takes 60 ms so a word in progress fades instead of clicking; opening takes
     // 15 ms so your first syllable after someone else talked is not swallowed.

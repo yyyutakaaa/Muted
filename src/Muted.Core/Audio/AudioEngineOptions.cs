@@ -95,6 +95,7 @@ public sealed record SuppressionOptions(
     bool StudioVoice = false,
     StudioModel StudioModel = StudioModel.DeepFilterNet3,
     bool StudioAutoStepDown = true,
+    bool StudioRoomTone = true,
     bool OnlyMyVoice = false,
     float SpeakerStrictness = 0.5f,
     Speech.VoiceProfile? VoiceProfile = null)

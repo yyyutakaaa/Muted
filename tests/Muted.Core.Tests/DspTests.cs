@@ -136,4 +136,62 @@ public sealed class DspTests
         gate.Process(held, voiceProbability: 0.1f, threshold: 0.55f, holdMilliseconds: 100, enabled: true);
         Assert.Equal(1f, gate.Gain);
     }
+
+    private static float GateFrame(VoiceGate gate, float early, float confirm, int holdMilliseconds = 250)
+    {
+        var frame = Enumerable.Repeat(1f, 480).ToArray();
+        gate.Process(frame, early, confirm, 0.55f, holdMilliseconds, true, VoiceGate.DefaultFloorGain);
+        return gate.Gain;
+    }
+
+    [Fact]
+    public void VoiceGate_OpensOnTheEarlySignalBeforeTheConfirmingOne()
+    {
+        var gate = new VoiceGate();
+        for (var frame = 0; frame < 20; frame++)
+        {
+            GateFrame(gate, 0.05f, 0.05f);
+        }
+
+        Assert.Equal(VoiceGate.DefaultFloorGain, gate.Gain, 3);
+
+        // RNNoise hears the word first; the gate is open before Studio Voice confirms it.
+        Assert.Equal(1f, GateFrame(gate, 0.6f, 0.1f));
+        Assert.Equal(1f, GateFrame(gate, 0.9f, 0.9f));
+    }
+
+    [Fact]
+    public void VoiceGate_DropsAnEarlySignalThatIsNeverConfirmed()
+    {
+        var gate = new VoiceGate();
+
+        // A key click RNNoise takes for speech and Studio Voice does not.
+        for (var frame = 0; frame < 8; frame++)
+        {
+            Assert.Equal(1f, GateFrame(gate, 0.8f, 0.05f));
+        }
+
+        for (var frame = 0; frame < 10; frame++)
+        {
+            GateFrame(gate, 0.8f, 0.05f);
+        }
+
+        Assert.Equal(VoiceGate.DefaultFloorGain, gate.Gain, 3);
+    }
+
+    [Fact]
+    public void VoiceGate_ClosesSlowlyToAFloorInsteadOfSilence()
+    {
+        var gate = new VoiceGate();
+        GateFrame(gate, 0.9f, 0.9f, holdMilliseconds: 0);
+        var closing = GateFrame(gate, 0.05f, 0.05f, holdMilliseconds: 0);
+        Assert.True(closing > 0.5f, "The gate snapped shut instead of fading.");
+
+        for (var frame = 0; frame < 10; frame++)
+        {
+            GateFrame(gate, 0.05f, 0.05f, holdMilliseconds: 0);
+        }
+
+        Assert.Equal(VoiceGate.DefaultFloorGain, gate.Gain, 3);
+    }
 }
