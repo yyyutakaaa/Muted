@@ -1,13 +1,11 @@
 name: Pages
 
-# Publishes docs/index.html and its images as the project website. Only those two are
-# copied, so the other documents in docs/ stay out of the site.
+# The website moved to https://muted.mehdioul.dev (repository yyyutakaaa/muted-site).
+# GitHub Pages only publishes a page that sends old links there.
 on:
   push:
     branches: [master]
     paths:
-      - docs/index.html
-      - docs/images/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
@@ -27,13 +25,26 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Stage the site
+      - name: Write the redirect page
         run: |
           mkdir site
-          cp docs/index.html site/
-          cp -r docs/images site/images
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Muted has moved</title>
+            <meta http-equiv="refresh" content="0; url=https://muted.mehdioul.dev/">
+            <link rel="canonical" href="https://muted.mehdioul.dev/">
+            <meta name="robots" content="noindex">
+          </head>
+          <body>
+            <p>The Muted website has moved to <a href="https://muted.mehdioul.dev/">muted.mehdioul.dev</a>.</p>
+          </body>
+          </html>
+          HTML
+          cp site/index.html site/404.html
 
       - uses: actions/configure-pages@v5
 
