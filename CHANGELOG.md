@@ -13,6 +13,8 @@ workflow puts that section at the top of the GitHub release notes.
 
 ### Changed
 
+- The website moved to https://muted.mehdioul.dev. The old GitHub Pages address
+  now sends visitors there.
 - **The first word after a pause is no longer cut off.** The voice gate used to
   open only when both RNNoise and Studio Voice were sure, which meant it opened
   after the word had arrived. It now opens on RNNoise, which hears the word 40 to

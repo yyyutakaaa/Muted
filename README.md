@@ -1,5 +1,7 @@
 # Muted
 
+Website: https://muted.mehdioul.dev
+
 [![Latest release](https://img.shields.io/github/v/release/yyyutakaaa/Muted)](https://github.com/yyyutakaaa/Muted/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/yyyutakaaa/Muted/total)](https://github.com/yyyutakaaa/Muted/releases)
 [![CI](https://github.com/yyyutakaaa/Muted/actions/workflows/ci.yml/badge.svg)](https://github.com/yyyutakaaa/Muted/actions/workflows/ci.yml)
